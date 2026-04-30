@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "1-QQUc5zF-8LklClrIffz"
+uri = "file://CHANGELOG.md"
+type = "text"
+title = "Directory Master v1.0.0 — Changelog"

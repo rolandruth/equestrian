@@ -1,5 +1,7 @@
 # Workspace
 
+**Current version: 1.0.0** — See `CHANGELOG.md` for the full release history and developer notes.
+
 ## Overview
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.

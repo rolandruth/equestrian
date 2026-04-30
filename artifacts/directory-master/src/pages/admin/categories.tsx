@@ -1,0 +1,229 @@
+import { useState } from "react";
+import { 
+  useListCategories, 
+  useCreateCategory,
+  useUpdateCategory,
+  useDeleteCategory,
+  getListCategoriesQueryKey
+} from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Edit, Trash2, Tag, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+
+export default function AdminCategoriesPage() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: categories, isLoading } = useListCategories();
+  
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  
+  const [formData, setFormData] = useState({ id: 0, name: "", description: "" });
+  
+  const createMutation = useCreateCategory();
+  const updateMutation = useUpdateCategory();
+  const deleteMutation = useDeleteCategory();
+
+  const handleOpenNew = () => {
+    setFormData({ id: 0, name: "", description: "" });
+    setIsFormOpen(true);
+  };
+
+  const handleOpenEdit = (category: any) => {
+    setFormData({ 
+      id: category.id, 
+      name: category.name, 
+      description: category.description || "" 
+    });
+    setIsFormOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return;
+
+    try {
+      if (formData.id) {
+        await updateMutation.mutateAsync({ 
+          id: formData.id, 
+          data: { name: formData.name, description: formData.description || null } 
+        });
+        toast({ title: "Category updated" });
+      } else {
+        await createMutation.mutateAsync({ 
+          data: { name: formData.name, description: formData.description || null } 
+        });
+        toast({ title: "Category created" });
+      }
+      queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+      setIsFormOpen(false);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    try {
+      await deleteMutation.mutateAsync({ id: deleteId });
+      toast({ title: "Category deleted" });
+      queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
+    } catch (error: any) {
+      toast({ title: "Cannot delete category", description: error.message, variant: "destructive" });
+    } finally {
+      setDeleteId(null);
+    }
+  };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
+          <p className="text-gray-500 mt-1">Organize your directory into logical sections.</p>
+        </div>
+        <Button onClick={handleOpenNew}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Category
+        </Button>
+      </div>
+
+      <div className="bg-white dark:bg-gray-900 border rounded-xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-muted-foreground uppercase bg-gray-50/50 dark:bg-gray-800/50 border-b">
+              <tr>
+                <th className="px-6 py-4 font-medium">Name</th>
+                <th className="px-6 py-4 font-medium">Entries</th>
+                <th className="px-6 py-4 font-medium">Created</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">Loading...</td>
+                </tr>
+              ) : categories?.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground flex flex-col items-center">
+                    <Tag className="h-8 w-8 mb-2 opacity-20" />
+                    <p>No categories found.</p>
+                    <Button variant="link" onClick={handleOpenNew}>Create your first category</Button>
+                  </td>
+                </tr>
+              ) : (
+                categories?.map((cat) => (
+                  <tr key={cat.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-gray-900 dark:text-white">{cat.name}</div>
+                      {cat.description && <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{cat.description}</div>}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                        {cat.entryCount} entries
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {format(new Date(cat.createdAt), "MMM d, yyyy")}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20" onClick={() => handleOpenEdit(cat)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 ml-1"
+                        onClick={() => setDeleteId(cat.id)}
+                        disabled={cat.entryCount > 0}
+                        title={cat.entryCount > 0 ? "Cannot delete category with entries" : "Delete category"}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{formData.id ? "Edit Category" : "New Category"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name *</label>
+              <Input 
+                value={formData.name} 
+                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                placeholder="e.g. Technology" 
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea 
+                value={formData.description} 
+                onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                placeholder="Optional description" 
+                rows={3}
+              />
+            </div>
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
+              <Button type="submit" disabled={isPending || !formData.name.trim()}>
+                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {formData.id ? "Save Changes" : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this category? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

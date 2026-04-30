@@ -1,0 +1,154 @@
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { entries, directorySettings } from "@workspace/db";
+import { eq, ilike, and, desc, asc, count, sql } from "drizzle-orm";
+
+const router = Router();
+
+function formatEntry(e: typeof entries.$inferSelect) {
+  return {
+    id: e.id,
+    title: e.title,
+    category: e.category,
+    summary: e.summary,
+    description: e.description,
+    contactEmail: e.contactEmail,
+    contactPhone: e.contactPhone,
+    website: e.website,
+    location: e.location,
+    tags: e.tags,
+    moreDetails: e.moreDetails,
+    sourceCsvRow: e.sourceCsvRow,
+    published: e.published,
+    createdAt: e.createdAt.toISOString(),
+    updatedAt: e.updatedAt.toISOString(),
+  };
+}
+
+router.get("/entries", async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
+    const offset = (page - 1) * limit;
+    const search = (req.query.search as string) || "";
+    const category = (req.query.category as string) || "";
+    const sort = (req.query.sort as string) || "newest";
+
+    const conditions = [eq(entries.published, true)];
+    if (search) conditions.push(ilike(entries.title, `%${search}%`));
+    if (category) conditions.push(eq(entries.category, category));
+
+    const where = and(...conditions);
+    const orderBy = sort === "az" ? asc(entries.title) : desc(entries.createdAt);
+
+    const [total] = await db.select({ count: count() }).from(entries).where(where);
+    const rows = await db.select().from(entries).where(where).orderBy(orderBy).limit(limit).offset(offset);
+
+    res.json({
+      entries: rows.map(formatEntry),
+      total: Number(total.count),
+      page,
+      totalPages: Math.ceil(Number(total.count) / limit),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to list entries" });
+  }
+});
+
+router.get("/entries/:id", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.select().from(entries)
+      .where(and(eq(entries.id, id), eq(entries.published, true))).limit(1);
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+    res.json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get entry" });
+  }
+});
+
+router.get("/stats", async (req, res) => {
+  try {
+    const [totalEntries] = await db.select({ count: count() }).from(entries).where(eq(entries.published, true));
+    const breakdown = await db.select({
+      category: entries.category,
+      count: count(),
+    }).from(entries)
+      .where(and(eq(entries.published, true), sql`${entries.category} IS NOT NULL`))
+      .groupBy(entries.category)
+      .orderBy(desc(count()));
+
+    res.json({
+      totalEntries: Number(totalEntries.count),
+      totalCategories: breakdown.length,
+      categoryBreakdown: breakdown.map(b => ({ category: b.category!, count: Number(b.count) })),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get stats" });
+  }
+});
+
+router.get("/featured", async (req, res) => {
+  try {
+    const rows = await db.select().from(entries)
+      .where(eq(entries.published, true))
+      .orderBy(desc(entries.createdAt))
+      .limit(6);
+    res.json(rows.map(formatEntry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get featured entries" });
+  }
+});
+
+router.get("/recent", async (req, res) => {
+  try {
+    const rows = await db.select().from(entries)
+      .where(eq(entries.published, true))
+      .orderBy(desc(entries.createdAt))
+      .limit(8);
+    res.json(rows.map(formatEntry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get recent entries" });
+  }
+});
+
+router.get("/settings", async (req, res) => {
+  try {
+    const [settings] = await db.select().from(directorySettings).limit(1);
+    if (!settings) {
+      res.json({
+        id: 0,
+        siteTitle: "Directory Master",
+        logoUrl: null,
+        homepageHeadline: null,
+        homepageDescription: null,
+        themeColor: null,
+        calloutSections: null,
+        installed: false,
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+    res.json({
+      id: settings.id,
+      siteTitle: settings.siteTitle,
+      logoUrl: settings.logoUrl,
+      homepageHeadline: settings.homepageHeadline,
+      homepageDescription: settings.homepageDescription,
+      themeColor: settings.themeColor,
+      calloutSections: settings.calloutSections,
+      installed: settings.installed,
+      updatedAt: settings.updatedAt.toISOString(),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get settings" });
+  }
+});
+
+export default router;

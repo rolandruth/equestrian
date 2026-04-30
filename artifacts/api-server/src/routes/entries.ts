@@ -1,0 +1,127 @@
+import { Router } from "express";
+import { db } from "@workspace/db";
+import { entries } from "@workspace/db";
+import { requireAuth, requireEditor } from "../middlewares/auth.js";
+import { eq, ilike, and, desc, count, sql } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/", requireAuth, async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, parseInt(req.query.limit as string) || 20);
+    const offset = (page - 1) * limit;
+    const search = (req.query.search as string) || "";
+    const category = (req.query.category as string) || "";
+    const publishedParam = req.query.published as string;
+
+    const conditions = [];
+    if (search) conditions.push(ilike(entries.title, `%${search}%`));
+    if (category) conditions.push(eq(entries.category, category));
+    if (publishedParam === "true") conditions.push(eq(entries.published, true));
+    if (publishedParam === "false") conditions.push(eq(entries.published, false));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [total] = await db.select({ count: count() }).from(entries).where(where);
+    const rows = await db.select().from(entries).where(where)
+      .orderBy(desc(entries.createdAt)).limit(limit).offset(offset);
+
+    res.json({
+      entries: rows.map(formatEntry),
+      total: Number(total.count),
+      page,
+      totalPages: Math.ceil(Number(total.count) / limit),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to list entries" });
+  }
+});
+
+router.post("/", requireEditor, async (req, res) => {
+  try {
+    const { title, ...rest } = req.body;
+    if (!title) {
+      res.status(400).json({ error: "Title is required" });
+      return;
+    }
+    const [entry] = await db.insert(entries).values({ title, ...rest }).returning();
+    res.status(201).json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to create entry" });
+  }
+});
+
+router.get("/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.select().from(entries).where(eq(entries.id, id)).limit(1);
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+    res.json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get entry" });
+  }
+});
+
+router.patch("/:id", requireEditor, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.update(entries).set({ ...req.body, updatedAt: new Date() })
+      .where(eq(entries.id, id)).returning();
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+    res.json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to update entry" });
+  }
+});
+
+router.delete("/:id", requireEditor, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.delete(entries).where(eq(entries.id, id));
+    res.json({ success: true, message: null });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to delete entry" });
+  }
+});
+
+router.patch("/:id/publish", requireEditor, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { published } = req.body;
+    const [entry] = await db.update(entries).set({ published, updatedAt: new Date() })
+      .where(eq(entries.id, id)).returning();
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+    res.json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to update entry" });
+  }
+});
+
+function formatEntry(e: typeof entries.$inferSelect) {
+  return {
+    id: e.id,
+    title: e.title,
+    category: e.category,
+    summary: e.summary,
+    description: e.description,
+    contactEmail: e.contactEmail,
+    contactPhone: e.contactPhone,
+    website: e.website,
+    location: e.location,
+    tags: e.tags,
+    moreDetails: e.moreDetails,
+    sourceCsvRow: e.sourceCsvRow,
+    published: e.published,
+    createdAt: e.createdAt.toISOString(),
+    updatedAt: e.updatedAt.toISOString(),
+  };
+}
+
+export default router;

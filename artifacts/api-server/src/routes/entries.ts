@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { entries } from "@workspace/db";
-import { requireAuth, requireEditor } from "../middlewares/auth.js";
+import { entries, categories } from "@workspace/db";
+import { requireAuth, requireEditor, requireAdmin } from "../middlewares/auth.js";
 import { eq, ilike, and, desc, count, sql } from "drizzle-orm";
 
 const router = Router();
@@ -101,6 +101,19 @@ router.patch("/:id/publish", requireEditor, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update entry" });
+  }
+});
+
+// DELETE /api/entries — wipe all entries + categories (admin only)
+router.delete("/", requireAdmin, async (req, res) => {
+  try {
+    const deleted = await db.delete(entries).returning({ id: entries.id });
+    await db.delete(categories);
+    req.log.warn({ entriesDeleted: deleted.length }, "Admin cleared all entries and categories");
+    res.json({ success: true, entriesDeleted: deleted.length });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to clear entries" });
   }
 });
 

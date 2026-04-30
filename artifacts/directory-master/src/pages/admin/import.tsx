@@ -137,11 +137,25 @@ export default function AdminImportPage() {
                   and organizing it into categories and entries. This may take a minute.
                 </p>
                 <div className="w-full max-w-md space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress</span>
-                    <span>{statusData.progress || 0}%</span>
-                  </div>
-                  <Progress value={statusData.progress || 0} className="h-2" />
+                  {(statusData.progress ?? 0) > 0 ? (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Progress</span>
+                        <span>{statusData.progress}%</span>
+                      </div>
+                      <Progress value={statusData.progress ?? 0} className="h-2" />
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span>Progress</span>
+                        <span className="text-muted-foreground">Waiting for Gemini...</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary rounded-full animate-pulse w-1/3" />
+                      </div>
+                    </>
+                  )}
                 </div>
                 {statusData.message && (
                   <p className="text-sm font-medium text-primary mt-4">{statusData.message}</p>

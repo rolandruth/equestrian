@@ -9,91 +9,153 @@ import { logger } from "../lib/logger.js";
 
 const router = Router();
 
+const BATCH_SIZE = 30;
+
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
+function extractJson(text: string): any {
+  // Try direct parse first
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Strip markdown code fences
+    const stripped = text.replace(/^```(?:json)?\s*/im, "").replace(/\s*```$/im, "").trim();
+    try {
+      return JSON.parse(stripped);
+    } catch {
+      // Extract first JSON object
+      const match = stripped.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+      throw new Error("No valid JSON found in Gemini response");
+    }
+  }
+}
+
+function buildPrompt(headerRow: string, dataRows: string[]): string {
+  const csvChunk = [headerRow, ...dataRows].join("\n");
+  return `You are a directory data organizer. Parse this CSV data and return structured JSON.
+
+CSV:
+${csvChunk}
+
+For each data row, create an entry with these fields:
+- title: the most prominent name/title field
+- category: assign a category (group similar entries together, use max 8 categories total)
+- summary: a 1-2 sentence summary of this entry
+- description: a more detailed description (2-4 sentences)
+- contactEmail: email address if present, else null
+- contactPhone: phone number if present, else null
+- website: URL if present, else null
+- location: city/state/country if present, else null
+- tags: comma-separated relevant tags (3-5 tags)
+- sourceCsvRow: the original CSV row as-is
+
+Return a JSON object ONLY (no markdown, no explanation):
+{
+  "entries": [{ "title": "...", "category": "...", "summary": "...", "description": "...", "contactEmail": null, "contactPhone": null, "website": null, "location": null, "tags": "...", "sourceCsvRow": "..." }],
+  "categories": ["Category1", "Category2"]
+}`;
+}
+
 async function processImport(jobId: string, csvContent: string) {
   try {
-    const lines = csvContent.trim().split("\n");
-    const totalRows = lines.length - 1;
+    const lines = csvContent.trim().split("\n").filter((l) => l.trim());
+    if (lines.length < 2) {
+      throw new Error("CSV must have at least a header row and one data row.");
+    }
+
+    const headerRow = lines[0];
+    const dataRows = lines.slice(1);
+    const totalRows = dataRows.length;
 
     await db.update(importJobs).set({
       status: "processing",
       totalRows,
       processedRows: 0,
-      message: "Directory Master is reviewing your CSV and organizing your directory.",
+      progress: 0,
+      message: `Preparing to analyze ${totalRows} rows...`,
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
 
-    const prompt = `You are a directory data organizer. I have CSV data that needs to be organized into structured directory entries.
-
-CSV Content:
-${csvContent}
-
-Instructions:
-1. Parse every row of CSV data (skip the header row).
-2. For each row, create a structured entry with these fields:
-   - title: the most prominent name/title field
-   - category: assign a category (group similar entries together, max 10 categories)
-   - summary: a 1-2 sentence summary
-   - description: more detailed description
-   - contactEmail: email if present
-   - contactPhone: phone if present
-   - website: URL if present
-   - location: city/state/country if present
-   - tags: comma-separated tags relevant to the entry
-   - moreDetails: any other important info that doesn't fit above (as JSON string or plain text)
-   - sourceCsvRow: the original CSV row as a string
-
-3. Also return the unique categories found.
-
-Return a JSON object with this structure:
-{
-  "entries": [
-    {
-      "title": "...",
-      "category": "...",
-      "summary": "...",
-      "description": "...",
-      "contactEmail": null,
-      "contactPhone": null,
-      "website": null,
-      "location": null,
-      "tags": "tag1, tag2",
-      "moreDetails": null,
-      "sourceCsvRow": "..."
-    }
-  ],
-  "categories": ["Category1", "Category2"]
-}
-
-Return ONLY valid JSON. No markdown, no explanation.`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { maxOutputTokens: 8192, responseMimeType: "application/json" },
-    });
-
-    const text = response.text ?? "";
-    if (!text) throw new Error("Gemini returned an empty response. Please try again.");
-
-    let parsed: { entries: any[]; categories: string[] };
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error(`Failed to parse Gemini response. Raw: ${text.slice(0, 200)}`);
-      parsed = JSON.parse(match[0]);
+    // Split into batches
+    const batches: string[][] = [];
+    for (let i = 0; i < dataRows.length; i += BATCH_SIZE) {
+      batches.push(dataRows.slice(i, i + BATCH_SIZE));
     }
 
-    if (!parsed.entries || !Array.isArray(parsed.entries)) {
-      throw new Error("Gemini did not return a valid entries array. Please check your CSV format.");
+    const allEntries: any[] = [];
+    const allCategories = new Set<string>();
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      const batchNum = batchIndex + 1;
+      const rowsProcessedSoFar = batchIndex * BATCH_SIZE;
+      const geminiProgress = Math.round((batchIndex / batches.length) * 50); // 0-50% for Gemini phase
+
+      await db.update(importJobs).set({
+        progress: geminiProgress,
+        message: `Gemini AI is analyzing batch ${batchNum} of ${batches.length} (${batch.length} rows)...`,
+        updatedAt: new Date(),
+      }).where(eq(importJobs.jobId, jobId));
+
+      const prompt = buildPrompt(headerRow, batch);
+
+      let attempts = 0;
+      let parsed: { entries: any[]; categories: string[] } | null = null;
+
+      while (attempts < 3 && !parsed) {
+        attempts++;
+        try {
+          const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            config: { maxOutputTokens: 8192 },
+          });
+
+          const text = response.text ?? "";
+          if (!text) {
+            logger.warn({ batchIndex, attempt: attempts }, "Gemini returned empty text, retrying...");
+            if (attempts < 3) {
+              await new Promise((r) => setTimeout(r, 2000 * attempts));
+              continue;
+            }
+            throw new Error(`Gemini returned an empty response after ${attempts} attempts.`);
+          }
+
+          logger.info({ batchIndex, textLength: text.length }, "Gemini response received");
+          const result = extractJson(text);
+
+          if (!result.entries || !Array.isArray(result.entries)) {
+            throw new Error("Gemini response missing entries array");
+          }
+
+          parsed = result;
+        } catch (err) {
+          if (attempts >= 3) throw err;
+          logger.warn({ err, batchIndex, attempt: attempts }, "Gemini call failed, retrying...");
+          await new Promise((r) => setTimeout(r, 2000 * attempts));
+        }
+      }
+
+      if (parsed) {
+        for (const cat of parsed.categories ?? []) {
+          if (cat) allCategories.add(String(cat));
+        }
+        allEntries.push(...parsed.entries);
+      }
     }
+
+    // Insert categories (50-60% progress range)
+    await db.update(importJobs).set({
+      progress: 55,
+      message: `Creating ${allCategories.size} categories...`,
+      updatedAt: new Date(),
+    }).where(eq(importJobs.jobId, jobId));
 
     let categoriesCreated = 0;
-    for (const catName of (parsed.categories ?? [])) {
+    for (const catName of allCategories) {
       const slug = slugify(catName);
       const existing = await db.select().from(categories).where(eq(categories.name, catName)).limit(1);
       if (existing.length === 0) {
@@ -102,46 +164,56 @@ Return ONLY valid JSON. No markdown, no explanation.`;
       }
     }
 
+    // Insert entries (60-100% progress range)
     let entriesCreated = 0;
-    for (const entry of (parsed.entries ?? [])) {
+    const totalEntries = allEntries.length;
+
+    for (const entry of allEntries) {
       await db.insert(entries).values({
-        title: entry.title || "Untitled",
-        category: entry.category || null,
-        summary: entry.summary || null,
-        description: entry.description || null,
-        contactEmail: entry.contactEmail || null,
-        contactPhone: entry.contactPhone || null,
-        website: entry.website || null,
-        location: entry.location || null,
-        tags: entry.tags || null,
-        moreDetails: entry.moreDetails || null,
-        sourceCsvRow: entry.sourceCsvRow || null,
+        title: String(entry.title || "Untitled").slice(0, 500),
+        category: entry.category ? String(entry.category).slice(0, 200) : null,
+        summary: entry.summary ? String(entry.summary).slice(0, 1000) : null,
+        description: entry.description ? String(entry.description) : null,
+        contactEmail: entry.contactEmail ? String(entry.contactEmail).slice(0, 200) : null,
+        contactPhone: entry.contactPhone ? String(entry.contactPhone).slice(0, 50) : null,
+        website: entry.website ? String(entry.website).slice(0, 500) : null,
+        location: entry.location ? String(entry.location).slice(0, 200) : null,
+        tags: entry.tags ? String(entry.tags).slice(0, 500) : null,
+        moreDetails: entry.moreDetails ? String(entry.moreDetails) : null,
+        sourceCsvRow: entry.sourceCsvRow ? String(entry.sourceCsvRow).slice(0, 1000) : null,
         published: true,
       });
       entriesCreated++;
 
-      await db.update(importJobs).set({
-        processedRows: entriesCreated,
-        progress: Math.round((entriesCreated / totalRows) * 100),
-        updatedAt: new Date(),
-      }).where(eq(importJobs.jobId, jobId));
+      const insertProgress = 60 + Math.round((entriesCreated / totalEntries) * 40);
+      if (entriesCreated % 5 === 0 || entriesCreated === totalEntries) {
+        await db.update(importJobs).set({
+          processedRows: entriesCreated,
+          progress: insertProgress,
+          message: `Saving entries... (${entriesCreated}/${totalEntries})`,
+          updatedAt: new Date(),
+        }).where(eq(importJobs.jobId, jobId));
+      }
     }
 
     await db.update(importJobs).set({
       status: "complete",
-      message: `Import complete! Created ${entriesCreated} entries in ${categoriesCreated} categories.`,
+      message: `Import complete! Created ${entriesCreated} entries across ${categoriesCreated} new categories.`,
       processedRows: entriesCreated,
       entriesCreated,
       categoriesCreated,
       progress: 100,
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
+
+    logger.info({ jobId, entriesCreated, categoriesCreated }, "Import complete");
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err);
+    logger.error({ jobId, err }, "Import failed");
     await db.update(importJobs).set({
       status: "error",
       error: errMsg,
-      message: "Something went wrong during import. Please check your CSV and try again.",
+      message: "Import failed. See error details below.",
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
   }
@@ -150,7 +222,7 @@ Return ONLY valid JSON. No markdown, no explanation.`;
 router.post("/csv", requireEditor, async (req, res) => {
   try {
     const { csvContent } = req.body;
-    if (!csvContent) {
+    if (!csvContent || typeof csvContent !== "string" || !csvContent.trim()) {
       res.status(400).json({ error: "CSV content is required" });
       return;
     }
@@ -159,10 +231,10 @@ router.post("/csv", requireEditor, async (req, res) => {
     const [job] = await db.insert(importJobs).values({
       jobId,
       status: "pending",
-      message: "Import job created",
+      message: "Import job queued",
     }).returning();
 
-    processImport(jobId, csvContent).catch((err) => logger.error(err, "processImport failed"));
+    processImport(jobId, csvContent).catch((err) => logger.error(err, "processImport unhandled error"));
 
     res.json({
       jobId: job.jobId,

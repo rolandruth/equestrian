@@ -8,14 +8,17 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
   const token = authHeader.slice(7);
-  const session = getSession(token);
-  if (!session) {
-    res.status(401).json({ error: "Invalid or expired session" });
-    return;
-  }
-  (req as any).userId = session.userId;
-  (req as any).userRole = session.role;
-  next();
+  getSession(token).then((session) => {
+    if (!session) {
+      res.status(401).json({ error: "Invalid or expired session" });
+      return;
+    }
+    (req as any).userId = session.userId;
+    (req as any).userRole = session.role;
+    next();
+  }).catch(() => {
+    res.status(500).json({ error: "Auth check failed" });
+  });
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {

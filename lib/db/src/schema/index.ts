@@ -3,5 +3,6 @@ export * from "./users";
 export * from "./categories";
 export * from "./entries";
 export * from "./importJobs";
+export * from "./sessions";
 export * from "./conversations";
 export * from "./messages";

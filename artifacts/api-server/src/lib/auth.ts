@@ -1,4 +1,7 @@
 import crypto from "crypto";
+import { db } from "@workspace/db";
+import { sessions } from "@workspace/db";
+import { eq, lt } from "drizzle-orm";
 
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -16,25 +19,25 @@ export function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
-const sessions = new Map<string, { userId: number; role: string; expiresAt: Date }>();
-
-export function createSession(userId: number, role: string): string {
+export async function createSession(userId: number, role: string): Promise<string> {
   const token = generateToken();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  sessions.set(token, { userId, role, expiresAt });
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+  await db.insert(sessions).values({ token, userId, role, expiresAt });
+  // Clean up old expired sessions occasionally
+  db.delete(sessions).where(lt(sessions.expiresAt, new Date())).catch(() => {});
   return token;
 }
 
-export function getSession(token: string): { userId: number; role: string } | null {
-  const session = sessions.get(token);
+export async function getSession(token: string): Promise<{ userId: number; role: string } | null> {
+  const [session] = await db.select().from(sessions).where(eq(sessions.token, token)).limit(1);
   if (!session) return null;
   if (session.expiresAt < new Date()) {
-    sessions.delete(token);
+    await db.delete(sessions).where(eq(sessions.token, token));
     return null;
   }
   return { userId: session.userId, role: session.role };
 }
 
-export function deleteSession(token: string): void {
-  sessions.delete(token);
+export async function deleteSession(token: string): Promise<void> {
+  await db.delete(sessions).where(eq(sessions.token, token));
 }

@@ -21,7 +21,7 @@ router.post("/login", async (req, res) => {
       return;
     }
 
-    const token = createSession(user.id, user.role);
+    const token = await createSession(user.id, user.role);
     res.json({
       user: {
         id: user.id,
@@ -40,7 +40,7 @@ router.post("/login", async (req, res) => {
 
 router.post("/logout", requireAuth, async (req, res) => {
   const token = req.headers.authorization?.slice(7);
-  if (token) deleteSession(token);
+  if (token) await deleteSession(token);
   res.json({ success: true, message: null });
 });
 

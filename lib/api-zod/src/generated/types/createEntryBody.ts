@@ -23,6 +23,14 @@ export interface CreateEntryBody {
   /** @nullable */
   location?: string | null;
   /** @nullable */
+  venue?: string | null;
+  /** @nullable */
+  eventType?: string | null;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
   tags?: string | null;
   /** @nullable */
   moreDetails?: string | null;

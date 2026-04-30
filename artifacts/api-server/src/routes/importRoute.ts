@@ -9,156 +9,247 @@ import { logger } from "../lib/logger.js";
 
 const router = Router();
 
-const BATCH_SIZE = 15; // Smaller batches = shorter outputs, less chance of hitting token limits
+// All target fields available for mapping
+const AVAILABLE_FIELDS = [
+  { value: "title",         label: "Title / Name",        description: "The main name or title of the entry" },
+  { value: "category",      label: "Category",            description: "Primary category for grouping entries" },
+  { value: "summary",       label: "Short Summary",       description: "1-2 sentence summary shown in cards" },
+  { value: "description",   label: "Full Description",    description: "Detailed description of the entry" },
+  { value: "website",       label: "Website URL",         description: "Primary website or link" },
+  { value: "contactEmail",  label: "Contact Email",       description: "Email address" },
+  { value: "contactPhone",  label: "Contact Phone",       description: "Phone number" },
+  { value: "location",      label: "Location (full)",     description: "Full location string (city, state, country)" },
+  { value: "location_city", label: "Location – City",     description: "City part — combined with state/country into Location" },
+  { value: "location_state",label: "Location – State/Region", description: "State or region part of the location" },
+  { value: "location_country",label:"Location – Country", description: "Country part of the location" },
+  { value: "venue",         label: "Venue",               description: "Venue or facility name" },
+  { value: "eventType",     label: "Event Type",          description: "Type of event (conference, expo, summit…)" },
+  { value: "startDate",     label: "Start Date",          description: "Start date of the event or listing" },
+  { value: "endDate",       label: "End Date",            description: "End date of the event or listing" },
+  { value: "tags",          label: "Tags / Keywords",     description: "Comma-separated tags" },
+  { value: "moreDetails",   label: "More Details",        description: "Additional information (stored as text)" },
+  { value: "skip",          label: "Skip (don't import)", description: "This column will not be imported" },
+];
+
+// Heuristic rules for auto-suggesting mappings from column names
+const HEURISTIC_RULES: Array<{ patterns: RegExp[]; target: string; confidence: number }> = [
+  { patterns: [/^name$/i, /^title$/i, /^event_name$/i, /^listing_name$/i], target: "title", confidence: 0.95 },
+  { patterns: [/^slug$/i, /^id$/i, /^identifier$/i, /^uid$/i, /^uuid$/i, /^code$/i, /^key$/i, /^ref$/i], target: "skip", confidence: 0.9 },
+  { patterns: [/^source_url$/i, /^source$/i, /^origin$/i, /^reference$/i], target: "skip", confidence: 0.85 },
+  { patterns: [/^category$/i, /^type$/i, /^section$/i, /^genre$/i, /^topic$/i], target: "category", confidence: 0.9 },
+  { patterns: [/^event_type$/i, /^event_format$/i, /^format$/i, /^kind$/i], target: "eventType", confidence: 0.9 },
+  { patterns: [/^start_date$/i, /^start$/i, /^begins$/i, /^date_start$/i, /^from_date$/i, /^opens$/i], target: "startDate", confidence: 0.9 },
+  { patterns: [/^end_date$/i, /^end$/i, /^until$/i, /^date_end$/i, /^to_date$/i, /^closes$/i], target: "endDate", confidence: 0.9 },
+  { patterns: [/^city$/i, /^town$/i], target: "location_city", confidence: 0.95 },
+  { patterns: [/^state$/i, /^region$/i, /^province$/i, /^territory$/i, /^state_region$/i], target: "location_state", confidence: 0.92 },
+  { patterns: [/^country$/i, /^nation$/i, /^country_code$/i], target: "location_country", confidence: 0.95 },
+  { patterns: [/^location$/i, /^address$/i, /^place$/i, /^where$/i], target: "location", confidence: 0.9 },
+  { patterns: [/^venue$/i, /^venue_name$/i, /^facility$/i, /^hall$/i, /^building$/i], target: "venue", confidence: 0.95 },
+  { patterns: [/^description$/i, /^desc$/i, /^about$/i, /^details$/i, /^info$/i, /^bio$/i, /^overview$/i, /^body$/i], target: "description", confidence: 0.9 },
+  { patterns: [/^summary$/i, /^excerpt$/i, /^brief$/i, /^abstract$/i, /^short_description$/i], target: "summary", confidence: 0.9 },
+  { patterns: [/^email$/i, /^contact_email$/i, /^e_mail$/i, /^mailto$/i], target: "contactEmail", confidence: 0.95 },
+  { patterns: [/^phone$/i, /^telephone$/i, /^mobile$/i, /^contact_phone$/i, /^tel$/i], target: "contactPhone", confidence: 0.95 },
+  { patterns: [/^website$/i, /^url$/i, /^web$/i, /^link$/i, /^homepage$/i, /^site$/i], target: "website", confidence: 0.9 },
+  { patterns: [/^tags$/i, /^tag$/i, /^keywords$/i, /^keyword$/i, /^labels$/i], target: "tags", confidence: 0.9 },
+  { patterns: [/^notes$/i, /^additional$/i, /^extra$/i, /^more_details$/i, /^remarks$/i], target: "moreDetails", confidence: 0.85 },
+];
+
+function suggestMapping(columnName: string): { target: string; confidence: number } {
+  for (const rule of HEURISTIC_RULES) {
+    for (const pattern of rule.patterns) {
+      if (pattern.test(columnName)) {
+        return { target: rule.target, confidence: rule.confidence };
+      }
+    }
+  }
+  // Default to moreDetails with low confidence for unrecognized columns
+  return { target: "moreDetails", confidence: 0.3 };
+}
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      result.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
 function extractJson(text: string): any {
-  // Try direct parse first
-  try {
-    return JSON.parse(text);
-  } catch {
-    // Strip markdown code fences
-    const stripped = text.replace(/^```(?:json)?\s*/im, "").replace(/\s*```$/im, "").trim();
-    try {
-      return JSON.parse(stripped);
-    } catch {
-      // Extract first JSON object
-      const match = stripped.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]);
-      throw new Error("No valid JSON found in Gemini response");
-    }
+  try { return JSON.parse(text); } catch {}
+  const stripped = text.replace(/^```(?:json)?\s*/im, "").replace(/\s*```$/im, "").trim();
+  try { return JSON.parse(stripped); } catch {}
+  const match = stripped.match(/\{[\s\S]*\}/);
+  if (match) return JSON.parse(match[0]);
+  throw new Error("No valid JSON found in Gemini response");
+}
+
+// Build an entry object from a CSV row using confirmed field mappings
+interface FieldMapping {
+  csvColumn: string;
+  targetField: string;
+  approved: boolean;
+}
+
+function applyMappings(headers: string[], rowValues: string[], mappings: FieldMapping[]): Record<string, string | null> {
+  const entry: Record<string, string | null> = {};
+  const locationParts: { city?: string; state?: string; country?: string } = {};
+
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i];
+    const value = (rowValues[i] ?? "").trim() || null;
+    const mapping = mappings.find(m => m.csvColumn === header);
+
+    if (!mapping || !mapping.approved || mapping.targetField === "skip") continue;
+
+    const target = mapping.targetField;
+
+    if (target === "location_city") { locationParts.city = value ?? undefined; }
+    else if (target === "location_state") { locationParts.state = value ?? undefined; }
+    else if (target === "location_country") { locationParts.country = value ?? undefined; }
+    else { entry[target] = value; }
   }
+
+  // Combine location parts if any were mapped
+  if (locationParts.city || locationParts.state || locationParts.country) {
+    const parts = [locationParts.city, locationParts.state, locationParts.country].filter(Boolean);
+    entry["location"] = entry["location"] || parts.join(", ") || null;
+  }
+
+  return entry;
 }
 
-function buildPrompt(headerRow: string, dataRows: string[]): string {
-  const csvChunk = [headerRow, ...dataRows].join("\n");
-  return `You are a directory data organizer. Parse this CSV data and return structured JSON.
+// Gemini enrichment: generate summary + tags for entries missing them
+const ENRICH_BATCH = 20;
 
-CSV:
-${csvChunk}
+async function enrichBatch(batch: Array<{ index: number; data: Record<string, string | null> }>): Promise<Map<number, { summary: string; tags: string }>> {
+  const needsEnrich = batch.filter(b => !b.data.summary || !b.data.tags);
+  if (needsEnrich.length === 0) return new Map();
 
-For each data row, create an entry with these fields:
-- title: the most prominent name/title field
-- category: assign a category (group similar entries together, use max 8 categories total)
-- summary: a 1-2 sentence summary of this entry
-- description: a more detailed description (2-4 sentences)
-- contactEmail: email address if present, else null
-- contactPhone: phone number if present, else null
-- website: URL if present, else null
-- location: city/state/country if present, else null
-- tags: comma-separated relevant tags (3-5 tags)
-- sourceCsvRow: the original CSV row as-is
-
-Return a JSON object ONLY (no markdown, no explanation):
+  const prompt = `For each of these directory entries, generate a concise 1-2 sentence summary and 3-5 comma-separated tags. Return ONLY JSON (no markdown):
 {
-  "entries": [{ "title": "...", "category": "...", "summary": "...", "description": "...", "contactEmail": null, "contactPhone": null, "website": null, "location": null, "tags": "...", "sourceCsvRow": "..." }],
-  "categories": ["Category1", "Category2"]
-}`;
+  "results": [
+    { "index": <number>, "summary": "...", "tags": "tag1, tag2, tag3" }
+  ]
 }
 
-async function processImport(jobId: string, csvContent: string) {
-  try {
-    logger.info({ jobId, csvBytes: csvContent.length }, "processImport started");
-    const lines = csvContent.trim().split("\n").filter((l) => l.trim());
-    if (lines.length < 2) {
-      throw new Error("CSV must have at least a header row and one data row.");
-    }
+Entries:
+${needsEnrich.map(b => `[${b.index}] Title: ${b.data.title || "Unknown"} | Category: ${b.data.category || ""} | Description: ${(b.data.description || "").slice(0, 300)} | Location: ${b.data.location || ""} | EventType: ${b.data.eventType || ""}`).join("\n")}`;
 
-    const headerRow = lines[0];
-    const dataRows = lines.slice(1);
-    const totalRows = dataRows.length;
+  const response = await ai.models.generateContent({
+    model: "gemini-3-flash-preview",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: { maxOutputTokens: 16384 },
+  });
+
+  const text = response.text ?? "";
+  if (!text) return new Map();
+
+  const parsed = extractJson(text);
+  const result = new Map<number, { summary: string; tags: string }>();
+  for (const r of parsed.results ?? []) {
+    result.set(r.index, { summary: r.summary || "", tags: r.tags || "" });
+  }
+  return result;
+}
+
+async function processImport(jobId: string, csvContent: string, fieldMappings: FieldMapping[]) {
+  try {
+    logger.info({ jobId, csvBytes: csvContent.length, mappings: fieldMappings.length }, "processImport started");
+
+    const rawLines = csvContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim().split("\n");
+    const lines = rawLines.filter(l => l.trim());
+    if (lines.length < 2) throw new Error("CSV must have at least a header row and one data row.");
+
+    const headers = parseCSVLine(lines[0]);
+    const dataLines = lines.slice(1);
+    const totalRows = dataLines.length;
+
+    const approvedMappings = fieldMappings.filter(m => m.approved && m.targetField !== "skip");
+    const needsEnrichment = !approvedMappings.some(m => m.targetField === "summary") ||
+                            !approvedMappings.some(m => m.targetField === "tags");
 
     await db.update(importJobs).set({
       status: "processing",
       totalRows,
       processedRows: 0,
-      progress: 0,
-      message: `Preparing to analyze ${totalRows} rows...`,
+      progress: 5,
+      message: `Mapping ${totalRows} rows using confirmed field mappings...`,
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
 
-    // Split into batches
-    const batches: string[][] = [];
-    for (let i = 0; i < dataRows.length; i += BATCH_SIZE) {
-      batches.push(dataRows.slice(i, i + BATCH_SIZE));
+    // Step 1: Parse all rows using confirmed mappings
+    const parsedEntries: Array<{ rowIndex: number; data: Record<string, string | null> }> = [];
+
+    for (let i = 0; i < dataLines.length; i++) {
+      const rowValues = parseCSVLine(dataLines[i]);
+      const data = applyMappings(headers, rowValues, fieldMappings);
+      if (data.title) {
+        parsedEntries.push({ rowIndex: i, data });
+      }
     }
 
-    const allEntries: any[] = [];
-    const allCategories = new Set<string>();
+    logger.info({ jobId, parsedCount: parsedEntries.length, needsEnrichment }, "Rows parsed");
 
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-      const batchNum = batchIndex + 1;
-      const rowsProcessedSoFar = batchIndex * BATCH_SIZE;
-      const geminiProgress = Math.round((batchIndex / batches.length) * 50); // 0-50% for Gemini phase
+    // Step 2: Gemini enrichment for summary/tags if not mapped (optional)
+    if (needsEnrichment && parsedEntries.length > 0) {
+      const totalBatches = Math.ceil(parsedEntries.length / ENRICH_BATCH);
 
-      await db.update(importJobs).set({
-        progress: geminiProgress,
-        message: `Gemini AI is analyzing batch ${batchNum} of ${batches.length} (${batch.length} rows)...`,
-        updatedAt: new Date(),
-      }).where(eq(importJobs.jobId, jobId));
+      for (let b = 0; b < totalBatches; b++) {
+        const batchSlice = parsedEntries.slice(b * ENRICH_BATCH, (b + 1) * ENRICH_BATCH);
+        const batchItems = batchSlice.map((e, i) => ({ index: b * ENRICH_BATCH + i, data: e.data }));
 
-      const prompt = buildPrompt(headerRow, batch);
+        const progress = 10 + Math.round((b / totalBatches) * 50);
+        await db.update(importJobs).set({
+          progress,
+          message: `AI enriching batch ${b + 1} of ${totalBatches} (generating summaries & tags)...`,
+          updatedAt: new Date(),
+        }).where(eq(importJobs.jobId, jobId));
 
-      let attempts = 0;
-      let parsed: { entries: any[]; categories: string[] } | null = null;
-
-      logger.info({ batchIndex, promptLength: prompt.length, batchRows: batch.length }, "Sending batch to Gemini");
-
-      while (attempts < 3 && !parsed) {
-        attempts++;
         try {
-          const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            config: { maxOutputTokens: 32768 },
-          });
-
-          const finishReason = response.candidates?.[0]?.finishReason;
-          const textLength = response.text?.length ?? 0;
-          const usage = response.usageMetadata;
-          logger.info(
-            { batchIndex, attempt: attempts, finishReason, textLength, usage },
-            "Gemini response received"
-          );
-
-          const text = response.text ?? "";
-          if (!text) {
-            logger.warn({ batchIndex, attempt: attempts, finishReason, usage }, "Gemini returned empty text, retrying...");
-            if (attempts < 3) {
-              await new Promise((r) => setTimeout(r, 3000 * attempts));
-              continue;
+          const enriched = await enrichBatch(batchItems);
+          for (const [idx, enrichment] of enriched) {
+            const entry = parsedEntries[idx];
+            if (entry) {
+              if (!entry.data.summary && enrichment.summary) entry.data.summary = enrichment.summary;
+              if (!entry.data.tags && enrichment.tags) entry.data.tags = enrichment.tags;
             }
-            throw new Error(`Gemini returned an empty response after ${attempts} attempts. finishReason: ${finishReason}`);
           }
-
-          const result = extractJson(text);
-          if (!result.entries || !Array.isArray(result.entries)) {
-            throw new Error("Gemini response missing entries array");
-          }
-
-          parsed = result;
+          logger.info({ jobId, batch: b, enrichedCount: enriched.size }, "Enrichment batch done");
         } catch (err) {
-          if (attempts >= 3) throw err;
-          logger.warn({ err, batchIndex, attempt: attempts }, "Gemini call failed, retrying...");
-          await new Promise((r) => setTimeout(r, 3000 * attempts));
+          logger.warn({ jobId, batch: b, err }, "Enrichment batch failed — continuing without summaries for this batch");
         }
-      }
-
-      if (parsed) {
-        for (const cat of parsed.categories ?? []) {
-          if (cat) allCategories.add(String(cat));
-        }
-        allEntries.push(...parsed.entries);
       }
     }
 
-    // Insert categories (50-60% progress range)
+    // Step 3: Collect categories
+    const allCategories = new Set<string>();
+    for (const { data } of parsedEntries) {
+      if (data.category) allCategories.add(data.category.trim());
+    }
+
     await db.update(importJobs).set({
-      progress: 55,
+      progress: 65,
       message: `Creating ${allCategories.size} categories...`,
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
@@ -173,29 +264,49 @@ async function processImport(jobId: string, csvContent: string) {
       }
     }
 
-    // Insert entries (60-100% progress range)
+    // Step 4: Insert entries
     let entriesCreated = 0;
-    const totalEntries = allEntries.length;
+    const totalEntries = parsedEntries.length;
 
-    for (const entry of allEntries) {
+    await db.update(importJobs).set({
+      progress: 70,
+      message: `Saving ${totalEntries} entries to database...`,
+      updatedAt: new Date(),
+    }).where(eq(importJobs.jobId, jobId));
+
+    for (const { data } of parsedEntries) {
+      const customFields: Record<string, string> = {};
+      // Any mapped "moreDetails" values accumulate; check for custom_ fields
+      const customKeys = Object.keys(data).filter(k => k.startsWith("custom_"));
+      for (const k of customKeys) {
+        if (data[k]) customFields[k.replace("custom_", "")] = data[k]!;
+        delete data[k];
+      }
+
       await db.insert(entries).values({
-        title: String(entry.title || "Untitled").slice(0, 500),
-        category: entry.category ? String(entry.category).slice(0, 200) : null,
-        summary: entry.summary ? String(entry.summary).slice(0, 1000) : null,
-        description: entry.description ? String(entry.description) : null,
-        contactEmail: entry.contactEmail ? String(entry.contactEmail).slice(0, 200) : null,
-        contactPhone: entry.contactPhone ? String(entry.contactPhone).slice(0, 50) : null,
-        website: entry.website ? String(entry.website).slice(0, 500) : null,
-        location: entry.location ? String(entry.location).slice(0, 200) : null,
-        tags: entry.tags ? String(entry.tags).slice(0, 500) : null,
-        moreDetails: entry.moreDetails ? String(entry.moreDetails) : null,
-        sourceCsvRow: entry.sourceCsvRow ? String(entry.sourceCsvRow).slice(0, 1000) : null,
+        title: String(data.title || "Untitled").slice(0, 500),
+        category: data.category?.slice(0, 200) ?? null,
+        summary: data.summary?.slice(0, 1000) ?? null,
+        description: data.description ?? null,
+        contactEmail: data.contactEmail?.slice(0, 200) ?? null,
+        contactPhone: data.contactPhone?.slice(0, 50) ?? null,
+        website: data.website?.slice(0, 500) ?? null,
+        location: data.location?.slice(0, 200) ?? null,
+        venue: data.venue?.slice(0, 300) ?? null,
+        eventType: data.eventType?.slice(0, 100) ?? null,
+        startDate: data.startDate?.slice(0, 50) ?? null,
+        endDate: data.endDate?.slice(0, 50) ?? null,
+        tags: data.tags?.slice(0, 500) ?? null,
+        moreDetails: data.moreDetails ?? null,
+        customFields: Object.keys(customFields).length > 0 ? customFields : null,
+        sourceCsvRow: null,
         published: true,
       });
+
       entriesCreated++;
 
-      const insertProgress = 60 + Math.round((entriesCreated / totalEntries) * 40);
-      if (entriesCreated % 5 === 0 || entriesCreated === totalEntries) {
+      if (entriesCreated % 10 === 0 || entriesCreated === totalEntries) {
+        const insertProgress = 70 + Math.round((entriesCreated / totalEntries) * 30);
         await db.update(importJobs).set({
           processedRows: entriesCreated,
           progress: insertProgress,
@@ -228,11 +339,54 @@ async function processImport(jobId: string, csvContent: string) {
   }
 }
 
+// POST /api/import/analyze — parse headers + suggest mappings
+router.post("/analyze", requireEditor, async (req, res) => {
+  try {
+    const { headers, sampleRows } = req.body as { headers: string[]; sampleRows: string[][] };
+    if (!headers || !Array.isArray(headers) || headers.length === 0) {
+      res.status(400).json({ error: "headers array is required" });
+      return;
+    }
+
+    const mappings = headers.map((col, i) => {
+      const { target, confidence } = suggestMapping(col);
+      const sampleValues = (sampleRows ?? [])
+        .slice(0, 3)
+        .map(row => (row[i] ?? "").trim())
+        .filter(Boolean);
+
+      return {
+        csvColumn: col,
+        targetField: target,
+        sampleValues,
+        confidence,
+        approved: target !== "skip",
+      };
+    });
+
+    res.json({ mappings, availableFields: AVAILABLE_FIELDS });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to analyze CSV" });
+  }
+});
+
+// POST /api/import/csv — start import with confirmed field mappings
 router.post("/csv", requireEditor, async (req, res) => {
   try {
-    const { csvContent } = req.body;
+    const { csvContent, fieldMappings } = req.body as { csvContent: string; fieldMappings: FieldMapping[] };
+
     if (!csvContent || typeof csvContent !== "string" || !csvContent.trim()) {
       res.status(400).json({ error: "CSV content is required" });
+      return;
+    }
+    if (!fieldMappings || !Array.isArray(fieldMappings) || fieldMappings.length === 0) {
+      res.status(400).json({ error: "fieldMappings array is required" });
+      return;
+    }
+    const hasTitleMapping = fieldMappings.some(m => m.approved && m.targetField === "title");
+    if (!hasTitleMapping) {
+      res.status(400).json({ error: "At least one column must be mapped to Title / Name" });
       return;
     }
 
@@ -243,7 +397,9 @@ router.post("/csv", requireEditor, async (req, res) => {
       message: "Import job queued",
     }).returning();
 
-    processImport(jobId, csvContent).catch((err) => logger.error(err, "processImport unhandled error"));
+    processImport(jobId, csvContent, fieldMappings).catch(err =>
+      logger.error(err, "processImport unhandled error")
+    );
 
     res.json({
       jobId: job.jobId,
@@ -262,6 +418,7 @@ router.post("/csv", requireEditor, async (req, res) => {
   }
 });
 
+// GET /api/import/status/:jobId
 router.get("/status/:jobId", requireEditor, async (req, res) => {
   try {
     const [job] = await db.select().from(importJobs).where(eq(importJobs.jobId, req.params.jobId)).limit(1);

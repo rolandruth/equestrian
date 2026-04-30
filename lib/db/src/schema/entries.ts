@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -12,8 +12,13 @@ export const entries = pgTable("entries", {
   contactPhone: text("contact_phone"),
   website: text("website"),
   location: text("location"),
+  venue: text("venue"),
+  eventType: text("event_type"),
+  startDate: text("start_date"),
+  endDate: text("end_date"),
   tags: text("tags"),
   moreDetails: text("more_details"),
+  customFields: jsonb("custom_fields"),
   sourceCsvRow: text("source_csv_row"),
   published: boolean("published").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

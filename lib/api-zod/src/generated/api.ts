@@ -101,8 +101,13 @@ export const ListEntriesResponse = zod.object({
       contactPhone: zod.string().nullish(),
       website: zod.string().nullish(),
       location: zod.string().nullish(),
+      venue: zod.string().nullish(),
+      eventType: zod.string().nullish(),
+      startDate: zod.string().nullish(),
+      endDate: zod.string().nullish(),
       tags: zod.string().nullish(),
       moreDetails: zod.string().nullish(),
+      customFields: zod.object({}).passthrough().nullish(),
       sourceCsvRow: zod.string().nullish(),
       published: zod.boolean(),
       createdAt: zod.string(),
@@ -126,6 +131,10 @@ export const CreateEntryBody = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
   published: zod.boolean().nullish(),
@@ -148,8 +157,13 @@ export const GetEntryResponse = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
   createdAt: zod.string(),
@@ -172,6 +186,10 @@ export const UpdateEntryBody = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
   published: zod.boolean().nullish(),
@@ -187,8 +205,13 @@ export const UpdateEntryResponse = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
   createdAt: zod.string(),
@@ -228,8 +251,13 @@ export const ToggleEntryPublishedResponse = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
   createdAt: zod.string(),
@@ -386,10 +414,46 @@ export const DeleteUserResponse = zod.object({
 });
 
 /**
- * @summary Import entries from CSV text
+ * @summary Analyze CSV headers and suggest field mappings
+ */
+export const AnalyzeImportBody = zod.object({
+  headers: zod.array(zod.string()),
+  sampleRows: zod.array(zod.array(zod.string())),
+});
+
+export const AnalyzeImportResponse = zod.object({
+  mappings: zod.array(
+    zod.object({
+      csvColumn: zod.string(),
+      targetField: zod.string(),
+      sampleValues: zod.array(zod.string()),
+      confidence: zod.number(),
+      approved: zod.boolean(),
+    }),
+  ),
+  availableFields: zod.array(
+    zod.object({
+      value: zod.string(),
+      label: zod.string(),
+      description: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Import entries from CSV text with confirmed field mappings
  */
 export const ImportCsvBody = zod.object({
   csvContent: zod.string(),
+  fieldMappings: zod.array(
+    zod.object({
+      csvColumn: zod.string(),
+      targetField: zod.string(),
+      sampleValues: zod.array(zod.string()),
+      confidence: zod.number(),
+      approved: zod.boolean(),
+    }),
+  ),
 });
 
 export const ImportCsvResponse = zod.object({
@@ -446,8 +510,13 @@ export const ListPublicEntriesResponse = zod.object({
       contactPhone: zod.string().nullish(),
       website: zod.string().nullish(),
       location: zod.string().nullish(),
+      venue: zod.string().nullish(),
+      eventType: zod.string().nullish(),
+      startDate: zod.string().nullish(),
+      endDate: zod.string().nullish(),
       tags: zod.string().nullish(),
       moreDetails: zod.string().nullish(),
+      customFields: zod.object({}).passthrough().nullish(),
       sourceCsvRow: zod.string().nullish(),
       published: zod.boolean(),
       createdAt: zod.string(),
@@ -476,8 +545,13 @@ export const GetPublicEntryResponse = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
   createdAt: zod.string(),
@@ -511,8 +585,13 @@ export const GetFeaturedEntriesResponseItem = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
   createdAt: zod.string(),
@@ -535,8 +614,13 @@ export const GetRecentEntriesResponseItem = zod.object({
   contactPhone: zod.string().nullish(),
   website: zod.string().nullish(),
   location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
   createdAt: zod.string(),

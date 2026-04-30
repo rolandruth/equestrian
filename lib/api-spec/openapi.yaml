@@ -456,11 +456,30 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /import/analyze:
+    post:
+      operationId: analyzeImport
+      tags: [import]
+      summary: Analyze CSV headers and suggest field mappings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportAnalyzeBody"
+      responses:
+        "200":
+          description: Suggested column mappings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportAnalyzeResult"
+
   /import/csv:
     post:
       operationId: importCsv
       tags: [import]
-      summary: Import entries from CSV text
+      summary: Import entries from CSV text with confirmed field mappings
       requestBody:
         required: true
         content:
@@ -752,10 +771,20 @@ components:
           type: ["string", "null"]
         location:
           type: ["string", "null"]
+        venue:
+          type: ["string", "null"]
+        eventType:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
+        endDate:
+          type: ["string", "null"]
         tags:
           type: ["string", "null"]
         moreDetails:
           type: ["string", "null"]
+        customFields:
+          type: ["object", "null"]
         sourceCsvRow:
           type: ["string", "null"]
         published:
@@ -785,6 +814,14 @@ components:
           type: ["string", "null"]
         location:
           type: ["string", "null"]
+        venue:
+          type: ["string", "null"]
+        eventType:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
+        endDate:
+          type: ["string", "null"]
         tags:
           type: ["string", "null"]
         moreDetails:
@@ -811,6 +848,14 @@ components:
         website:
           type: ["string", "null"]
         location:
+          type: ["string", "null"]
+        venue:
+          type: ["string", "null"]
+        eventType:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
+        endDate:
           type: ["string", "null"]
         tags:
           type: ["string", "null"]
@@ -914,12 +959,69 @@ components:
         calloutSections:
           type: ["string", "null"]
 
+    ImportAnalyzeBody:
+      type: object
+      properties:
+        headers:
+          type: array
+          items:
+            type: string
+        sampleRows:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+      required: [headers, sampleRows]
+
+    ColumnMapping:
+      type: object
+      properties:
+        csvColumn:
+          type: string
+        targetField:
+          type: string
+        sampleValues:
+          type: array
+          items:
+            type: string
+        confidence:
+          type: number
+        approved:
+          type: boolean
+      required: [csvColumn, targetField, sampleValues, confidence, approved]
+
+    ImportAnalyzeResult:
+      type: object
+      properties:
+        mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnMapping"
+        availableFields:
+          type: array
+          items:
+            type: object
+            properties:
+              value:
+                type: string
+              label:
+                type: string
+              description:
+                type: string
+            required: [value, label, description]
+      required: [mappings, availableFields]
+
     ImportCsvBody:
       type: object
       properties:
         csvContent:
           type: string
-      required: [csvContent]
+        fieldMappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/ColumnMapping"
+      required: [csvContent, fieldMappings]
 
     ImportJob:
       type: object

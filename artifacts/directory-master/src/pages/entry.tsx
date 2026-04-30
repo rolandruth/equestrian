@@ -14,7 +14,10 @@ import {
   Phone, 
   ChevronLeft,
   Tag,
-  Loader2
+  Loader2,
+  Building2,
+  CalendarDays,
+  Layers
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -126,6 +129,42 @@ export default function EntryPage() {
             <h3 className="font-semibold text-lg mb-6">Contact & Details</h3>
             
             <div className="space-y-5">
+              {/* Event-specific fields */}
+              {(displayEntry as any).eventType && (
+                <div className="flex items-start">
+                  <Layers className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium mb-1">Event Type</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">{(displayEntry as any).eventType}</div>
+                  </div>
+                </div>
+              )}
+
+              {((displayEntry as any).startDate || (displayEntry as any).endDate) && (
+                <div className="flex items-start">
+                  <CalendarDays className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium mb-1">Dates</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">
+                      {(displayEntry as any).startDate}
+                      {(displayEntry as any).endDate && (displayEntry as any).endDate !== (displayEntry as any).startDate
+                        ? ` – ${(displayEntry as any).endDate}`
+                        : ""}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {(displayEntry as any).venue && (
+                <div className="flex items-start">
+                  <Building2 className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />
+                  <div>
+                    <div className="text-sm font-medium mb-1">Venue</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300">{(displayEntry as any).venue}</div>
+                  </div>
+                </div>
+              )}
+
               {displayEntry.website && (
                 <div className="flex items-start">
                   <Globe className="h-5 w-5 text-muted-foreground mr-3 mt-0.5" />

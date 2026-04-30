@@ -96,6 +96,11 @@ export interface UpdateUserBody {
   role?: string | null;
 }
 
+/**
+ * @nullable
+ */
+export type EntryCustomFields = { [key: string]: unknown } | null;
+
 export interface Entry {
   id: number;
   title: string;
@@ -114,9 +119,19 @@ export interface Entry {
   /** @nullable */
   location?: string | null;
   /** @nullable */
+  venue?: string | null;
+  /** @nullable */
+  eventType?: string | null;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
   tags?: string | null;
   /** @nullable */
   moreDetails?: string | null;
+  /** @nullable */
+  customFields?: EntryCustomFields;
   /** @nullable */
   sourceCsvRow?: string | null;
   published: boolean;
@@ -140,6 +155,14 @@ export interface CreateEntryBody {
   website?: string | null;
   /** @nullable */
   location?: string | null;
+  /** @nullable */
+  venue?: string | null;
+  /** @nullable */
+  eventType?: string | null;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
   /** @nullable */
   tags?: string | null;
   /** @nullable */
@@ -165,6 +188,14 @@ export interface UpdateEntryBody {
   website?: string | null;
   /** @nullable */
   location?: string | null;
+  /** @nullable */
+  venue?: string | null;
+  /** @nullable */
+  eventType?: string | null;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
   /** @nullable */
   tags?: string | null;
   /** @nullable */
@@ -239,8 +270,33 @@ export interface UpdateSettingsBody {
   calloutSections?: string | null;
 }
 
+export interface ImportAnalyzeBody {
+  headers: string[];
+  sampleRows: string[][];
+}
+
+export interface ColumnMapping {
+  csvColumn: string;
+  targetField: string;
+  sampleValues: string[];
+  confidence: number;
+  approved: boolean;
+}
+
+export type ImportAnalyzeResultAvailableFieldsItem = {
+  value: string;
+  label: string;
+  description: string;
+};
+
+export interface ImportAnalyzeResult {
+  mappings: ColumnMapping[];
+  availableFields: ImportAnalyzeResultAvailableFieldsItem[];
+}
+
 export interface ImportCsvBody {
   csvContent: string;
+  fieldMappings: ColumnMapping[];
 }
 
 export type ImportJobStatus =

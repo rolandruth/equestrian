@@ -58,7 +58,7 @@ A self-hosted, white-label directory website builder. Users install it via a set
 - `directory_settings` — Site title, logo, homepage content, theme, installed flag
 - `users` — Admin/editor/viewer accounts with hashed passwords
 - `categories` — Directory categories with slugs
-- `entries` — Directory entries (title, summary, description, contact, location, tags, etc.)
+- `entries` — Directory entries: title, summary, description, contact info, location, venue, eventType, startDate, endDate, tags, moreDetails, customFields (jsonb)
 - `import_jobs` — CSV import job tracking
 
 ## API Routes
@@ -71,6 +71,21 @@ All routes under `/api`:
 - `GET/POST /categories`, `PATCH/DELETE /categories/:id`
 - `GET/PATCH /settings`
 - `GET/POST /users`, `PATCH/DELETE /users/:id`
-- `POST /import/csv`, `GET /import/status/:jobId`
+- `POST /import/analyze` — Analyze CSV headers, return heuristic field mapping suggestions
+- `POST /import/csv` — Start import with confirmed `fieldMappings[]` array
+- `GET /import/status/:jobId` — Poll import job progress
 - `GET /public/entries`, `GET /public/entries/:id`, `GET /public/stats`
 - `GET /public/featured`, `GET /public/recent`, `GET /public/settings`
+
+## Import System
+
+3-step wizard at `/admin/import`:
+1. **Upload** — Upload or paste a CSV file
+2. **Map Columns** — Review heuristic-suggested field mappings; toggle columns on/off; change mappings via dropdown; confidence indicators (high/medium/low)
+3. **Progress** — Background job processes rows, optionally calling Gemini for missing summaries/tags
+
+Key design notes:
+- Heuristic mapping uses regex patterns against column names (no AI needed for mapping)
+- Gemini enrichment only runs when `summary` or `tags` columns aren't mapped (batches of 20)
+- Location subfields (`location_city`, `location_state`, `location_country`) are auto-combined into the `location` field
+- At least one column must map to `title` for import to proceed

@@ -28,6 +28,8 @@ import type {
   EntryListResponse,
   ErrorResponse,
   HealthStatus,
+  ImportAnalyzeBody,
+  ImportAnalyzeResult,
   ImportCsvBody,
   ImportJob,
   ListEntriesParams,
@@ -1869,7 +1871,93 @@ export const useDeleteUser = <
 };
 
 /**
- * @summary Import entries from CSV text
+ * @summary Analyze CSV headers and suggest field mappings
+ */
+export const getAnalyzeImportUrl = () => {
+  return `/api/import/analyze`;
+};
+
+export const analyzeImport = async (
+  importAnalyzeBody: ImportAnalyzeBody,
+  options?: RequestInit,
+): Promise<ImportAnalyzeResult> => {
+  return customFetch<ImportAnalyzeResult>(getAnalyzeImportUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(importAnalyzeBody),
+  });
+};
+
+export const getAnalyzeImportMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeImport>>,
+    TError,
+    { data: BodyType<ImportAnalyzeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof analyzeImport>>,
+  TError,
+  { data: BodyType<ImportAnalyzeBody> },
+  TContext
+> => {
+  const mutationKey = ["analyzeImport"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof analyzeImport>>,
+    { data: BodyType<ImportAnalyzeBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return analyzeImport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnalyzeImportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof analyzeImport>>
+>;
+export type AnalyzeImportMutationBody = BodyType<ImportAnalyzeBody>;
+export type AnalyzeImportMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Analyze CSV headers and suggest field mappings
+ */
+export const useAnalyzeImport = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof analyzeImport>>,
+    TError,
+    { data: BodyType<ImportAnalyzeBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof analyzeImport>>,
+  TError,
+  { data: BodyType<ImportAnalyzeBody> },
+  TContext
+> => {
+  return useMutation(getAnalyzeImportMutationOptions(options));
+};
+
+/**
+ * @summary Import entries from CSV text with confirmed field mappings
  */
 export const getImportCsvUrl = () => {
   return `/api/import/csv`;
@@ -1932,7 +2020,7 @@ export type ImportCsvMutationBody = BodyType<ImportCsvBody>;
 export type ImportCsvMutationError = ErrorType<unknown>;
 
 /**
- * @summary Import entries from CSV text
+ * @summary Import entries from CSV text with confirmed field mappings
  */
 export const useImportCsv = <
   TError = ErrorType<unknown>,

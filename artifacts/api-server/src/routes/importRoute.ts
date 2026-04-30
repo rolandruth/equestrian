@@ -9,7 +9,7 @@ import { logger } from "../lib/logger.js";
 
 const router = Router();
 
-const BATCH_SIZE = 30;
+const BATCH_SIZE = 15; // Smaller batches = shorter outputs, less chance of hitting token limits
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -61,6 +61,7 @@ Return a JSON object ONLY (no markdown, no explanation):
 
 async function processImport(jobId: string, csvContent: string) {
   try {
+    logger.info({ jobId, csvBytes: csvContent.length }, "processImport started");
     const lines = csvContent.trim().split("\n").filter((l) => l.trim());
     if (lines.length < 2) {
       throw new Error("CSV must have at least a header row and one data row.");
@@ -105,28 +106,36 @@ async function processImport(jobId: string, csvContent: string) {
       let attempts = 0;
       let parsed: { entries: any[]; categories: string[] } | null = null;
 
+      logger.info({ batchIndex, promptLength: prompt.length, batchRows: batch.length }, "Sending batch to Gemini");
+
       while (attempts < 3 && !parsed) {
         attempts++;
         try {
           const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            config: { maxOutputTokens: 8192 },
+            config: { maxOutputTokens: 32768 },
           });
+
+          const finishReason = response.candidates?.[0]?.finishReason;
+          const textLength = response.text?.length ?? 0;
+          const usage = response.usageMetadata;
+          logger.info(
+            { batchIndex, attempt: attempts, finishReason, textLength, usage },
+            "Gemini response received"
+          );
 
           const text = response.text ?? "";
           if (!text) {
-            logger.warn({ batchIndex, attempt: attempts }, "Gemini returned empty text, retrying...");
+            logger.warn({ batchIndex, attempt: attempts, finishReason, usage }, "Gemini returned empty text, retrying...");
             if (attempts < 3) {
-              await new Promise((r) => setTimeout(r, 2000 * attempts));
+              await new Promise((r) => setTimeout(r, 3000 * attempts));
               continue;
             }
-            throw new Error(`Gemini returned an empty response after ${attempts} attempts.`);
+            throw new Error(`Gemini returned an empty response after ${attempts} attempts. finishReason: ${finishReason}`);
           }
 
-          logger.info({ batchIndex, textLength: text.length }, "Gemini response received");
           const result = extractJson(text);
-
           if (!result.entries || !Array.isArray(result.entries)) {
             throw new Error("Gemini response missing entries array");
           }
@@ -135,7 +144,7 @@ async function processImport(jobId: string, csvContent: string) {
         } catch (err) {
           if (attempts >= 3) throw err;
           logger.warn({ err, batchIndex, attempt: attempts }, "Gemini call failed, retrying...");
-          await new Promise((r) => setTimeout(r, 2000 * attempts));
+          await new Promise((r) => setTimeout(r, 3000 * attempts));
         }
       }
 

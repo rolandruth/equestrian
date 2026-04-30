@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useCompleteSetup, useGetSetupStatus } from "@workspace/api-client-react";
 import { useForm } from "react-hook-form";
@@ -54,8 +54,13 @@ export default function SetupPage() {
     );
   }
 
+  useEffect(() => {
+    if (setupStatus?.installed) {
+      setLocation("/");
+    }
+  }, [setupStatus?.installed, setLocation]);
+
   if (setupStatus?.installed) {
-    setLocation("/");
     return null;
   }
 

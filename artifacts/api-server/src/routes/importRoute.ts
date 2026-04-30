@@ -5,6 +5,7 @@ import { requireEditor } from "../middlewares/auth.js";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { logger } from "../lib/logger.js";
 
 const router = Router();
 
@@ -76,13 +77,19 @@ Return ONLY valid JSON. No markdown, no explanation.`;
     });
 
     const text = response.text ?? "";
+    if (!text) throw new Error("Gemini returned an empty response. Please try again.");
+
     let parsed: { entries: any[]; categories: string[] };
     try {
       parsed = JSON.parse(text);
     } catch {
       const match = text.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error("Failed to parse Gemini response");
+      if (!match) throw new Error(`Failed to parse Gemini response. Raw: ${text.slice(0, 200)}`);
       parsed = JSON.parse(match[0]);
+    }
+
+    if (!parsed.entries || !Array.isArray(parsed.entries)) {
+      throw new Error("Gemini did not return a valid entries array. Please check your CSV format.");
     }
 
     let categoriesCreated = 0;
@@ -155,7 +162,7 @@ router.post("/csv", requireEditor, async (req, res) => {
       message: "Import job created",
     }).returning();
 
-    processImport(jobId, csvContent).catch(console.error);
+    processImport(jobId, csvContent).catch((err) => logger.error(err, "processImport failed"));
 
     res.json({
       jobId: job.jobId,

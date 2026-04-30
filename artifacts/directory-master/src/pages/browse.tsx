@@ -31,8 +31,8 @@ export default function BrowsePage() {
   const { data: entriesData, isLoading } = useListPublicEntries({
     page,
     limit,
-    search: search || null,
-    category: categoryParam || null,
+    search: search || undefined,
+    category: categoryParam || undefined,
     sort,
   });
 

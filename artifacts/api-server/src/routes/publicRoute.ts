@@ -35,11 +35,15 @@ router.get("/entries", async (req, res) => {
     const sort = (req.query.sort as string) || "newest";
 
     const conditions = [eq(entries.published, true)];
-    if (search) conditions.push(ilike(entries.title, `%${search}%`));
-    if (category) conditions.push(eq(entries.category, category));
+    if (search && search !== "null") conditions.push(ilike(entries.title, `%${search}%`));
+    if (category && category !== "null") conditions.push(eq(entries.category, category));
 
     const where = and(...conditions);
-    const orderBy = sort === "az" ? asc(entries.title) : desc(entries.createdAt);
+    const orderBy =
+      sort === "a-z" ? asc(entries.title) :
+      sort === "z-a" ? desc(entries.title) :
+      sort === "oldest" ? asc(entries.createdAt) :
+      desc(entries.createdAt);
 
     const [total] = await db.select({ count: count() }).from(entries).where(where);
     const rows = await db.select().from(entries).where(where).orderBy(orderBy).limit(limit).offset(offset);

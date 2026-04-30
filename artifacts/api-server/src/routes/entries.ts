@@ -16,8 +16,8 @@ router.get("/", requireAuth, async (req, res) => {
     const publishedParam = req.query.published as string;
 
     const conditions = [];
-    if (search) conditions.push(ilike(entries.title, `%${search}%`));
-    if (category) conditions.push(eq(entries.category, category));
+    if (search && search !== "null") conditions.push(ilike(entries.title, `%${search}%`));
+    if (category && category !== "null") conditions.push(eq(entries.category, category));
     if (publishedParam === "true") conditions.push(eq(entries.published, true));
     if (publishedParam === "false") conditions.push(eq(entries.published, false));
 

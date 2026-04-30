@@ -39,8 +39,8 @@ export default function AdminEntriesPage() {
   const { data: entriesData, isLoading } = useListEntries({
     page,
     limit: 20,
-    search: search || null,
-    published: status === "all" ? null : status === "published"
+    search: search || undefined,
+    published: status === "all" ? undefined : status === "published"
   });
 
   const deleteMutation = useDeleteEntry();

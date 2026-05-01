@@ -21,7 +21,7 @@ import {
   LayoutTemplate, Image, Type, Grid3x3, Star, Clock, Search,
   FileText, Info, PanelRight, Link2, Heading1, AlignLeft, AlignCenter,
   AlignRight, Plus, X, Layers, CheckCircle2, RefreshCw,
-  Bold, Italic, Underline as UnderlineIcon, List, ListOrdered,
+  Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Settings2,
 } from "lucide-react";
 import {
   DndContext, closestCenter, DragEndEvent, useSensor, useSensors, PointerSensor,
@@ -490,37 +490,48 @@ function SortableBlock({ block, isSelected, onSelect, onRemove, onToggle, themeC
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
-      className={`group relative rounded-xl border-2 transition-all cursor-pointer ${
+      className={`group relative rounded-xl border-2 transition-all ${
         isSelected
           ? "border-blue-500 shadow-lg shadow-blue-500/10"
-          : "border-transparent hover:border-gray-300 dark:hover:border-gray-600"
+          : "border-transparent hover:border-gray-200 dark:hover:border-gray-700"
       } ${!block.enabled ? "opacity-50" : ""}`}
-      onClick={onSelect}
     >
+      {/* Drag handle */}
       <div
         {...attributes} {...listeners}
-        onClick={e => e.stopPropagation()}
         className="absolute -left-7 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
       >
         <GripVertical className="h-4 w-4 text-gray-400" />
       </div>
 
-      <div className="absolute -top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      {/* Top-right: eye + trash (hover only) */}
+      <div className="absolute -top-3 right-14 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         <button onClick={e => { e.stopPropagation(); onToggle(); }}
-          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50" title={block.enabled ? "Hide" : "Show"}>
+          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700" title={block.enabled ? "Hide section" : "Show section"}>
           <EyeOff className="h-3.5 w-3.5 text-gray-500" />
         </button>
         <button onClick={e => { e.stopPropagation(); onRemove(); }}
-          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900 shadow-sm hover:bg-red-50 dark:hover:bg-red-950" title="Remove">
+          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900 shadow-sm hover:bg-red-50 dark:hover:bg-red-950" title="Remove section">
           <Trash2 className="h-3.5 w-3.5 text-red-500" />
         </button>
       </div>
 
-      {isSelected && (
-        <div className="absolute -top-3 left-3 px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full">Editing</div>
-      )}
+      {/* Gear button — always visible, top-right corner */}
+      <button
+        onClick={e => { e.stopPropagation(); onSelect(); }}
+        title="Edit section properties"
+        className={`absolute -top-3 right-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium shadow-sm border transition-all ${
+          isSelected
+            ? "bg-blue-500 border-blue-500 text-white"
+            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-500"
+        }`}
+      >
+        <Settings2 className="h-3 w-3" />
+        {isSelected ? "Editing" : "Edit"}
+      </button>
+
       {!block.enabled && (
-        <div className="absolute -top-3 left-3 px-2 py-0.5 bg-gray-500 text-white text-xs font-medium rounded-full flex items-center gap-1">
+        <div className="absolute -top-3 left-3 px-2 py-0.5 bg-gray-500 text-white text-xs font-medium rounded-full flex items-center gap-1 z-10">
           <EyeOff className="h-3 w-3" /> Hidden
         </div>
       )}

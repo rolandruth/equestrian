@@ -14,6 +14,8 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     homepageHeadline: s.homepageHeadline,
     homepageDescription: s.homepageDescription,
     themeColor: s.themeColor,
+    navbarBgColor: s.navbarBgColor,
+    navbarTextColor: s.navbarTextColor,
     calloutSections: s.calloutSections,
     templateSettings: s.templateSettings ?? null,
     installed: s.installed,
@@ -43,6 +45,8 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.homepageHeadline !== undefined)    dbUpdates.homepageHeadline = req.body.homepageHeadline;
     if (req.body.homepageDescription !== undefined) dbUpdates.homepageDescription = req.body.homepageDescription;
     if (req.body.themeColor !== undefined)          dbUpdates.themeColor = req.body.themeColor;
+    if (req.body.navbarBgColor !== undefined)       dbUpdates.navbarBgColor = req.body.navbarBgColor;
+    if (req.body.navbarTextColor !== undefined)     dbUpdates.navbarTextColor = req.body.navbarTextColor;
     if (req.body.calloutSections !== undefined)     dbUpdates.calloutSections = req.body.calloutSections;
     if (req.body.templateSettings !== undefined)    dbUpdates.templateSettings = req.body.templateSettings;
 

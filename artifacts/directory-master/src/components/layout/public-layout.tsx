@@ -10,6 +10,20 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const navbarBg = (settings as any)?.navbarBgColor || undefined;
+  const navbarText = (settings as any)?.navbarTextColor || undefined;
+
+  const navbarStyle: React.CSSProperties = {
+    backgroundColor: navbarBg,
+    borderBottomColor: navbarBg ? "transparent" : undefined,
+  };
+
+  const textStyle: React.CSSProperties = {
+    color: navbarText,
+  };
+
+  const linkClass = `font-medium text-sm transition-colors ${navbarText ? "" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}`;
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -20,7 +34,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
+      <header
+        className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50"
+        style={navbarStyle}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
@@ -28,7 +45,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 {settings?.logoUrl ? (
                   <img src={settings.logoUrl} alt={settings.siteTitle} className="h-8 w-auto" />
                 ) : null}
-                <span className="font-bold text-xl text-gray-900 dark:text-white">
+                <span className="font-bold text-xl text-gray-900 dark:text-white" style={textStyle}>
                   {settings?.siteTitle || "Directory"}
                 </span>
               </Link>
@@ -38,7 +55,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <div className="hidden md:flex md:items-center md:space-x-8 flex-1 justify-end">
               <form onSubmit={handleSearch} className="relative w-full max-w-md mx-8">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
+                  <Search className="h-4 w-4" style={navbarText ? { color: navbarText, opacity: 0.6 } : { color: undefined }} />
                 </div>
                 <input
                   type="text"
@@ -49,10 +66,18 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 />
               </form>
               
-              <Link href="/browse" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium text-sm transition-colors">
+              <Link
+                href="/browse"
+                className={linkClass}
+                style={textStyle}
+              >
                 Browse All
               </Link>
-              <Link href="/admin/login" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium text-sm transition-colors">
+              <Link
+                href="/admin/login"
+                className={linkClass}
+                style={textStyle}
+              >
                 Sign In
               </Link>
             </div>
@@ -61,9 +86,12 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center md:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none"
+                className="inline-flex items-center justify-center p-2 rounded-md focus:outline-none"
+                style={navbarText ? { color: navbarText } : undefined}
               >
-                {isMenuOpen ? <X className="block h-6 w-6" /> : <Menu className="block h-6 w-6" />}
+                {isMenuOpen
+                  ? <X className="block h-6 w-6" />
+                  : <Menu className="block h-6 w-6" />}
               </button>
             </div>
           </div>
@@ -71,7 +99,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 pb-4 px-4">
+          <div
+            className="md:hidden border-b border-gray-200 dark:border-gray-800 pb-4 px-4"
+            style={{ backgroundColor: navbarBg || undefined }}
+          >
             <form onSubmit={handleSearch} className="mt-2 mb-4">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -87,17 +118,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </div>
             </form>
             <div className="flex flex-col space-y-2">
-              <Link 
-                href="/browse" 
+              <Link
+                href="/browse"
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="block px-3 py-2 rounded-md text-base font-medium"
+                style={navbarText ? textStyle : undefined}
               >
                 Browse All
               </Link>
-              <Link 
-                href="/admin/login" 
+              <Link
+                href="/admin/login"
                 onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="block px-3 py-2 rounded-md text-base font-medium"
+                style={navbarText ? textStyle : undefined}
               >
                 Sign In
               </Link>

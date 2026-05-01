@@ -9,6 +9,8 @@ export const directorySettings = pgTable("directory_settings", {
   homepageHeadline: text("homepage_headline"),
   homepageDescription: text("homepage_description"),
   themeColor: text("theme_color"),
+  navbarBgColor: text("navbar_bg_color"),
+  navbarTextColor: text("navbar_text_color"),
   calloutSections: text("callout_sections"),
   templateSettings: jsonb("template_settings"),
   installed: boolean("installed").notNull().default(false),

@@ -26,6 +26,8 @@ const settingsSchema = z.object({
   homepageHeadline: z.string().optional().nullable(),
   homepageDescription: z.string().optional().nullable(),
   themeColor: z.string().optional().nullable(),
+  navbarBgColor: z.string().optional().nullable(),
+  navbarTextColor: z.string().optional().nullable(),
   calloutSections: z.string().optional().nullable(),
 });
 
@@ -80,6 +82,8 @@ export default function AdminSettingsPage() {
       homepageHeadline: "",
       homepageDescription: "",
       themeColor: "",
+      navbarBgColor: "",
+      navbarTextColor: "",
       calloutSections: "",
     }
   });
@@ -92,6 +96,8 @@ export default function AdminSettingsPage() {
         homepageHeadline: settings.homepageHeadline || "",
         homepageDescription: settings.homepageDescription || "",
         themeColor: settings.themeColor || "",
+        navbarBgColor: (settings as any).navbarBgColor || "",
+        navbarTextColor: (settings as any).navbarTextColor || "",
         calloutSections: settings.calloutSections || "",
       });
       setTemplateSettings(mergeTemplateSettings((settings as any).templateSettings));
@@ -184,6 +190,100 @@ export default function AdminSettingsPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="pt-2 border-t">
+                <p className="text-sm font-medium mb-4">Navigation Bar Colors</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="navbarBgColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Background Color</FormLabel>
+                        <div className="flex items-center gap-3">
+                          <Input
+                            type="color"
+                            className="w-12 h-10 p-1 cursor-pointer border-0 shadow-none"
+                            value={field.value || '#ffffff'}
+                            onChange={field.onChange}
+                          />
+                          <FormControl>
+                            <Input
+                              className="w-36 font-mono"
+                              placeholder="#ffffff"
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          {field.value && (
+                            <button
+                              type="button"
+                              onClick={() => field.onChange("")}
+                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <FormDescription>Top bar background. Leave blank for the default white.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="navbarTextColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Text &amp; Icon Color</FormLabel>
+                        <div className="flex items-center gap-3">
+                          <Input
+                            type="color"
+                            className="w-12 h-10 p-1 cursor-pointer border-0 shadow-none"
+                            value={field.value || '#111827'}
+                            onChange={field.onChange}
+                          />
+                          <FormControl>
+                            <Input
+                              className="w-36 font-mono"
+                              placeholder="#111827"
+                              {...field}
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          {field.value && (
+                            <button
+                              type="button"
+                              onClick={() => field.onChange("")}
+                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <FormDescription>Site title, nav links, and search icon color. Useful for white logos on dark headers.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                {/* Live preview strip */}
+                {(form.watch("navbarBgColor") || form.watch("navbarTextColor")) && (
+                  <div
+                    className="mt-4 rounded-lg border px-4 py-3 flex items-center gap-3 text-sm font-medium transition-colors"
+                    style={{
+                      backgroundColor: form.watch("navbarBgColor") || undefined,
+                      color: form.watch("navbarTextColor") || undefined,
+                      borderColor: form.watch("navbarBgColor") ? "transparent" : undefined,
+                    }}
+                  >
+                    <span className="font-bold text-base">{form.watch("siteTitle") || "Your Site"}</span>
+                    <span className="mx-auto" />
+                    <span className="opacity-70">Browse All</span>
+                    <span className="opacity-70">Sign In</span>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 

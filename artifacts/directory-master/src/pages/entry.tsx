@@ -23,6 +23,7 @@ import {
 import { format } from "date-fns";
 import { FontLoader } from "@/components/template/FontLoader";
 import { mergeTemplateSettings, getFontFamily, ENTRY_SIDEBAR_FIELDS } from "@/lib/templateTypes";
+import type { SectionProps } from "@/lib/templateTypes";
 
 export default function EntryPage() {
   const { id } = useParams();
@@ -37,8 +38,9 @@ export default function EntryPage() {
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const entryFont = getFontFamily(ts.entry.font);
 
-  const getSectionEnabled = (id: string) =>
-    ts.entry.sections.find(s => s.id === id)?.enabled ?? true;
+  const getEntrySection = (id: string) => ts.entry.sections.find(s => s.id === id);
+  const getSectionEnabled = (id: string) => getEntrySection(id)?.enabled ?? true;
+  const getSectionProps = (id: string): SectionProps => getEntrySection(id)?.props ?? {};
 
   const sidebarFields = ts.entry.sidebarFields;
   const showSidebarField = (id: string) => sidebarFields.includes(id);
@@ -203,6 +205,10 @@ export default function EntryPage() {
     }
   };
 
+  const headerProps = getSectionProps("header");
+  const sidebarProps = getSectionProps("sidebar");
+  const relatedProps = getSectionProps("related");
+
   return (
     <div style={{ fontFamily: entryFont }}>
       <FontLoader fontKey={ts.entry.font} />
@@ -216,7 +222,13 @@ export default function EntryPage() {
         <div className="bg-white dark:bg-gray-900 border rounded-xl overflow-hidden shadow-sm">
           {/* Header Section */}
           {getSectionEnabled("header") && (
-            <div className="p-8 md:p-10 border-b bg-gray-50/50 dark:bg-gray-800/20">
+            <div
+              className="p-8 md:p-10 border-b"
+              style={{
+                backgroundColor: headerProps.backgroundColor || undefined,
+                fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined,
+              }}
+            >
               <div className="flex flex-wrap items-center gap-3 mb-4">
                 {displayEntry.category && (
                   <Link href={`/browse/${encodeURIComponent(displayEntry.category)}`}>
@@ -230,11 +242,23 @@ export default function EntryPage() {
                   Last updated {format(new Date(displayEntry.updatedAt || new Date()), "MMMM d, yyyy")}
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-4">
+              <h1
+                className="font-bold tracking-tight mb-4"
+                style={{
+                  color: headerProps.headingColor || undefined,
+                  fontSize: headerProps.headingFontSize || "clamp(1.75rem, 4vw, 2.25rem)",
+                }}
+              >
                 {displayEntry.title}
               </h1>
               {displayEntry.summary && (
-                <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl">
+                <p
+                  className="max-w-3xl"
+                  style={{
+                    color: headerProps.textColor || undefined,
+                    fontSize: headerProps.bodyFontSize || "1.125rem",
+                  }}
+                >
                   {displayEntry.summary}
                 </p>
               )}
@@ -266,8 +290,19 @@ export default function EntryPage() {
 
             {/* Sidebar */}
             {getSectionEnabled("sidebar") && (
-              <div className="w-full md:w-80 border-t md:border-t-0 md:border-l bg-gray-50/50 dark:bg-gray-800/20 p-8">
-                <h3 className="font-semibold text-lg mb-6">Contact & Details</h3>
+              <div
+                className="w-full md:w-80 border-t md:border-t-0 md:border-l p-8"
+                style={{
+                  backgroundColor: sidebarProps.backgroundColor || undefined,
+                  fontFamily: sidebarProps.fontFamily ? getFontFamily(sidebarProps.fontFamily) : undefined,
+                }}
+              >
+                <h3
+                  className="font-semibold text-lg mb-6"
+                  style={{ color: sidebarProps.headingColor || undefined }}
+                >
+                  {getEntrySection("sidebar")?.props?.sidebarTitle || "Contact & Details"}
+                </h3>
                 <div className="space-y-5">
                   {sidebarFields
                     .map(fieldId => renderSidebarField(fieldId))

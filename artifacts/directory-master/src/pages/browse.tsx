@@ -14,6 +14,7 @@ import { Search, MapPin, ArrowRight, Loader2, FilterX, CalendarDays, Building2, 
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { FontLoader } from "@/components/template/FontLoader";
 import { mergeTemplateSettings, getFontFamily } from "@/lib/templateTypes";
+import type { SectionProps } from "@/lib/templateTypes";
 
 export default function BrowsePage() {
   const [location, setLocation] = useLocation();
@@ -43,10 +44,10 @@ export default function BrowsePage() {
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const browseFont = getFontFamily(ts.browse.font);
 
-  const getSectionEnabled = (id: string) =>
-    ts.browse.sections.find(s => s.id === id)?.enabled ?? true;
-  const getSectionHeading = (id: string, fallback: string) =>
-    ts.browse.sections.find(s => s.id === id)?.heading || fallback;
+  const getSection = (id: string) => ts.browse.sections.find(s => s.id === id);
+  const getSectionEnabled = (id: string) => getSection(id)?.enabled ?? true;
+  const getSectionHeading = (id: string, fallback: string) => getSection(id)?.heading || fallback;
+  const getSectionProps = (id: string) => getSection(id)?.props ?? {};
 
   const cardFields = ts.browse.cardFields;
   const showField = (id: string) => cardFields.includes(id);
@@ -169,19 +170,31 @@ export default function BrowsePage() {
     <div style={{ fontFamily: browseFont }}>
       <FontLoader fontKey={ts.browse.font} />
 
-      {/* Banner image */}
-      {ts.browse.heroImageUrl && (
-        <div
-          className="w-full h-40 bg-cover bg-center relative"
-          style={{ backgroundImage: `url(${ts.browse.heroImageUrl})` }}
-        >
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <h2 className="text-white text-3xl font-bold">
-              {getSectionHeading("header", "Browse Directory")}
-            </h2>
+      {/* Header banner — driven by builder section props */}
+      {(() => {
+        const hp = getSectionProps("header") as SectionProps;
+        if (!hp.backgroundImage && !hp.backgroundColor) return null;
+        return (
+          <div
+            className="w-full h-40 bg-cover bg-center relative"
+            style={hp.backgroundImage
+              ? { backgroundImage: `url(${hp.backgroundImage})` }
+              : { backgroundColor: hp.backgroundColor }}
+          >
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={hp.backgroundImage ? { backgroundColor: `rgba(0,0,0,${(hp.overlayOpacity ?? 40) / 100})` } : {}}
+            >
+              <h2
+                className="text-3xl font-bold"
+                style={{ color: hp.headingColor || "#ffffff", fontFamily: hp.fontFamily ? getFontFamily(hp.fontFamily) : undefined }}
+              >
+                {getSectionHeading("header", "Browse Directory")}
+              </h2>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="flex flex-col md:flex-row gap-8">

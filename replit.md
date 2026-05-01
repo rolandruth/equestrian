@@ -1,6 +1,6 @@
 # Workspace
 
-**Current version: 1.0.0** — See `CHANGELOG.md` for the full release history and developer notes.
+**Current version: 2.0.0** — See `CHANGELOG.md` for the full release history and developer notes.
 
 ## Overview
 
@@ -41,6 +41,10 @@ A self-hosted, white-label directory website builder. Users install it via a set
 - Public directory: homepage, browse/category pages, entry detail pages
 - Admin dashboard: manage entries, categories, users, settings, CSV re-import
 - Role-based access (admin, editor, viewer)
+- Visual page builder (Elementor-like) at `/admin/builder/:page` with WYSIWYG editing, drag-and-drop, and auto-save
+- Per-section typography controls: font family, heading/body size, heading color
+- Per-section color pickers: background, text, heading, button, overlay
+- `templateSettings` JSONB column drives all public page rendering in real time
 
 **Pages:**
 - `/` — Public homepage (or setup wizard redirect if not installed)
@@ -52,8 +56,9 @@ A self-hosted, white-label directory website builder. Users install it via a set
 - `/admin/entries` — Manage entries
 - `/admin/categories` — Manage categories
 - `/admin/import` — CSV import with Gemini
-- `/admin/settings` — Directory settings
+- `/admin/settings` — Directory settings (includes Visual Page Builder launch cards)
 - `/admin/users` — User management
+- `/admin/builder/:page` — Visual page builder (page = `homepage` | `browse` | `entry`); full-screen, no AdminLayout
 
 ## DB Schema
 

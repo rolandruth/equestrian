@@ -4,6 +4,129 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.0.0] — 2026-05-01
+
+Visual Page Builder release. Introduces a full Elementor-like drag-and-drop builder for all three public pages, WYSIWYG rich text editing, per-section typography and color controls, and end-to-end live preview — builder changes are reflected on public pages immediately after save.
+
+---
+
+### New Features
+
+#### Visual Page Builder (`/admin/builder/:page`)
+- Full-screen 3-column layout: block library (left), drag-and-drop canvas (center), properties panel (right)
+- Supports three pages: `homepage`, `browse`, `entry` — launched from Settings → Visual Page Builder
+- Drag-and-drop section reordering via `@dnd-kit/sortable` (8px pointer activation threshold)
+- Per-section enable/disable toggle (eye icon) and delete (trash icon)
+- **Gear / Edit button** on every section card — always visible, turns blue when that section is selected — makes it immediately clear which section is being edited
+- Auto-save: 1.5-second debounce after any change; shows "Auto-saving…" → "Saved & live" status in the top bar
+- Manual "Save Now" button for immediate persistence
+- "Preview" button opens the live public page in a new tab
+
+#### Block Types
+| Block | Page | Description |
+|---|---|---|
+| Hero Banner | Homepage | Full-width hero with optional background image, overlay, CTA button |
+| Category Grid | Homepage | Clickable category cards; configurable column count and max items |
+| Featured Entries | Homepage | Grid of featured/pinned entries |
+| Recent Entries | Homepage | Most recently added entries |
+| Text Block | Homepage | Custom heading + WYSIWYG body text paragraph |
+| Image Block | Homepage | Full-width image with optional caption |
+| Page Header | Browse | Title and result count |
+| Search & Filters | Browse | Sidebar search and category filter panel |
+| Entry Cards Grid | Browse | Main paginated grid |
+| Title & Summary | Entry | Entry title, category badge, and summary |
+| Description | Entry | Full description body |
+| Additional Info | Entry | Extended details section |
+| Details Sidebar | Entry | Contact info and metadata side panel |
+| Related Entries | Entry | Grid of similar entries in the same category |
+
+#### Per-Section Properties Panel
+Every section exposes the following controls (where applicable):
+
+**Typography**
+- Font Family — Inter, Poppins, Roboto, Georgia, Playfair Display, Montserrat (per section override)
+- Heading Size — S (18px) / M (24px) / L (30px) / XL (36px) / 2XL (48px)
+- Heading Color — color swatch + hex input
+- Body / Subtitle Size — S (14px) / M (16px) / L (18px) / XL (20px)
+
+**Background**
+- Background Color — color swatch + hex input with clear (×)
+- Background Image URL — text input; enables overlay slider
+- Overlay Opacity — 0–100 slider (shown only when background image is set)
+
+**Text / CTA**
+- Text Color, Text Alignment (Left / Center / Right)
+- Padding — Small / Medium / Large
+- Button Text, Button URL, Button Color
+
+**WYSIWYG Editor** (Text Block only)
+- Tiptap-based inline editor with formatting toolbar
+- Bold, Italic, Underline; H2, H3, Paragraph; Bullet list, Numbered list
+- Alignment: Left / Center / Right
+- Text color picker (Tiptap Color extension)
+- Output stored as HTML in `richBodyText` prop field
+
+#### `templateSettings` Schema (`SectionConfig`)
+Stored as JSONB in `directory_settings.template_settings`. Structure:
+
+```typescript
+interface TemplateSettings {
+  homepage: { font: string; heroImageUrl: string; sections: SectionConfig[] };
+  browse:   { font: string; heroImageUrl: string; cardFields: string[]; sections: SectionConfig[] };
+  entry:    { font: string; sidebarFields: string[]; sections: SectionConfig[] };
+}
+
+interface SectionConfig {
+  id: string;           // unique block id (e.g. "hero", "custom-text-<timestamp>")
+  type?: string;        // block type (falls back to id if absent)
+  label: string;
+  enabled: boolean;
+  heading?: string;
+  props?: SectionProps;
+}
+
+interface SectionProps {
+  backgroundColor?: string; backgroundImage?: string;
+  textColor?: string; headingColor?: string;
+  textAlignment?: "left" | "center" | "right";
+  padding?: "sm" | "md" | "lg"; overlayOpacity?: number;
+  buttonText?: string; buttonUrl?: string; buttonColor?: string;
+  fontFamily?: string; headingFontSize?: string; bodyFontSize?: string;
+  bodyText?: string; richBodyText?: string;   // richBodyText is HTML from Tiptap
+  imageUrl?: string; imageCaption?: string;
+  maxItems?: number; columns?: number;
+  sidebarTitle?: string;
+}
+```
+
+#### Public Page Rendering (WYSIWYG → Live)
+`home.tsx`, `browse.tsx`, and `entry.tsx` were fully rewritten to consume `SectionConfig.props` directly:
+
+- **`home.tsx`**: Section order and visibility driven by `templateSettings.homepage.sections`. Each section type (`hero`, `categories`, `featured`, `recent`, `custom-text`, `custom-image`) reads all props (background, colors, fonts, sizes, buttons) and applies them as inline styles. Custom text blocks render `richBodyText` via `dangerouslySetInnerHTML`.
+- **`browse.tsx`**: Header banner background/color/heading driven by `header` section props; `heroImageUrl` flat field removed.
+- **`entry.tsx`**: Header background color, heading color/size, body font/size, and sidebar background/heading color all driven by their respective section props. Sidebar title reads from `props.sidebarTitle`.
+
+**Auto-save pipeline:**
+1. User edits any property in the builder
+2. `updateBlocks()` → `scheduleAutoSave()` — 1.5s debounce starts
+3. `PATCH /api/settings` with full `templateSettings` object
+4. `qc.invalidateQueries(getGetPublicSettingsQueryKey())` fires
+5. Public pages re-fetch and re-render with new styles — no page reload needed
+
+---
+
+### Developer Notes for v2.0
+
+- **`templateSettings` not in OpenAPI spec**: The `PATCH /api/settings` body accepts `templateSettings` as a passthrough field in `settings.ts`. The frontend casts `{ templateSettings: current } as any` when calling `updateMutation.mutateAsync`. If you add `templateSettings` to the OpenAPI spec, remove the `as any` cast and regenerate with `pnpm --filter @workspace/api-spec run codegen`.
+- **Tiptap imports**: `TextStyle` must be imported as a named export — `import { TextStyle } from "@tiptap/extension-text-style"`. There is no default export. `setContent()` no longer accepts a boolean second argument in newer Tiptap — pass no second argument or use `{ emitUpdate: false }`.
+- **Builder route**: `/admin/builder/:page` is wrapped in `RequireAuth` only (no `AdminLayout`). It is full-screen and manages its own header bar.
+- **`mergeTemplateSettings`**: Always use this function when reading `templateSettings` from the API — it fills in missing sections and fields with defaults so the public pages never crash on partial data. New default sections are appended to the end of any stored array.
+- **Custom block IDs**: Non-unique block types (Text Block, Image Block) use `${type}-${Date.now()}` as their ID so multiple instances can coexist. Standard blocks (hero, categories, etc.) use their type string as the ID and enforce single-instance by skipping the add if the ID already exists.
+- **Font loading**: The `FontLoader` component injects a `<link>` tag into `<head>` for Google Fonts at the page level. Individual section font overrides use inline `fontFamily` style — no additional font loading at section level. If you add new fonts, update `FONTS` in `templateTypes.ts` and ensure `getFontGoogleUrl` returns the correct URL.
+- **Vite cache**: If Tiptap or other new dependencies produce "does not provide an export named 'default'" errors after install, delete `artifacts/directory-master/node_modules/.vite` and restart the workflow to force re-optimization.
+
+---
+
 ## [1.0.0] — 2026-04-30
 
 Initial public release. Full-stack, self-hosted white-label directory website builder.

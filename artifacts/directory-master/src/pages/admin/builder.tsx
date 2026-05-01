@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import {
   useGetSettings,
@@ -10,15 +10,18 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   ChevronLeft, Save, Eye, Loader2, GripVertical, Trash2, EyeOff,
   LayoutTemplate, Image, Type, Grid3x3, Star, Clock, Search,
   FileText, Info, PanelRight, Link2, Heading1, AlignLeft, AlignCenter,
-  AlignRight, Plus, X, Layers
+  AlignRight, Plus, X, Layers, CheckCircle2, RefreshCw,
+  Bold, Italic, Underline as UnderlineIcon, List, ListOrdered,
 } from "lucide-react";
 import {
   DndContext, closestCenter, DragEndEvent, useSensor, useSensors, PointerSensor,
@@ -27,27 +30,179 @@ import {
   SortableContext, verticalListSortingStrategy, arrayMove, useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import Underline from "@tiptap/extension-underline";
 import {
   type SectionConfig, type SectionProps, type BlockDefinition, type TemplateSettings,
-  mergeTemplateSettings, getBlockType, getBlockDefs,
+  mergeTemplateSettings, getBlockType, getBlockDefs, FONTS, getFontFamily,
 } from "@/lib/templateTypes";
 
-// ─── Block type icon map ────────────────────────────────────────────────
+// ─── Block type icon map ─────────────────────────────────────────────────
 const BLOCK_ICONS: Record<string, React.ReactNode> = {
-  hero:         <Image className="h-4 w-4" />,
-  categories:   <Grid3x3 className="h-4 w-4" />,
-  featured:     <Star className="h-4 w-4" />,
-  recent:       <Clock className="h-4 w-4" />,
-  "custom-text":<Type className="h-4 w-4" />,
+  hero:          <Image className="h-4 w-4" />,
+  categories:    <Grid3x3 className="h-4 w-4" />,
+  featured:      <Star className="h-4 w-4" />,
+  recent:        <Clock className="h-4 w-4" />,
+  "custom-text": <Type className="h-4 w-4" />,
   "custom-image":<Image className="h-4 w-4" />,
-  header:       <Heading1 className="h-4 w-4" />,
-  filters:      <Search className="h-4 w-4" />,
-  grid:         <Grid3x3 className="h-4 w-4" />,
-  description:  <FileText className="h-4 w-4" />,
-  moreDetails:  <Info className="h-4 w-4" />,
-  sidebar:      <PanelRight className="h-4 w-4" />,
-  related:      <Link2 className="h-4 w-4" />,
+  header:        <Heading1 className="h-4 w-4" />,
+  filters:       <Search className="h-4 w-4" />,
+  grid:          <Grid3x3 className="h-4 w-4" />,
+  description:   <FileText className="h-4 w-4" />,
+  moreDetails:   <Info className="h-4 w-4" />,
+  sidebar:       <PanelRight className="h-4 w-4" />,
+  related:       <Link2 className="h-4 w-4" />,
 };
+
+const HEADING_SIZES = [
+  { label: "S", value: "1.125rem" },
+  { label: "M", value: "1.5rem" },
+  { label: "L", value: "1.875rem" },
+  { label: "XL", value: "2.25rem" },
+  { label: "2XL", value: "3rem" },
+];
+
+const BODY_SIZES = [
+  { label: "S", value: "0.875rem" },
+  { label: "M", value: "1rem" },
+  { label: "L", value: "1.125rem" },
+  { label: "XL", value: "1.25rem" },
+];
+
+// ─── WYSIWYG Rich Text Editor (Tiptap) ──────────────────────────────────
+function WysiwygEditor({ content, onChange }: { content: string; onChange: (html: string) => void }) {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextStyle,
+      Color,
+      Underline,
+    ],
+    content: content || "<p>Write your content here...</p>",
+    onUpdate: ({ editor }) => onChange(editor.getHTML()),
+  });
+
+  // Sync external content changes (e.g. switching selected block)
+  const lastContent = useRef(content);
+  const isExternalUpdate = useRef(false);
+  useEffect(() => {
+    if (editor && content !== lastContent.current) {
+      lastContent.current = content;
+      const cur = editor.getHTML();
+      if (content !== cur) {
+        isExternalUpdate.current = true;
+        editor.commands.setContent(content || "<p></p>");
+        isExternalUpdate.current = false;
+      }
+    }
+  }, [content, editor]);
+
+  if (!editor) return null;
+
+  const Btn = ({ active, onClick, title, children }: {
+    active: boolean; onClick: () => void; title: string; children: React.ReactNode;
+  }) => (
+    <button
+      type="button"
+      onMouseDown={e => { e.preventDefault(); onClick(); }}
+      title={title}
+      className={`p-1.5 rounded text-sm transition-colors ${
+        active
+          ? "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300"
+          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+      }`}
+    >
+      {children}
+    </button>
+  );
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900">
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+        <Btn active={editor.isActive("bold")} onClick={() => editor.chain().focus().toggleBold().run()} title="Bold">
+          <Bold className="h-3.5 w-3.5" />
+        </Btn>
+        <Btn active={editor.isActive("italic")} onClick={() => editor.chain().focus().toggleItalic().run()} title="Italic">
+          <Italic className="h-3.5 w-3.5" />
+        </Btn>
+        <Btn active={editor.isActive("underline")} onClick={() => editor.chain().focus().toggleUnderline().run()} title="Underline">
+          <UnderlineIcon className="h-3.5 w-3.5" />
+        </Btn>
+
+        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+        <Btn active={editor.isActive("heading", { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
+          <span className="text-xs font-bold">H2</span>
+        </Btn>
+        <Btn active={editor.isActive("heading", { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">
+          <span className="text-xs font-bold">H3</span>
+        </Btn>
+        <Btn active={editor.isActive("paragraph")} onClick={() => editor.chain().focus().setParagraph().run()} title="Paragraph">
+          <span className="text-xs">P</span>
+        </Btn>
+
+        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+        <Btn active={editor.isActive("bulletList")} onClick={() => editor.chain().focus().toggleBulletList().run()} title="Bullet List">
+          <List className="h-3.5 w-3.5" />
+        </Btn>
+        <Btn active={editor.isActive("orderedList")} onClick={() => editor.chain().focus().toggleOrderedList().run()} title="Numbered List">
+          <ListOrdered className="h-3.5 w-3.5" />
+        </Btn>
+
+        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+        <Btn active={editor.isActive({ textAlign: "left" })} onClick={() => editor.chain().focus().setTextAlign("left").run()} title="Align Left">
+          <AlignLeft className="h-3.5 w-3.5" />
+        </Btn>
+        <Btn active={editor.isActive({ textAlign: "center" })} onClick={() => editor.chain().focus().setTextAlign("center").run()} title="Align Center">
+          <AlignCenter className="h-3.5 w-3.5" />
+        </Btn>
+        <Btn active={editor.isActive({ textAlign: "right" })} onClick={() => editor.chain().focus().setTextAlign("right").run()} title="Align Right">
+          <AlignRight className="h-3.5 w-3.5" />
+        </Btn>
+
+        <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+        {/* Text color */}
+        <div className="flex items-center gap-1" title="Text Color">
+          <span className="text-xs text-gray-500 font-bold">A</span>
+          <input
+            type="color"
+            defaultValue="#000000"
+            onChange={e => editor.chain().focus().setColor(e.target.value).run()}
+            className="w-5 h-5 rounded cursor-pointer border border-gray-300 dark:border-gray-600 p-0"
+          />
+        </div>
+      </div>
+
+      {/* Editor body */}
+      <EditorContent
+        editor={editor}
+        className={`
+          px-3 py-2 min-h-[120px] text-sm
+          [&_.ProseMirror]:outline-none
+          [&_.ProseMirror]:min-h-[100px]
+          [&_.ProseMirror_p]:my-1
+          [&_.ProseMirror_h2]:text-lg [&_.ProseMirror_h2]:font-bold [&_.ProseMirror_h2]:my-2
+          [&_.ProseMirror_h3]:text-base [&_.ProseMirror_h3]:font-semibold [&_.ProseMirror_h3]:my-1.5
+          [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:pl-5 [&_.ProseMirror_ul]:my-1
+          [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:pl-5 [&_.ProseMirror_ol]:my-1
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:text-gray-400
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:float-left
+          [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none
+        `}
+      />
+    </div>
+  );
+}
 
 // ─── Visual block preview ────────────────────────────────────────────────
 function BlockPreview({ block, themeColor, siteSettings }: {
@@ -59,6 +214,7 @@ function BlockPreview({ block, themeColor, siteSettings }: {
   const p = block.props ?? {};
   const align = p.textAlignment ?? "center";
   const textAlignClass = align === "right" ? "text-right" : align === "left" ? "text-left" : "text-center";
+  const fontStyle = p.fontFamily ? { fontFamily: getFontFamily(p.fontFamily) } : {};
 
   if (type === "hero") {
     const hasBg = !!p.backgroundImage;
@@ -69,20 +225,32 @@ function BlockPreview({ block, themeColor, siteSettings }: {
           background: hasBg
             ? `linear-gradient(rgba(0,0,0,${(p.overlayOpacity ?? 50) / 100}), rgba(0,0,0,${(p.overlayOpacity ?? 50) / 100})), url(${p.backgroundImage}) center/cover`
             : (p.backgroundColor || "#1e293b"),
+          ...fontStyle,
         }}
       >
-        <h2 className="text-2xl font-extrabold mb-2 leading-tight" style={{ color: p.textColor || "#ffffff" }}>
+        <h2
+          className="font-extrabold mb-2 leading-tight"
+          style={{
+            color: p.headingColor || p.textColor || "#ffffff",
+            fontSize: p.headingFontSize || "1.5rem",
+          }}
+        >
           {siteSettings?.homepageHeadline || block.heading || "Your Hero Headline"}
         </h2>
-        <p className="text-sm opacity-80 mb-5 max-w-xl mx-auto" style={{ color: p.textColor || "#e2e8f0" }}>
+        <p
+          className="opacity-80 mb-5 max-w-xl mx-auto"
+          style={{
+            color: p.textColor || "#e2e8f0",
+            fontSize: p.bodyFontSize || "0.875rem",
+          }}
+        >
           {siteSettings?.homepageDescription || "A short subtitle describing your directory."}
         </p>
-        {p.buttonText && (
-          <span className="inline-block px-5 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: p.buttonColor || themeColor }}>
+        {p.buttonText ? (
+          <span className="inline-block px-5 py-2 rounded-lg font-semibold text-white" style={{ background: p.buttonColor || themeColor, fontSize: p.bodyFontSize || "0.875rem" }}>
             {p.buttonText}
           </span>
-        )}
-        {!p.buttonText && (
+        ) : (
           <span className="inline-block px-5 py-2 rounded-lg text-sm font-semibold text-white opacity-60 border border-white/30">
             Add a CTA button in properties →
           </span>
@@ -94,11 +262,16 @@ function BlockPreview({ block, themeColor, siteSettings }: {
   if (type === "categories") {
     const cols = p.columns ?? 4;
     return (
-      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-6 border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-800 dark:text-white mb-4">{block.heading || "Browse by Category"}</h3>
-        <div className={`grid gap-3`} style={{ gridTemplateColumns: `repeat(${Math.min(cols, 4)}, 1fr)` }}>
+      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-6 border border-gray-100 dark:border-gray-700" style={fontStyle}>
+        <h3
+          className="font-bold mb-4"
+          style={{ color: p.headingColor || undefined, fontSize: p.headingFontSize || "1.125rem" }}
+        >
+          {block.heading || "Browse by Category"}
+        </h3>
+        <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(cols, 4)}, 1fr)` }}>
           {["AI", "Technology", "Events", "Finance", "Marketing", "Design", "Business", "Health"].slice(0, p.maxItems ?? 8).map((cat, i) => (
-            <div key={i} className="rounded-lg p-3 text-center border border-gray-200 dark:border-gray-700 hover:border-primary/50 transition-colors">
+            <div key={i} className="rounded-lg p-3 text-center border border-gray-200 dark:border-gray-700">
               <div className="font-medium text-sm text-gray-700 dark:text-gray-300">{cat}</div>
               <div className="text-xs text-gray-400 mt-0.5">12 entries</div>
             </div>
@@ -111,8 +284,13 @@ function BlockPreview({ block, themeColor, siteSettings }: {
   if (type === "featured" || type === "recent") {
     const heading = block.heading || (type === "featured" ? "Featured" : "Recently Added");
     return (
-      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-6 border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-800 dark:text-white mb-4">{heading}</h3>
+      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-6 border border-gray-100 dark:border-gray-700" style={fontStyle}>
+        <h3
+          className="font-bold mb-4"
+          style={{ color: p.headingColor || undefined, fontSize: p.headingFontSize || "1.125rem" }}
+        >
+          {heading}
+        </h3>
         <div className="grid grid-cols-3 gap-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-2">
@@ -131,17 +309,34 @@ function BlockPreview({ block, themeColor, siteSettings }: {
   }
 
   if (type === "custom-text") {
+    const hasRich = !!p.richBodyText && p.richBodyText !== "<p></p>";
     return (
       <div
         className={`w-full rounded-lg p-8 border border-gray-100 dark:border-gray-700 ${textAlignClass}`}
-        style={{ background: p.backgroundColor || "#ffffff", color: p.textColor }}
+        style={{ background: p.backgroundColor || "#ffffff", ...fontStyle }}
       >
-        <h3 className="font-bold text-lg mb-2 text-gray-800 dark:text-gray-100" style={{ color: p.textColor }}>
-          {block.heading || "Custom Text Heading"}
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed" style={{ color: p.textColor ? `${p.textColor}cc` : undefined }}>
-          {p.bodyText || "Add your custom paragraph text here. You can edit this in the properties panel on the right."}
-        </p>
+        {block.heading && (
+          <h3
+            className="font-bold mb-3"
+            style={{
+              color: p.headingColor || p.textColor || "#111827",
+              fontSize: p.headingFontSize || "1.25rem",
+            }}
+          >
+            {block.heading}
+          </h3>
+        )}
+        {hasRich ? (
+          <div
+            className="prose prose-sm max-w-none text-left"
+            style={{ color: p.textColor || undefined, fontSize: p.bodyFontSize || "1rem" }}
+            dangerouslySetInnerHTML={{ __html: p.richBodyText! }}
+          />
+        ) : (
+          <p className="leading-relaxed text-gray-500" style={{ fontSize: p.bodyFontSize || "1rem" }}>
+            {p.bodyText || "Add your content using the rich text editor in the properties panel →"}
+          </p>
+        )}
       </div>
     );
   }
@@ -164,17 +359,17 @@ function BlockPreview({ block, themeColor, siteSettings }: {
     );
   }
 
-  // Browse: header
   if (type === "header") {
     return (
-      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-5 border border-gray-100 dark:border-gray-700">
-        <h3 className="text-xl font-bold text-gray-800 dark:text-white">{block.heading || "All Entries"}</h3>
+      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-5 border border-gray-100 dark:border-gray-700" style={fontStyle}>
+        <h3 className="font-bold" style={{ color: p.headingColor || undefined, fontSize: p.headingFontSize || "1.25rem" }}>
+          {block.heading || "All Entries"}
+        </h3>
         <p className="text-sm text-gray-400 mt-1">200 results found</p>
       </div>
     );
   }
 
-  // Browse: filters
   if (type === "filters") {
     return (
       <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
@@ -194,7 +389,6 @@ function BlockPreview({ block, themeColor, siteSettings }: {
     );
   }
 
-  // Browse: grid
   if (type === "grid") {
     return (
       <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700">
@@ -211,7 +405,6 @@ function BlockPreview({ block, themeColor, siteSettings }: {
     );
   }
 
-  // Entry: description
   if (type === "description") {
     return (
       <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-6 border border-gray-100 dark:border-gray-700">
@@ -224,7 +417,6 @@ function BlockPreview({ block, themeColor, siteSettings }: {
     );
   }
 
-  // Entry: moreDetails
   if (type === "moreDetails") {
     return (
       <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-6 border border-gray-100 dark:border-gray-700">
@@ -242,10 +434,9 @@ function BlockPreview({ block, themeColor, siteSettings }: {
     );
   }
 
-  // Entry: sidebar
   if (type === "sidebar") {
     return (
-      <div className="w-full rounded-lg bg-gray-50 dark:bg-gray-800/60 p-5 border border-gray-100 dark:border-gray-700">
+      <div className="w-full rounded-lg bg-gray-50 dark:bg-gray-800/60 p-5 border border-gray-100 dark:border-gray-700" style={fontStyle}>
         <h4 className="font-semibold text-sm mb-4 text-gray-700 dark:text-gray-200">{p.sidebarTitle || "Contact & Details"}</h4>
         <div className="space-y-3">
           {[["📍", "Location"], ["🌐", "Website"], ["📧", "Email"], ["📞", "Phone"]].map(([icon, label]) => (
@@ -262,11 +453,12 @@ function BlockPreview({ block, themeColor, siteSettings }: {
     );
   }
 
-  // Entry: related
   if (type === "related") {
     return (
-      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-5 border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-800 dark:text-white mb-4">{block.heading || "Related Entries"}</h3>
+      <div className="w-full rounded-lg bg-white dark:bg-gray-800 p-5 border border-gray-100 dark:border-gray-700" style={fontStyle}>
+        <h3 className="font-bold mb-4" style={{ color: p.headingColor || undefined, fontSize: p.headingFontSize || "1.125rem" }}>
+          {block.heading || "Related Entries"}
+        </h3>
         <div className="grid grid-cols-3 gap-3">
           {[1, 2, 3].map(i => (
             <div key={i} className="rounded border border-gray-200 dark:border-gray-700 p-3 space-y-1.5">
@@ -279,7 +471,6 @@ function BlockPreview({ block, themeColor, siteSettings }: {
     );
   }
 
-  // Fallback
   return (
     <div className="w-full rounded-lg bg-gray-100 dark:bg-gray-800 p-5 border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-400">
       <Layers className="h-5 w-5 mr-2" />
@@ -290,13 +481,8 @@ function BlockPreview({ block, themeColor, siteSettings }: {
 
 // ─── Sortable block wrapper ──────────────────────────────────────────────
 function SortableBlock({ block, isSelected, onSelect, onRemove, onToggle, themeColor, siteSettings }: {
-  block: SectionConfig;
-  isSelected: boolean;
-  onSelect: () => void;
-  onRemove: () => void;
-  onToggle: () => void;
-  themeColor: string;
-  siteSettings: any;
+  block: SectionConfig; isSelected: boolean; onSelect: () => void;
+  onRemove: () => void; onToggle: () => void; themeColor: string; siteSettings: any;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
 
@@ -311,42 +497,28 @@ function SortableBlock({ block, isSelected, onSelect, onRemove, onToggle, themeC
       } ${!block.enabled ? "opacity-50" : ""}`}
       onClick={onSelect}
     >
-      {/* Drag handle */}
       <div
-        {...attributes}
-        {...listeners}
+        {...attributes} {...listeners}
         onClick={e => e.stopPropagation()}
         className="absolute -left-7 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
       >
         <GripVertical className="h-4 w-4 text-gray-400" />
       </div>
 
-      {/* Action bar */}
       <div className="absolute -top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        <button
-          onClick={e => { e.stopPropagation(); onToggle(); }}
-          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50"
-          title={block.enabled ? "Hide section" : "Show section"}
-        >
+        <button onClick={e => { e.stopPropagation(); onToggle(); }}
+          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm hover:bg-gray-50" title={block.enabled ? "Hide" : "Show"}>
           <EyeOff className="h-3.5 w-3.5 text-gray-500" />
         </button>
-        <button
-          onClick={e => { e.stopPropagation(); onRemove(); }}
-          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900 shadow-sm hover:bg-red-50 dark:hover:bg-red-950"
-          title="Remove section"
-        >
+        <button onClick={e => { e.stopPropagation(); onRemove(); }}
+          className="p-1 rounded-md bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900 shadow-sm hover:bg-red-50 dark:hover:bg-red-950" title="Remove">
           <Trash2 className="h-3.5 w-3.5 text-red-500" />
         </button>
       </div>
 
-      {/* Selected indicator */}
       {isSelected && (
-        <div className="absolute -top-3 left-3 px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full">
-          Editing
-        </div>
+        <div className="absolute -top-3 left-3 px-2 py-0.5 bg-blue-500 text-white text-xs font-medium rounded-full">Editing</div>
       )}
-
-      {/* Hidden badge */}
       {!block.enabled && (
         <div className="absolute -top-3 left-3 px-2 py-0.5 bg-gray-500 text-white text-xs font-medium rounded-full flex items-center gap-1">
           <EyeOff className="h-3 w-3" /> Hidden
@@ -360,42 +532,30 @@ function SortableBlock({ block, isSelected, onSelect, onRemove, onToggle, themeC
 
 // ─── Block library panel ─────────────────────────────────────────────────
 function BlockLibraryPanel({ pageType, existingIds, onAdd }: {
-  pageType: string;
-  existingIds: string[];
-  onAdd: (def: BlockDefinition) => void;
+  pageType: string; existingIds: string[]; onAdd: (def: BlockDefinition) => void;
 }) {
   const defs = getBlockDefs(pageType);
-  const customAllowed = pageType === "homepage";
-
   return (
-    <div className="w-64 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col overflow-hidden">
+    <div className="w-60 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col overflow-hidden">
       <div className="p-4 border-b border-gray-100 dark:border-gray-800">
         <h3 className="font-semibold text-sm text-gray-800 dark:text-white">Add Section</h3>
         <p className="text-xs text-gray-400 mt-0.5">Click to add to your page</p>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {defs.map(def => {
-          const isPresent = existingIds.some(id => id === def.type || id.startsWith(`${def.type}-`));
           const isCustom = def.type.startsWith("custom-");
+          const isPresent = existingIds.some(id => id === def.type || id.startsWith(`${def.type}-`));
           const canAdd = isCustom || !isPresent;
           return (
-            <button
-              key={def.type}
-              onClick={() => canAdd && onAdd(def)}
-              disabled={!canAdd}
-              className={`w-full text-left p-3 rounded-lg border transition-all ${
-                canAdd
-                  ? "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 dark:hover:border-blue-700 cursor-pointer"
-                  : "border-gray-100 dark:border-gray-800 opacity-40 cursor-not-allowed"
-              }`}
+            <button key={def.type} onClick={() => canAdd && onAdd(def)} disabled={!canAdd}
+              className={`w-full text-left p-3 rounded-lg border transition-all ${canAdd
+                ? "border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30 dark:hover:border-blue-700 cursor-pointer"
+                : "border-gray-100 dark:border-gray-800 opacity-40 cursor-not-allowed"}`}
             >
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-gray-500 dark:text-gray-400">
-                  {BLOCK_ICONS[def.type] ?? <Layers className="h-4 w-4" />}
-                </span>
+                <span className="text-gray-500 dark:text-gray-400">{BLOCK_ICONS[def.type] ?? <Layers className="h-4 w-4" />}</span>
                 <span className="text-sm font-medium text-gray-800 dark:text-white">{def.label}</span>
-                {!canAdd && <span className="ml-auto text-xs text-gray-400">Added</span>}
-                {canAdd && <Plus className="ml-auto h-3.5 w-3.5 text-gray-400" />}
+                {!canAdd ? <span className="ml-auto text-xs text-gray-400">Added</span> : <Plus className="ml-auto h-3.5 w-3.5 text-gray-400" />}
               </div>
               <p className="text-xs text-gray-400 leading-snug">{def.description}</p>
             </button>
@@ -414,11 +574,11 @@ function PropertiesPanel({ block, onChange, onPropsChange }: {
 }) {
   if (!block) {
     return (
-      <div className="w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center justify-center text-center p-6">
+      <div className="w-80 flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center justify-center text-center p-6">
         <div className="text-gray-400">
           <Layers className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p className="text-sm font-medium">No section selected</p>
-          <p className="text-xs mt-1">Click a section on the canvas to edit its properties</p>
+          <p className="text-xs mt-1">Click any section on the canvas to edit its properties</p>
         </div>
       </div>
     );
@@ -427,10 +587,11 @@ function PropertiesPanel({ block, onChange, onPropsChange }: {
   const type = getBlockType(block);
   const p = block.props ?? {};
 
-  const field = (label: string, node: React.ReactNode, hint?: string) => (
+  // ── Shared helper renderers ──────────────────────────────────────────
+  const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
     <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">{label}</Label>
-      {node}
+      <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</Label>
+      {children}
       {hint && <p className="text-xs text-gray-400">{hint}</p>}
     </div>
   );
@@ -439,126 +600,259 @@ function PropertiesPanel({ block, onChange, onPropsChange }: {
     <Input value={value ?? ""} onChange={e => onCh(e.target.value)} placeholder={placeholder} className="h-8 text-sm" />
   );
 
-  const colorInput = (value: string | undefined, onCh: (v: string) => void, fallback = "#ffffff") => (
+  const colorPicker = (value: string | undefined, onCh: (v: string) => void, fallback = "#ffffff", label?: string) => (
     <div className="flex items-center gap-2">
-      <input type="color" value={value || fallback} onChange={e => onCh(e.target.value)} className="w-9 h-8 rounded border border-gray-200 dark:border-gray-700 cursor-pointer p-0.5" />
-      <Input value={value ?? ""} onChange={e => onCh(e.target.value)} placeholder={fallback} className="h-8 text-sm font-mono flex-1" />
-      {value && <button onClick={() => onCh("")} className="text-gray-400 hover:text-gray-600"><X className="h-4 w-4" /></button>}
+      <div className="relative">
+        <input type="color" value={value || fallback} onChange={e => onCh(e.target.value)}
+          className="w-9 h-8 rounded border border-gray-200 dark:border-gray-700 cursor-pointer p-0.5 bg-transparent" />
+      </div>
+      <Input value={value ?? ""} onChange={e => onCh(e.target.value)} placeholder={label || fallback}
+        className="h-8 text-sm font-mono flex-1" />
+      {value && (
+        <button onClick={() => onCh("")} className="text-gray-400 hover:text-gray-600 flex-shrink-0"><X className="h-4 w-4" /></button>
+      )}
     </div>
   );
 
   const alignButtons = (value: string | undefined, onCh: (v: "left" | "center" | "right") => void) => (
     <div className="flex gap-1">
       {(["left", "center", "right"] as const).map(a => (
-        <button key={a} onClick={() => onCh(a)} className={`flex-1 py-1.5 rounded border text-xs flex items-center justify-center transition-colors ${value === a ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600" : "border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300"}`}>
+        <button key={a} onClick={() => onCh(a)}
+          className={`flex-1 py-1.5 rounded border text-xs flex items-center justify-center transition-colors ${value === a ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600" : "border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300"}`}>
           {a === "left" ? <AlignLeft className="h-3.5 w-3.5" /> : a === "center" ? <AlignCenter className="h-3.5 w-3.5" /> : <AlignRight className="h-3.5 w-3.5" />}
         </button>
       ))}
     </div>
   );
 
+  const sizeButtons = (sizes: typeof HEADING_SIZES, value: string | undefined, onCh: (v: string) => void) => (
+    <div className="flex gap-1">
+      {sizes.map(s => (
+        <button key={s.value} onClick={() => onCh(s.value)}
+          className={`flex-1 py-1.5 text-xs rounded border font-medium transition-colors ${value === s.value ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300"}`}>
+          {s.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const fontFamilyPicker = (value: string | undefined, onCh: (v: string) => void) => (
+    <Select value={value ?? "default"} onValueChange={v => onCh(v === "default" ? "" : v)}>
+      <SelectTrigger className="h-8 text-sm">
+        <SelectValue placeholder="Default font" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="default">
+          <span className="text-gray-400">Default font</span>
+        </SelectItem>
+        {FONTS.map(f => (
+          <SelectItem key={f.key} value={f.key}>
+            <span style={{ fontFamily: f.family }}>{f.label}</span>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  // Sections that have heading text
+  const hasHeading = !["filters", "grid", "description", "moreDetails", "sidebar"].includes(type);
+  // Sections that benefit from font/size controls
+  const hasTypography = !["filters", "grid", "description", "moreDetails"].includes(type);
+
   return (
-    <div className="w-72 flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col overflow-hidden">
+    <div className="w-80 flex-shrink-0 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col overflow-hidden">
+      {/* Header */}
       <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-2">
         <span className="text-gray-500">{BLOCK_ICONS[type] ?? <Layers className="h-4 w-4" />}</span>
-        <div>
-          <h3 className="font-semibold text-sm text-gray-800 dark:text-white">{block.label}</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm text-gray-800 dark:text-white truncate">{block.label}</h3>
           <p className="text-xs text-gray-400">Section properties</p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Switch checked={block.enabled} onCheckedChange={v => onChange({ enabled: v })} />
-          <span className="text-xs text-gray-400">{block.enabled ? "Visible" : "Hidden"}</span>
         </div>
       </div>
 
+      {/* Scrollable properties */}
       <div className="flex-1 overflow-y-auto p-4 space-y-5">
 
-        {/* Heading field — shared by most blocks */}
-        {block.heading !== undefined && type !== "filters" && type !== "grid" && type !== "description" && type !== "moreDetails" && type !== "sidebar" && (
-          field("Section Heading", textInput(block.heading, v => onChange({ heading: v }), "e.g. Browse by Category"))
+        {/* ── Heading text ── */}
+        {hasHeading && (
+          <Field label="Section Heading">
+            {textInput(block.heading, v => onChange({ heading: v }), "e.g. Browse by Category")}
+          </Field>
         )}
 
-        {/* ── Hero block ── */}
-        {type === "hero" && (<>
-          <Separator />
-          {field("Background Image URL", textInput(p.backgroundImage, v => onPropsChange({ backgroundImage: v }), "https://example.com/banner.jpg"),
-            "Full-width banner image behind the text")}
-          {field("Background Color", colorInput(p.backgroundColor, v => onPropsChange({ backgroundColor: v }), "#1e293b"),
-            "Used when no image is set")}
-          {field("Overlay Opacity", (
-            <div className="flex items-center gap-2">
-              <input type="range" min={0} max={90} step={5} value={p.overlayOpacity ?? 50}
-                onChange={e => onPropsChange({ overlayOpacity: Number(e.target.value) })}
-                className="flex-1 accent-blue-500" />
-              <span className="text-xs text-gray-500 w-8">{p.overlayOpacity ?? 50}%</span>
+        {/* ── Typography section ── */}
+        {hasTypography && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Typography</p>
+
+              <Field label="Font Family">
+                {fontFamilyPicker(p.fontFamily, v => onPropsChange({ fontFamily: v }))}
+              </Field>
+
+              {hasHeading && (
+                <Field label="Heading Size">
+                  {sizeButtons(HEADING_SIZES, p.headingFontSize, v => onPropsChange({ headingFontSize: v }))}
+                </Field>
+              )}
+
+              {hasHeading && (
+                <Field label="Heading Color">
+                  {colorPicker(p.headingColor, v => onPropsChange({ headingColor: v }), "#111827", "Default")}
+                </Field>
+              )}
+
+              {(type === "hero" || type === "custom-text" || type === "header") && (
+                <Field label="Body / Subtitle Size">
+                  {sizeButtons(BODY_SIZES, p.bodyFontSize, v => onPropsChange({ bodyFontSize: v }))}
+                </Field>
+              )}
             </div>
-          ), "Darkness of the image overlay (0 = no overlay)")}
-          {field("Text Color", colorInput(p.textColor, v => onPropsChange({ textColor: v }), "#ffffff"))}
-          {field("Text Alignment", alignButtons(p.textAlignment, v => onPropsChange({ textAlignment: v })))}
-          {field("Padding Size", (
-            <div className="flex gap-1">
-              {(["sm", "md", "lg"] as const).map(s => (
-                <button key={s} onClick={() => onPropsChange({ padding: s })}
-                  className={`flex-1 py-1.5 text-xs rounded border font-medium transition-colors ${(p.padding ?? "md") === s ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300"}`}>
-                  {s.toUpperCase()}
-                </button>
-              ))}
+          </>
+        )}
+
+        {/* ── HERO specific ── */}
+        {type === "hero" && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Background</p>
+              <Field label="Background Image URL" hint="Full-width banner image behind the text">
+                {textInput(p.backgroundImage, v => onPropsChange({ backgroundImage: v }), "https://example.com/banner.jpg")}
+              </Field>
+              <Field label="Background Color" hint="Used when no image is set">
+                {colorPicker(p.backgroundColor, v => onPropsChange({ backgroundColor: v }), "#1e293b")}
+              </Field>
+              <Field label="Overlay Opacity">
+                <div className="flex items-center gap-2">
+                  <input type="range" min={0} max={90} step={5} value={p.overlayOpacity ?? 50}
+                    onChange={e => onPropsChange({ overlayOpacity: Number(e.target.value) })}
+                    className="flex-1 accent-blue-500" />
+                  <span className="text-xs text-gray-500 w-8 text-right">{p.overlayOpacity ?? 50}%</span>
+                </div>
+              </Field>
+              <Field label="Text Color">
+                {colorPicker(p.textColor, v => onPropsChange({ textColor: v }), "#ffffff")}
+              </Field>
+              <Field label="Text Alignment">
+                {alignButtons(p.textAlignment, v => onPropsChange({ textAlignment: v }))}
+              </Field>
+              <Field label="Padding">
+                <div className="flex gap-1">
+                  {(["sm", "md", "lg"] as const).map(s => (
+                    <button key={s} onClick={() => onPropsChange({ padding: s })}
+                      className={`flex-1 py-1.5 text-xs rounded border font-medium transition-colors ${(p.padding ?? "md") === s ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300"}`}>
+                      {s.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </Field>
             </div>
-          ))}
-          <Separator />
-          {field("CTA Button Text", textInput(p.buttonText, v => onPropsChange({ buttonText: v }), "Browse All →"))}
-          {field("CTA Button URL", textInput(p.buttonUrl, v => onPropsChange({ buttonUrl: v }), "/browse"))}
-          {field("Button Color", colorInput(p.buttonColor, v => onPropsChange({ buttonColor: v })))}
-        </>)}
 
-        {/* ── Custom text block ── */}
-        {type === "custom-text" && (<>
-          <Separator />
-          {field("Body Text", (
-            <Textarea value={p.bodyText ?? ""} onChange={e => onPropsChange({ bodyText: e.target.value })} rows={4} placeholder="Write your custom paragraph..." className="text-sm resize-none" />
-          ))}
-          {field("Text Alignment", alignButtons(p.textAlignment, v => onPropsChange({ textAlignment: v })))}
-          {field("Background Color", colorInput(p.backgroundColor, v => onPropsChange({ backgroundColor: v }), "#ffffff"))}
-          {field("Text Color", colorInput(p.textColor, v => onPropsChange({ textColor: v })))}
-        </>)}
-
-        {/* ── Custom image block ── */}
-        {type === "custom-image" && (<>
-          <Separator />
-          {field("Image URL", textInput(p.imageUrl, v => onPropsChange({ imageUrl: v }), "https://example.com/photo.jpg"))}
-          {field("Caption", textInput(p.imageCaption, v => onPropsChange({ imageCaption: v }), "Optional image caption..."))}
-        </>)}
-
-        {/* ── Grid sections (categories, featured, recent, related) ── */}
-        {(type === "categories" || type === "featured" || type === "recent" || type === "related") && (<>
-          <Separator />
-          {field("Max Items", (
-            <Input type="number" min={1} max={24} value={p.maxItems ?? (type === "categories" ? 8 : 3)}
-              onChange={e => onPropsChange({ maxItems: Number(e.target.value) })} className="h-8 text-sm w-24" />
-          ))}
-          {type === "categories" && field("Columns", (
-            <div className="flex gap-1">
-              {[2, 3, 4].map(c => (
-                <button key={c} onClick={() => onPropsChange({ columns: c })}
-                  className={`w-10 py-1.5 text-xs rounded border font-medium transition-colors ${(p.columns ?? 4) === c ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300"}`}>
-                  {c}
-                </button>
-              ))}
+            <Separator />
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">CTA Button</p>
+              <Field label="Button Text">
+                {textInput(p.buttonText, v => onPropsChange({ buttonText: v }), "Browse All →")}
+              </Field>
+              <Field label="Button URL">
+                {textInput(p.buttonUrl, v => onPropsChange({ buttonUrl: v }), "/browse")}
+              </Field>
+              <Field label="Button Color">
+                {colorPicker(p.buttonColor, v => onPropsChange({ buttonColor: v }))}
+              </Field>
             </div>
-          ))}
-        </>)}
+          </>
+        )}
 
-        {/* ── Entry sidebar ── */}
-        {type === "sidebar" && (<>
-          <Separator />
-          {field("Sidebar Title", textInput(p.sidebarTitle, v => onPropsChange({ sidebarTitle: v }), "Contact & Details"))}
-        </>)}
+        {/* ── CUSTOM TEXT specific ── */}
+        {type === "custom-text" && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Content</p>
+              <Field label="Rich Text Content">
+                <WysiwygEditor
+                  content={p.richBodyText ?? p.bodyText ?? ""}
+                  onChange={v => onPropsChange({ richBodyText: v })}
+                />
+              </Field>
+              <Field label="Text Alignment">
+                {alignButtons(p.textAlignment, v => onPropsChange({ textAlignment: v }))}
+              </Field>
+              <Field label="Background Color">
+                {colorPicker(p.backgroundColor, v => onPropsChange({ backgroundColor: v }), "#ffffff")}
+              </Field>
+              <Field label="Text Color" hint="Overrides individual text colors">
+                {colorPicker(p.textColor, v => onPropsChange({ textColor: v }))}
+              </Field>
+            </div>
+          </>
+        )}
 
-        {/* ── Header (browse/entry) ── */}
-        {type === "header" && (<>
-          <Separator />
-          <p className="text-xs text-gray-400">The page header adapts its title automatically from the category or entry name. Use the heading above to customize the default title.</p>
-        </>)}
+        {/* ── CUSTOM IMAGE specific ── */}
+        {type === "custom-image" && (
+          <>
+            <Separator />
+            <Field label="Image URL">
+              {textInput(p.imageUrl, v => onPropsChange({ imageUrl: v }), "https://example.com/photo.jpg")}
+            </Field>
+            <Field label="Caption">
+              {textInput(p.imageCaption, v => onPropsChange({ imageCaption: v }), "Optional caption...")}
+            </Field>
+          </>
+        )}
+
+        {/* ── GRID sections (categories, featured, recent, related) ── */}
+        {["categories", "featured", "recent", "related"].includes(type) && (
+          <>
+            <Separator />
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Layout</p>
+              <Field label="Max Items">
+                <Input type="number" min={1} max={24} value={p.maxItems ?? (type === "categories" ? 8 : 3)}
+                  onChange={e => onPropsChange({ maxItems: Number(e.target.value) })} className="h-8 text-sm w-24" />
+              </Field>
+              {type === "categories" && (
+                <Field label="Columns">
+                  <div className="flex gap-1">
+                    {[2, 3, 4].map(c => (
+                      <button key={c} onClick={() => onPropsChange({ columns: c })}
+                        className={`w-10 py-1.5 text-xs rounded border font-medium transition-colors ${(p.columns ?? 4) === c ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-600" : "border-gray-200 dark:border-gray-700 text-gray-500 hover:border-gray-300"}`}>
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </Field>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* ── SIDEBAR specific ── */}
+        {type === "sidebar" && (
+          <>
+            <Separator />
+            <Field label="Sidebar Title">
+              {textInput(p.sidebarTitle, v => onPropsChange({ sidebarTitle: v }), "Contact & Details")}
+            </Field>
+          </>
+        )}
+
+        {/* ── INFO for layout-only sections ── */}
+        {["filters", "grid", "description", "moreDetails"].includes(type) && (
+          <>
+            <Separator />
+            <p className="text-xs text-gray-400 leading-relaxed">
+              This section's appearance is controlled by your directory data and card field settings. 
+              Use the Page Templates tab in Settings to configure which fields are shown.
+            </p>
+          </>
+        )}
 
       </div>
     </div>
@@ -578,22 +872,54 @@ export default function BuilderPage() {
 
   const [ts, setTs] = useState<TemplateSettings | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+
+  const latestTsRef = useRef<TemplateSettings | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isDirtyRef = useRef(false);
 
   useEffect(() => {
-    if (settingsData) {
-      setTs(mergeTemplateSettings((settingsData as any).templateSettings));
+    if (settingsData && !ts) {
+      const merged = mergeTemplateSettings((settingsData as any).templateSettings);
+      setTs(merged);
+      latestTsRef.current = merged;
     }
   }, [settingsData]);
 
   const pageKey = pageType === "homepage" ? "homepage" : pageType === "browse" ? "browse" : "entry";
   const blocks: SectionConfig[] = ts ? ts[pageKey].sections : [];
 
-  const updateBlocks = (newBlocks: SectionConfig[]) => {
-    if (!ts) return;
-    setTs({ ...ts, [pageKey]: { ...ts[pageKey], sections: newBlocks } } as TemplateSettings);
-    setIsDirty(true);
-  };
+  // Auto-save: triggers 1.5s after the last change
+  const scheduleAutoSave = useCallback(() => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    setSaveState("saving");
+    autoSaveTimerRef.current = setTimeout(async () => {
+      const current = latestTsRef.current;
+      if (!current || !settingsData) return;
+      try {
+        await updateMutation.mutateAsync({ data: { templateSettings: current } as any });
+        qc.invalidateQueries({ queryKey: getGetPublicSettingsQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+        setSaveState("saved");
+        isDirtyRef.current = false;
+        setTimeout(() => setSaveState("idle"), 2500);
+      } catch {
+        setSaveState("idle");
+      }
+    }, 1500);
+  }, [settingsData, updateMutation, qc]);
+
+  const updateBlocks = useCallback((newBlocks: SectionConfig[]) => {
+    if (!latestTsRef.current) return;
+    const newTs = {
+      ...latestTsRef.current,
+      [pageKey]: { ...latestTsRef.current[pageKey], sections: newBlocks },
+    } as TemplateSettings;
+    latestTsRef.current = newTs;
+    setTs(newTs);
+    isDirtyRef.current = true;
+    scheduleAutoSave();
+  }, [pageKey, scheduleAutoSave]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -606,15 +932,21 @@ export default function BuilderPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!ts || !settingsData) return;
+  const handleManualSave = async () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    const current = latestTsRef.current;
+    if (!current || !settingsData) return;
+    setSaveState("saving");
     try {
-      await updateMutation.mutateAsync({ data: { templateSettings: ts } as any });
-      toast({ title: "Template saved!" });
+      await updateMutation.mutateAsync({ data: { templateSettings: current } as any });
       qc.invalidateQueries({ queryKey: getGetPublicSettingsQueryKey() });
       qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
-      setIsDirty(false);
+      toast({ title: "Template saved!" });
+      setSaveState("saved");
+      isDirtyRef.current = false;
+      setTimeout(() => setSaveState("idle"), 2500);
     } catch (e: any) {
+      setSaveState("idle");
       toast({ title: "Error saving", description: e.message, variant: "destructive" });
     }
   };
@@ -632,13 +964,10 @@ export default function BuilderPage() {
   const addBlock = (def: BlockDefinition) => {
     const isUnique = def.type.startsWith("custom-");
     const newId = isUnique ? `${def.type}-${Date.now()}` : def.type;
-    const already = blocks.find(b => b.id === newId);
-    if (already && !isUnique) return;
+    if (!isUnique && blocks.find(b => b.id === newId)) return;
     const newBlock: SectionConfig = {
-      id: newId,
-      type: isUnique ? def.type : undefined,
-      label: def.label,
-      enabled: true,
+      id: newId, type: isUnique ? def.type : undefined,
+      label: def.label, enabled: true,
       heading: def.defaultHeading ?? "",
       props: { ...(def.defaultProps ?? {}) },
     };
@@ -669,10 +998,8 @@ export default function BuilderPage() {
     <div className="fixed inset-0 flex flex-col bg-gray-100 dark:bg-gray-950 z-50 overflow-hidden">
       {/* ── Top bar ── */}
       <div className="flex items-center gap-3 px-4 h-14 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 flex-shrink-0 shadow-sm">
-        <button
-          onClick={() => navigate("/admin/settings")}
-          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors font-medium"
-        >
+        <button onClick={() => navigate("/admin/settings")}
+          className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 transition-colors font-medium">
           <ChevronLeft className="h-4 w-4" /> Settings
         </button>
         <div className="h-5 w-px bg-gray-200 dark:bg-gray-700" />
@@ -680,47 +1007,47 @@ export default function BuilderPage() {
           <LayoutTemplate className="h-4 w-4 text-blue-500" />
           <span className="font-semibold text-gray-800 dark:text-white">{pageLabel} Builder</span>
         </div>
-        {isDirty && (
-          <span className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
-            Unsaved changes
-          </span>
-        )}
+
+        {/* Auto-save status */}
+        <div className="flex items-center gap-1.5 ml-2">
+          {saveState === "saving" && (
+            <span className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Auto-saving…
+            </span>
+          )}
+          {saveState === "saved" && (
+            <span className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Saved & live
+            </span>
+          )}
+          {saveState === "idle" && isDirtyRef.current && (
+            <span className="text-xs text-gray-400">Unsaved</span>
+          )}
+        </div>
+
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" asChild>
             <a href={previewPath} target="_blank" rel="noopener noreferrer">
               <Eye className="h-4 w-4 mr-1.5" /> Preview
             </a>
           </Button>
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={updateMutation.isPending || !isDirty}
-            style={{ background: isDirty ? themeColor : undefined }}
-          >
-            {updateMutation.isPending
+          <Button size="sm" onClick={handleManualSave} disabled={saveState === "saving"}
+            style={{ background: themeColor }}>
+            {saveState === "saving"
               ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
               : <Save className="h-4 w-4 mr-1.5" />}
-            Save
+            Save Now
           </Button>
         </div>
       </div>
 
-      {/* ── Three-column builder area ── */}
+      {/* ── Three-column builder ── */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left: block library */}
-        <BlockLibraryPanel
-          pageType={pageType}
-          existingIds={blocks.map(b => b.id)}
-          onAdd={addBlock}
-        />
+        <BlockLibraryPanel pageType={pageType} existingIds={blocks.map(b => b.id)} onAdd={addBlock} />
 
-        {/* Center: canvas */}
-        <div
-          className="flex-1 overflow-y-auto p-8"
-          onClick={() => setSelectedId(null)}
-        >
+        {/* Canvas */}
+        <div className="flex-1 overflow-y-auto p-8" onClick={() => setSelectedId(null)}>
           <div className="max-w-2xl mx-auto">
-            {/* Canvas label */}
             <div className="flex items-center gap-3 mb-6">
               <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">{pageLabel} Canvas</span>
@@ -751,17 +1078,17 @@ export default function BuilderPage() {
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl py-24 text-center text-gray-400">
                 <LayoutTemplate className="h-14 w-14 mx-auto mb-4 opacity-20" />
                 <p className="font-semibold text-lg">Canvas is empty</p>
-                <p className="text-sm mt-1">Add sections from the panel on the left to get started.</p>
+                <p className="text-sm mt-1">Add sections from the panel on the left.</p>
               </div>
             )}
 
             <div className="mt-8 text-center text-xs text-gray-400">
-              Drag sections to reorder · Click a section to edit its properties
+              Drag sections to reorder · Click to select and edit properties
             </div>
           </div>
         </div>
 
-        {/* Right: properties panel */}
+        {/* Properties */}
         <PropertiesPanel
           block={selectedBlock}
           onChange={patch => selectedId && updateBlock(selectedId, patch)}

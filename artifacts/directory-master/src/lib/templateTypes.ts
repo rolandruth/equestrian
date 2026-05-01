@@ -34,12 +34,17 @@ export interface SectionProps {
   buttonUrl?: string;
   buttonColor?: string;
   bodyText?: string;
+  richBodyText?: string;
   imageUrl?: string;
   imageCaption?: string;
   maxItems?: number;
   columns?: number;
   sidebarTitle?: string;
   overlayOpacity?: number;
+  headingFontSize?: string;
+  headingColor?: string;
+  bodyFontSize?: string;
+  fontFamily?: string;
 }
 
 export interface SectionConfig {

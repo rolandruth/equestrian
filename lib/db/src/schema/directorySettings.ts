@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -10,6 +10,7 @@ export const directorySettings = pgTable("directory_settings", {
   homepageDescription: text("homepage_description"),
   themeColor: text("theme_color"),
   calloutSections: text("callout_sections"),
+  templateSettings: jsonb("template_settings"),
   installed: boolean("installed").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

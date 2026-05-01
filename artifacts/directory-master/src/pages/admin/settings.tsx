@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { 
   useGetSettings, 
   useUpdateSettings,
@@ -15,7 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette } from "lucide-react";
+import { Loader2, Save, Layout } from "lucide-react";
+import { TemplateEditor } from "@/components/template/TemplateEditor";
+import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
 
 const settingsSchema = z.object({
   siteTitle: z.string().min(2, "Site title is required"),
@@ -34,6 +36,10 @@ export default function AdminSettingsPage() {
   
   const { data: settings, isLoading } = useGetSettings();
   const updateMutation = useUpdateSettings();
+
+  const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(
+    mergeTemplateSettings(null)
+  );
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
@@ -57,18 +63,18 @@ export default function AdminSettingsPage() {
         themeColor: settings.themeColor || "",
         calloutSections: settings.calloutSections || "",
       });
+      setTemplateSettings(mergeTemplateSettings((settings as any).templateSettings));
     }
   }, [settings, form]);
 
   const onSubmit = async (data: SettingsFormValues) => {
-    // Clean up empty strings to null for API
     const cleanData = Object.fromEntries(
       Object.entries(data).map(([k, v]) => [k, v === "" ? null : v])
     ) as any;
 
     try {
-      await updateMutation.mutateAsync({ data: cleanData });
-      toast({ title: "Settings updated successfully" });
+      await updateMutation.mutateAsync({ data: { ...cleanData, templateSettings } });
+      toast({ title: "Settings saved successfully" });
       queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetPublicSettingsQueryKey() });
     } catch (e: any) {
@@ -90,6 +96,7 @@ export default function AdminSettingsPage() {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           
+          {/* Brand Identity */}
           <Card>
             <CardHeader>
               <CardTitle>Brand Identity</CardTitle>
@@ -133,9 +140,12 @@ export default function AdminSettingsPage() {
                   <FormItem>
                     <FormLabel>Primary Theme Color</FormLabel>
                     <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <Input type="color" className="w-12 h-10 p-1 cursor-pointer border-0 shadow-none" {...field} value={field.value || '#3b82f6'} />
-                      </div>
+                      <Input
+                        type="color"
+                        className="w-12 h-10 p-1 cursor-pointer border-0 shadow-none"
+                        {...field}
+                        value={field.value || '#3b82f6'}
+                      />
                       <FormControl>
                         <Input className="w-32 font-mono" placeholder="#3b82f6" {...field} value={field.value || ''} />
                       </FormControl>
@@ -148,10 +158,11 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Homepage Content */}
           <Card>
             <CardHeader>
               <CardTitle>Homepage Content</CardTitle>
-              <CardDescription>Customize the hero section of your directory.</CardDescription>
+              <CardDescription>Customize the hero section text of your directory.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <FormField
@@ -184,6 +195,23 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Page Templates */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Layout className="h-5 w-5" />
+                Page Templates
+              </CardTitle>
+              <CardDescription>
+                Customize fonts, banner images, section visibility and order, and field display for each of your public-facing pages. Changes take effect as soon as you save.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TemplateEditor value={templateSettings} onChange={setTemplateSettings} />
+            </CardContent>
+          </Card>
+
+          {/* Advanced */}
           <Card>
             <CardHeader>
               <CardTitle>Advanced</CardTitle>

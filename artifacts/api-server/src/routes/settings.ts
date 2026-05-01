@@ -15,6 +15,7 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     homepageDescription: s.homepageDescription,
     themeColor: s.themeColor,
     calloutSections: s.calloutSections,
+    templateSettings: s.templateSettings ?? null,
     installed: s.installed,
     updatedAt: s.updatedAt.toISOString(),
   };
@@ -36,19 +37,14 @@ router.patch("/", requireAdmin, async (req, res) => {
     const [existing] = await db.select().from(directorySettings).limit(1);
     if (!existing) { res.status(404).json({ error: "Settings not found" }); return; }
 
-    const updates: Record<string, unknown> = { updatedAt: new Date() };
-    const allowed = ["siteTitle", "logoUrl", "homepageHeadline", "homepageDescription", "themeColor", "calloutSections"];
-    for (const key of allowed) {
-      if (req.body[key] !== undefined) updates[key === "siteTitle" ? "siteTitle" : key] = req.body[key];
-    }
-
     const dbUpdates: Record<string, unknown> = { updatedAt: new Date() };
-    if (req.body.siteTitle !== undefined) dbUpdates.siteTitle = req.body.siteTitle;
-    if (req.body.logoUrl !== undefined) dbUpdates.logoUrl = req.body.logoUrl;
-    if (req.body.homepageHeadline !== undefined) dbUpdates.homepageHeadline = req.body.homepageHeadline;
+    if (req.body.siteTitle !== undefined)           dbUpdates.siteTitle = req.body.siteTitle;
+    if (req.body.logoUrl !== undefined)             dbUpdates.logoUrl = req.body.logoUrl;
+    if (req.body.homepageHeadline !== undefined)    dbUpdates.homepageHeadline = req.body.homepageHeadline;
     if (req.body.homepageDescription !== undefined) dbUpdates.homepageDescription = req.body.homepageDescription;
-    if (req.body.themeColor !== undefined) dbUpdates.themeColor = req.body.themeColor;
-    if (req.body.calloutSections !== undefined) dbUpdates.calloutSections = req.body.calloutSections;
+    if (req.body.themeColor !== undefined)          dbUpdates.themeColor = req.body.themeColor;
+    if (req.body.calloutSections !== undefined)     dbUpdates.calloutSections = req.body.calloutSections;
+    if (req.body.templateSettings !== undefined)    dbUpdates.templateSettings = req.body.templateSettings;
 
     const [updated] = await db.update(directorySettings).set(dbUpdates).where(eq(directorySettings.id, existing.id)).returning();
     res.json(formatSettings(updated));

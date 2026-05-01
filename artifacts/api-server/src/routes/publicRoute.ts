@@ -138,6 +138,7 @@ router.get("/settings", async (req, res) => {
         homepageDescription: null,
         themeColor: null,
         calloutSections: null,
+        templateSettings: null,
         installed: false,
         updatedAt: new Date().toISOString(),
       });
@@ -151,6 +152,7 @@ router.get("/settings", async (req, res) => {
       homepageDescription: settings.homepageDescription,
       themeColor: settings.themeColor,
       calloutSections: settings.calloutSections,
+      templateSettings: settings.templateSettings ?? null,
       installed: settings.installed,
       updatedAt: settings.updatedAt.toISOString(),
     });

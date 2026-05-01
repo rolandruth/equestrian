@@ -8,12 +8,12 @@ export interface FontOption {
 }
 
 export const FONTS: FontOption[] = [
-  { key: "inter",       label: "Inter",            family: "'Inter', sans-serif",            googleUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" },
-  { key: "poppins",     label: "Poppins",          family: "'Poppins', sans-serif",          googleUrl: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" },
-  { key: "roboto",      label: "Roboto",           family: "'Roboto', sans-serif",           googleUrl: "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" },
-  { key: "georgia",     label: "Georgia",          family: "Georgia, 'Times New Roman', serif", googleUrl: "" },
-  { key: "playfair",    label: "Playfair Display", family: "'Playfair Display', serif",      googleUrl: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap" },
-  { key: "montserrat",  label: "Montserrat",       family: "'Montserrat', sans-serif",       googleUrl: "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" },
+  { key: "inter",      label: "Inter",            family: "'Inter', sans-serif",            googleUrl: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" },
+  { key: "poppins",    label: "Poppins",          family: "'Poppins', sans-serif",          googleUrl: "https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" },
+  { key: "roboto",     label: "Roboto",           family: "'Roboto', sans-serif",           googleUrl: "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" },
+  { key: "georgia",    label: "Georgia",          family: "Georgia, 'Times New Roman', serif", googleUrl: "" },
+  { key: "playfair",   label: "Playfair Display", family: "'Playfair Display', serif",      googleUrl: "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&display=swap" },
+  { key: "montserrat", label: "Montserrat",       family: "'Montserrat', sans-serif",       googleUrl: "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" },
 ];
 
 export function getFontFamily(key: string): string {
@@ -24,11 +24,72 @@ export function getFontGoogleUrl(key: string): string {
   return FONTS.find(f => f.key === key)?.googleUrl ?? "";
 }
 
+export interface SectionProps {
+  backgroundColor?: string;
+  backgroundImage?: string;
+  textColor?: string;
+  textAlignment?: "left" | "center" | "right";
+  padding?: "sm" | "md" | "lg";
+  buttonText?: string;
+  buttonUrl?: string;
+  buttonColor?: string;
+  bodyText?: string;
+  imageUrl?: string;
+  imageCaption?: string;
+  maxItems?: number;
+  columns?: number;
+  sidebarTitle?: string;
+  overlayOpacity?: number;
+}
+
 export interface SectionConfig {
   id: string;
+  type?: string;
   label: string;
   enabled: boolean;
   heading?: string;
+  props?: SectionProps;
+}
+
+export function getBlockType(block: SectionConfig): string {
+  return block.type ?? block.id;
+}
+
+export interface BlockDefinition {
+  type: string;
+  label: string;
+  description: string;
+  defaultProps?: SectionProps;
+  defaultHeading?: string;
+}
+
+export const HOMEPAGE_BLOCK_DEFS: BlockDefinition[] = [
+  { type: "hero",        label: "Hero Banner",      description: "Full-width headline with optional background image and CTA button", defaultProps: { textAlignment: "center", overlayOpacity: 50 } },
+  { type: "categories",  label: "Category Grid",    description: "Grid of clickable category cards", defaultHeading: "Browse by Category", defaultProps: { maxItems: 8, columns: 4 } },
+  { type: "featured",    label: "Featured Entries", description: "Grid of featured/highlighted entries", defaultHeading: "Featured", defaultProps: { maxItems: 3, columns: 3 } },
+  { type: "recent",      label: "Recent Entries",   description: "Most recently added directory entries", defaultHeading: "Recently Added", defaultProps: { maxItems: 6, columns: 3 } },
+  { type: "custom-text", label: "Text Block",       description: "Custom heading and body text paragraph", defaultProps: { textAlignment: "left", bodyText: "Add your custom content here." } },
+  { type: "custom-image",label: "Image Block",      description: "Display a full-width image with optional caption", defaultProps: {} },
+];
+
+export const BROWSE_BLOCK_DEFS: BlockDefinition[] = [
+  { type: "header",  label: "Page Header",      description: "Title and result count for the browse page", defaultHeading: "All Entries" },
+  { type: "filters", label: "Search & Filters", description: "Search bar and category sidebar filter panel" },
+  { type: "grid",    label: "Entry Cards Grid", description: "Main grid of directory entry cards" },
+];
+
+export const ENTRY_BLOCK_DEFS: BlockDefinition[] = [
+  { type: "header",      label: "Title & Summary",        description: "Entry title, category badge, and summary" },
+  { type: "description", label: "Description",            description: "Full description body text" },
+  { type: "moreDetails", label: "Additional Information", description: "Extended details section" },
+  { type: "sidebar",     label: "Details Sidebar",        description: "Contact info and metadata in a side panel", defaultProps: { sidebarTitle: "Contact & Details" } },
+  { type: "related",     label: "Related Entries",        description: "Grid of similar entries in the same category", defaultHeading: "Related Entries", defaultProps: { maxItems: 3 } },
+];
+
+export function getBlockDefs(pageType: string): BlockDefinition[] {
+  if (pageType === "homepage") return HOMEPAGE_BLOCK_DEFS;
+  if (pageType === "browse")   return BROWSE_BLOCK_DEFS;
+  return ENTRY_BLOCK_DEFS;
 }
 
 export interface HomepageTemplate {
@@ -64,9 +125,9 @@ export const DEFAULT_HOMEPAGE_SECTIONS: SectionConfig[] = [
 ];
 
 export const DEFAULT_BROWSE_SECTIONS: SectionConfig[] = [
-  { id: "header",  label: "Page Header",        enabled: true, heading: "All Entries" },
-  { id: "filters", label: "Search & Filters",   enabled: true },
-  { id: "grid",    label: "Entry Cards Grid",   enabled: true },
+  { id: "header",  label: "Page Header",       enabled: true, heading: "All Entries" },
+  { id: "filters", label: "Search & Filters",  enabled: true },
+  { id: "grid",    label: "Entry Cards Grid",  enabled: true },
 ];
 
 export const DEFAULT_ENTRY_SECTIONS: SectionConfig[] = [

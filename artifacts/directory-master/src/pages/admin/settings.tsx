@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "wouter";
 import { 
   useGetSettings, 
   useUpdateSettings,
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush } from "lucide-react";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
 import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
 
@@ -29,6 +30,36 @@ const settingsSchema = z.object({
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
+
+const BUILDER_PAGES = [
+  {
+    key: "homepage",
+    label: "Homepage",
+    description: "Hero, category grid, featured & recent sections",
+    icon: Home,
+    color: "bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800",
+    iconColor: "text-violet-600 dark:text-violet-400",
+    badgeColor: "bg-violet-100 dark:bg-violet-900 text-violet-700 dark:text-violet-300",
+  },
+  {
+    key: "browse",
+    label: "Browse / Categories",
+    description: "Search filters, category sidebar & entry card grid",
+    icon: Search,
+    color: "bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800",
+    iconColor: "text-blue-600 dark:text-blue-400",
+    badgeColor: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
+  },
+  {
+    key: "entry",
+    label: "Entry Detail",
+    description: "Title, description, details sidebar & related entries",
+    icon: FileText,
+    color: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    badgeColor: "bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300",
+  },
+];
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
@@ -117,7 +148,6 @@ export default function AdminSettingsPage() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="logoUrl"
@@ -132,7 +162,6 @@ export default function AdminSettingsPage() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="themeColor"
@@ -178,7 +207,6 @@ export default function AdminSettingsPage() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="homepageDescription"
@@ -195,7 +223,50 @@ export default function AdminSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Page Templates */}
+          {/* Visual Page Builder */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Paintbrush className="h-5 w-5 text-primary" />
+                    Visual Page Builder
+                  </CardTitle>
+                  <CardDescription className="mt-1.5">
+                    Open the drag-and-drop builder to visually design each page — rearrange sections, 
+                    add custom text and image blocks, and configure per-section styles.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {BUILDER_PAGES.map(page => {
+                  const Icon = page.icon;
+                  return (
+                    <Link key={page.key} href={`/admin/builder/${page.key}`}>
+                      <div className={`group border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md hover:-translate-y-0.5 ${page.color}`}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className={`p-2 rounded-lg bg-white dark:bg-gray-900 shadow-sm border border-white/50 dark:border-gray-700`}>
+                            <Icon className={`h-5 w-5 ${page.iconColor}`} />
+                          </div>
+                          <ArrowRight className={`h-4 w-4 ${page.iconColor} opacity-0 group-hover:opacity-100 transition-opacity mt-1`} />
+                        </div>
+                        <h4 className="font-semibold text-sm text-gray-800 dark:text-white mb-1">{page.label}</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{page.description}</p>
+                        <div className={`mt-3 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${page.badgeColor}`}>
+                          <Paintbrush className="h-3 w-3" />
+                          Open Builder
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Page Templates (fine-grained controls) */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -203,7 +274,8 @@ export default function AdminSettingsPage() {
                 Page Templates
               </CardTitle>
               <CardDescription>
-                Customize fonts, banner images, section visibility and order, and field display for each of your public-facing pages. Changes take effect as soon as you save.
+                Fine-grained controls: fonts, banner images, section visibility and order, and field display for each page. 
+                Changes here are saved along with all other settings when you click Save below.
               </CardDescription>
             </CardHeader>
             <CardContent>

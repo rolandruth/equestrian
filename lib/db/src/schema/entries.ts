@@ -21,6 +21,11 @@ export const entries = pgTable("entries", {
   customFields: jsonb("custom_fields"),
   sourceCsvRow: text("source_csv_row"),
   published: boolean("published").notNull().default(false),
+  slug: text("slug"),
+  metaTitle: text("meta_title"),
+  metaDescription: text("meta_description"),
+  ogTitle: text("og_title"),
+  ogDescription: text("og_description"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

@@ -137,6 +137,11 @@ function formatEntry(e: typeof entries.$inferSelect) {
     customFields: e.customFields,
     sourceCsvRow: e.sourceCsvRow,
     published: e.published,
+    slug: e.slug,
+    metaTitle: e.metaTitle,
+    metaDescription: e.metaDescription,
+    ogTitle: e.ogTitle,
+    ogDescription: e.ogDescription,
     createdAt: e.createdAt.toISOString(),
     updatedAt: e.updatedAt.toISOString(),
   };

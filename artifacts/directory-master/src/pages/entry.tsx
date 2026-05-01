@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useParams, Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { 
   useGetPublicEntry,
   useListPublicEntries,
@@ -25,15 +27,33 @@ import { FontLoader } from "@/components/template/FontLoader";
 import { mergeTemplateSettings, getFontFamily, ENTRY_SIDEBAR_FIELDS } from "@/lib/templateTypes";
 import type { SectionProps } from "@/lib/templateTypes";
 
+async function fetchEntryBySlug(slug: string) {
+  const res = await fetch(`/api/public/entries/${encodeURIComponent(slug)}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 export default function EntryPage() {
-  const { id } = useParams();
-  const entryId = id === "demo1" || id === "demo2" || id === "demo3" ? 0 : parseInt(id || "0", 10);
-  const isDemo = entryId === 0;
+  const { id: idOrSlug } = useParams();
+  const isDemo = idOrSlug === "demo1" || idOrSlug === "demo2" || idOrSlug === "demo3";
+  const numericId = isDemo ? 0 : parseInt(idOrSlug || "0", 10);
+  const isNumeric = !isNaN(numericId) && String(numericId) === idOrSlug;
 
   const { data: settings } = useGetPublicSettings();
-  const { data: entry, isLoading } = useGetPublicEntry(entryId, {
-    query: { enabled: !isDemo && entryId > 0 }
+
+  const { data: entryById, isLoading: loadingById } = useGetPublicEntry(
+    isNumeric ? numericId : 0,
+    { query: { enabled: !isDemo && isNumeric && numericId > 0 } }
+  );
+
+  const { data: entryBySlug, isLoading: loadingBySlug } = useQuery({
+    queryKey: ["public-entry-slug", idOrSlug],
+    queryFn: () => fetchEntryBySlug(idOrSlug!),
+    enabled: !isDemo && !isNumeric && !!idOrSlug,
   });
+
+  const isLoading = loadingById || loadingBySlug;
+  const entry = isNumeric ? entryById : entryBySlug;
 
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const entryFont = getFontFamily(ts.entry.font);
@@ -43,7 +63,8 @@ export default function EntryPage() {
   const getSectionProps = (id: string): SectionProps => getEntrySection(id)?.props ?? {};
 
   const sidebarFields = ts.entry.sidebarFields;
-  const showSidebarField = (id: string) => sidebarFields.includes(id);
+
+  const siteTitle = (settings as any)?.siteTitle || "Directory Master";
 
   const demoEntry = {
     title: "Tech Conference 2024",
@@ -63,10 +84,43 @@ export default function EntryPage() {
 
   const { data: relatedData } = useListPublicEntries({
     category: displayEntry?.category || undefined,
-    limit: 3
+    limit: 4
   }, {
     query: { enabled: !!displayEntry?.category && !isDemo }
   });
+
+  // Inject SEO meta tags
+  useEffect(() => {
+    if (!displayEntry) return;
+    const e = displayEntry as any;
+
+    const metaTitle = e.metaTitle || `${e.title} | ${siteTitle}`;
+    const metaDescription = e.metaDescription || e.summary || "";
+    const ogTitle = e.ogTitle || e.title;
+    const ogDescription = e.ogDescription || e.summary || "";
+
+    document.title = metaTitle;
+
+    const setMeta = (attr: string, value: string, content: string) => {
+      let el = document.querySelector(`meta[${attr}="${value}"]`) as HTMLMetaElement | null;
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, value);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+    };
+
+    setMeta("name", "description", metaDescription);
+    setMeta("property", "og:title", ogTitle);
+    setMeta("property", "og:description", ogDescription);
+    setMeta("property", "og:site_name", siteTitle);
+    setMeta("property", "og:type", "article");
+
+    return () => {
+      document.title = siteTitle;
+    };
+  }, [displayEntry, siteTitle]);
 
   if (isLoading && !isDemo) {
     return (
@@ -207,7 +261,8 @@ export default function EntryPage() {
 
   const headerProps = getSectionProps("header");
   const sidebarProps = getSectionProps("sidebar");
-  const relatedProps = getSectionProps("related");
+
+  const entryNumericId = isNumeric ? numericId : (displayEntry as any)?.id;
 
   return (
     <div style={{ fontFamily: entryFont }}>
@@ -314,12 +369,12 @@ export default function EntryPage() {
         </div>
 
         {/* Related Entries */}
-        {getSectionEnabled("related") && !isDemo && relatedData && relatedData.entries.filter(e => e.id !== entryId).length > 0 && (
+        {getSectionEnabled("related") && !isDemo && relatedData && relatedData.entries.filter(e => e.id !== entryNumericId).length > 0 && (
           <div className="pt-8">
             <h2 className="text-2xl font-bold tracking-tight mb-6">Similar in {displayEntry.category}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedData.entries.filter(e => e.id !== entryId).slice(0, 3).map(related => (
-                <Link key={related.id} href={`/entry/${related.id}`}>
+              {relatedData.entries.filter(e => e.id !== entryNumericId).slice(0, 3).map(related => (
+                <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
                   <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle>

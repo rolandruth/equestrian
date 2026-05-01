@@ -9,7 +9,8 @@ import {
   Settings, 
   Users, 
   LogOut,
-  Globe
+  Globe,
+  Search
 } from "lucide-react";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/admin/entries", label: "Entries", icon: Files },
     { href: "/admin/categories", label: "Categories", icon: Tags },
     { href: "/admin/import", label: "Import CSV", icon: Upload },
+    { href: "/admin/seo", label: "SEO", icon: Search },
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/settings", label: "Settings", icon: Settings },
   ];

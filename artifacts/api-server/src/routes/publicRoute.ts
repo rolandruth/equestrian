@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { entries, directorySettings } from "@workspace/db";
-import { eq, ilike, and, desc, asc, count, sql } from "drizzle-orm";
+import { eq, ilike, and, desc, asc, count, sql, or } from "drizzle-orm";
 
 const router = Router();
 
@@ -25,6 +25,11 @@ function formatEntry(e: typeof entries.$inferSelect) {
     customFields: e.customFields,
     sourceCsvRow: e.sourceCsvRow,
     published: e.published,
+    slug: e.slug,
+    metaTitle: e.metaTitle,
+    metaDescription: e.metaDescription,
+    ogTitle: e.ogTitle,
+    ogDescription: e.ogDescription,
     createdAt: e.createdAt.toISOString(),
     updatedAt: e.updatedAt.toISOString(),
   };
@@ -65,11 +70,17 @@ router.get("/entries", async (req, res) => {
   }
 });
 
-router.get("/entries/:id", async (req, res) => {
+router.get("/entries/:idOrSlug", async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const [entry] = await db.select().from(entries)
-      .where(and(eq(entries.id, id), eq(entries.published, true))).limit(1);
+    const param = req.params.idOrSlug;
+    const numericId = parseInt(param, 10);
+    const isNumeric = !isNaN(numericId) && String(numericId) === param;
+
+    const where = isNumeric
+      ? and(eq(entries.id, numericId), eq(entries.published, true))
+      : and(eq(entries.slug, param), eq(entries.published, true));
+
+    const [entry] = await db.select().from(entries).where(where).limit(1);
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     res.json(formatEntry(entry));
   } catch (err) {

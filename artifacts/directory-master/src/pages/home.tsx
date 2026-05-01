@@ -68,7 +68,7 @@ export default function HomePage() {
         )}
       </CardContent>
       <CardFooter className="pt-4 border-t">
-        <Link href={`/entry/${entry.id}`} className="w-full">
+        <Link href={`/entry/${(entry as any).slug || entry.id}`} className="w-full">
           <Button variant="ghost" className="w-full group">
             View Details
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />

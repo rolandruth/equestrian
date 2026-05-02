@@ -30,6 +30,9 @@ const settingsSchema = z.object({
   navbarTextColor: z.string().optional().nullable(),
   heroSearchPlaceholder: z.string().optional().nullable(),
   heroSearchButtonText: z.string().optional().nullable(),
+  footerText: z.string().optional().nullable(),
+  privacyPolicyUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  termsUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   calloutSections: z.string().optional().nullable(),
 });
 
@@ -88,6 +91,9 @@ export default function AdminSettingsPage() {
       navbarTextColor: "",
       heroSearchPlaceholder: "",
       heroSearchButtonText: "",
+      footerText: "",
+      privacyPolicyUrl: "",
+      termsUrl: "",
       calloutSections: "",
     }
   });
@@ -104,6 +110,9 @@ export default function AdminSettingsPage() {
         navbarTextColor: (settings as any).navbarTextColor || "",
         heroSearchPlaceholder: (settings as any).heroSearchPlaceholder || "",
         heroSearchButtonText: (settings as any).heroSearchButtonText || "",
+        footerText: (settings as any).footerText || "",
+        privacyPolicyUrl: (settings as any).privacyPolicyUrl || "",
+        termsUrl: (settings as any).termsUrl || "",
         calloutSections: settings.calloutSections || "",
       });
       setTemplateSettings(mergeTemplateSettings((settings as any).templateSettings));
@@ -421,6 +430,60 @@ export default function AdminSettingsPage() {
             </CardHeader>
             <CardContent>
               <TemplateEditor value={templateSettings} onChange={setTemplateSettings} />
+            </CardContent>
+          </Card>
+
+          {/* Footer */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Footer</CardTitle>
+              <CardDescription>Customize the bottom bar shown on every public page.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="footerText"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Footer Text</FormLabel>
+                    <FormControl>
+                      <Input placeholder="© 2024 Your Company. All rights reserved." {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormDescription>Overrides the default copyright line. Leave blank to use the site title automatically.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <FormField
+                  control={form.control}
+                  name="privacyPolicyUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Privacy Policy URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://example.com/privacy" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormDescription>Shown as a link in the footer.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="termsUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Terms &amp; Conditions URL</FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://example.com/terms" {...field} value={field.value || ''} />
+                      </FormControl>
+                      <FormDescription>Shown as a link in the footer.</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 

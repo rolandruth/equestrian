@@ -18,6 +18,9 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     navbarTextColor: s.navbarTextColor,
     heroSearchPlaceholder: s.heroSearchPlaceholder,
     heroSearchButtonText: s.heroSearchButtonText,
+    footerText: s.footerText,
+    privacyPolicyUrl: s.privacyPolicyUrl,
+    termsUrl: s.termsUrl,
     calloutSections: s.calloutSections,
     templateSettings: s.templateSettings ?? null,
     installed: s.installed,
@@ -51,6 +54,9 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.navbarTextColor !== undefined)         dbUpdates.navbarTextColor = req.body.navbarTextColor;
     if (req.body.heroSearchPlaceholder !== undefined)   dbUpdates.heroSearchPlaceholder = req.body.heroSearchPlaceholder;
     if (req.body.heroSearchButtonText !== undefined)    dbUpdates.heroSearchButtonText = req.body.heroSearchButtonText;
+    if (req.body.footerText !== undefined)              dbUpdates.footerText = req.body.footerText;
+    if (req.body.privacyPolicyUrl !== undefined)        dbUpdates.privacyPolicyUrl = req.body.privacyPolicyUrl;
+    if (req.body.termsUrl !== undefined)                dbUpdates.termsUrl = req.body.termsUrl;
     if (req.body.calloutSections !== undefined)         dbUpdates.calloutSections = req.body.calloutSections;
     if (req.body.templateSettings !== undefined)    dbUpdates.templateSettings = req.body.templateSettings;
 

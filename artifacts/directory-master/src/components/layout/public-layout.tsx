@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
-import { useGetPublicSettings, useLogout } from "@workspace/api-client-react";
-import { Search, Menu, X } from "lucide-react";
+import { useGetPublicSettings, useLogout, useGetCurrentUser } from "@workspace/api-client-react";
+import { Search, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScriptInjector } from "./ScriptInjector";
@@ -14,6 +14,8 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { token, logout: clearToken } = useAuth();
   const logoutMutation = useLogout();
   const isLoggedIn = Boolean(token);
+  const { data: currentUser } = useGetCurrentUser({ query: { enabled: isLoggedIn } });
+  const isAdmin = isLoggedIn && currentUser?.role === "admin";
 
   const handleSignOut = async () => {
     setIsMenuOpen(false);
@@ -94,6 +96,16 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               >
                 Browse All
               </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className={`${linkClass} flex items-center gap-1.5`}
+                  style={textStyle}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Link>
+              )}
               {isLoggedIn ? (
                 <button
                   onClick={handleSignOut}
@@ -157,6 +169,17 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               >
                 Browse All
               </Link>
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium"
+                  style={navbarText ? textStyle : undefined}
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Dashboard
+                </Link>
+              )}
               {isLoggedIn ? (
                 <button
                   onClick={handleSignOut}

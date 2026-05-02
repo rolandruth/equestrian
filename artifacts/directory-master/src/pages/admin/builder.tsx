@@ -22,6 +22,7 @@ import {
   FileText, Info, PanelRight, Link2, Heading1, AlignLeft, AlignCenter,
   AlignRight, Plus, X, Layers, CheckCircle2, RefreshCw,
   Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Settings2,
+  Sparkles, RotateCcw,
 } from "lucide-react";
 import {
   DndContext, closestCenter, DragEndEvent, useSensor, useSensors, PointerSensor,
@@ -39,6 +40,7 @@ import Underline from "@tiptap/extension-underline";
 import {
   type SectionConfig, type SectionProps, type BlockDefinition, type TemplateSettings,
   mergeTemplateSettings, getBlockType, getBlockDefs, FONTS, getFontFamily,
+  DEFAULT_HOMEPAGE_SECTIONS,
 } from "@/lib/templateTypes";
 
 // ─── Block type icon map ─────────────────────────────────────────────────
@@ -884,6 +886,8 @@ export default function BuilderPage() {
   const [ts, setTs] = useState<TemplateSettings | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [aiEnhancing, setAiEnhancing] = useState(false);
+  const [aiEnhanced, setAiEnhanced] = useState(false);
 
   const latestTsRef = useRef<TemplateSettings | null>(null);
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -993,6 +997,46 @@ export default function BuilderPage() {
     if (selectedId === id) setSelectedId(null);
   };
 
+  const handleAiEnhance = async () => {
+    if (aiEnhancing) return;
+    setAiEnhancing(true);
+    try {
+      const token = localStorage.getItem("token");
+      const resp = await fetch("/api/builder/ai-enhance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          sections: blocks,
+          siteTitle: (settingsData as any)?.siteTitle,
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || "Enhancement failed");
+      }
+      const data = await resp.json();
+      if (data.sections && Array.isArray(data.sections)) {
+        updateBlocks(data.sections);
+        setAiEnhanced(true);
+        toast({ title: "Homepage enhanced by AI!", description: "Review the new layout. Use 'Restore Defaults' to undo." });
+      }
+    } catch (e: any) {
+      toast({ title: "Enhancement failed", description: e.message, variant: "destructive" });
+    } finally {
+      setAiEnhancing(false);
+    }
+  };
+
+  const handleRestoreDefaults = () => {
+    updateBlocks(DEFAULT_HOMEPAGE_SECTIONS.map(s => ({ ...s })));
+    setAiEnhanced(false);
+    setSelectedId(null);
+    toast({ title: "Restored to default layout" });
+  };
+
   const pageLabel = pageType === "homepage" ? "Homepage" : pageType === "browse" ? "Browse Page" : "Entry Detail";
   const previewPath = pageType === "homepage" ? "/" : pageType === "browse" ? "/browse" : "/entry/demo1";
   const themeColor = (settingsData as any)?.themeColor || "#3b82f6";
@@ -1037,6 +1081,30 @@ export default function BuilderPage() {
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          {/* AI buttons — homepage only */}
+          {pageType === "homepage" && (
+            <>
+              {aiEnhanced && (
+                <Button variant="outline" size="sm" onClick={handleRestoreDefaults}
+                  className="border-gray-300 text-gray-600 hover:bg-gray-50">
+                  <RotateCcw className="h-4 w-4 mr-1.5" /> Restore Defaults
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAiEnhance}
+                disabled={aiEnhancing}
+                className="border-purple-300 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-950/30"
+              >
+                {aiEnhancing
+                  ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                  : <Sparkles className="h-4 w-4 mr-1.5" />}
+                {aiEnhancing ? "Enhancing…" : "Enhance With AI"}
+              </Button>
+            </>
+          )}
+
           <Button variant="outline" size="sm" asChild>
             <a href={previewPath} target="_blank" rel="noopener noreferrer">
               <Eye className="h-4 w-4 mr-1.5" /> Preview

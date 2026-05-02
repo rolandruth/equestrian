@@ -340,6 +340,23 @@ export default function EntryPage() {
                     <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
                   </>
                 )}
+
+                {/* Custom field sections — created from AI-assisted CSV import */}
+                {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
+                  if (!value) return null;
+                  const label = key
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase());
+                  return (
+                    <div key={key}>
+                      <Separator className="my-8" />
+                      <h3 className="text-xl font-bold mb-3">{label}</h3>
+                      <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                        {String(value)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 

@@ -339,6 +339,119 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
   }
 }
 
+// POST /api/import/ai-map — use Gemini to intelligently map CSV columns to fields
+router.post("/ai-map", requireEditor, async (req, res) => {
+  try {
+    const { headers, sampleRows } = req.body as { headers: string[]; sampleRows: string[][] };
+    if (!headers || !Array.isArray(headers) || headers.length === 0) {
+      res.status(400).json({ error: "headers array is required" });
+      return;
+    }
+
+    const standardFieldList = AVAILABLE_FIELDS
+      .filter(f => f.value !== "skip")
+      .map(f => `  - "${f.value}": ${f.label} — ${f.description}`)
+      .join("\n");
+
+    const columnInfo = headers.map((col, i) => {
+      const samples = (sampleRows ?? [])
+        .slice(0, 3)
+        .map(row => (row[i] ?? "").trim())
+        .filter(Boolean)
+        .slice(0, 2);
+      return `  - Column: "${col}" | Samples: ${samples.length ? samples.join(" | ") : "(empty)"}`;
+    }).join("\n");
+
+    const prompt = `You are mapping CSV column headers to directory entry fields for a business directory web app.
+
+STANDARD FIELDS AVAILABLE:
+${standardFieldList}
+
+RULES:
+1. Map each column to the best-matching standard field when a clear match exists.
+2. For columns that are domain-specific and don't fit any standard field, use a CUSTOM field:
+   - targetField format: "custom_<snake_case_slug>" (e.g. "custom_insurance_providers")
+   - Set customLabel to a short human-readable heading (e.g. "Insurance Providers")
+   - Custom fields are displayed as individual visible sections on the public entry page.
+3. CRITICAL: Exactly ONE column must be mapped to "category". If no column is obviously a category, pick the most suitable grouping column, or assign it to the column whose values would best group these entries.
+4. Use "skip" only for clearly internal/useless columns (IDs, row numbers, source URLs, etc.).
+5. Set approved: false only for skipped columns.
+
+CSV COLUMNS TO MAP:
+${columnInfo}
+
+Respond with ONLY this JSON (no markdown fences, no explanation):
+{
+  "mappings": [
+    {
+      "csvColumn": "<exact column header>",
+      "targetField": "<standard field OR custom_slug>",
+      "customLabel": "<human-readable label for custom fields, null otherwise>",
+      "confidence": <0.0 to 1.0>,
+      "approved": <true or false>
+    }
+  ]
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      config: { maxOutputTokens: 8192 },
+    });
+
+    const text = response.text ?? "";
+    if (!text) {
+      res.status(500).json({ error: "No response from AI" });
+      return;
+    }
+
+    const parsed = extractJson(text);
+    const mappings: any[] = parsed.mappings ?? [];
+
+    // Ensure sampleValues are included (AI doesn't return these)
+    for (let i = 0; i < headers.length; i++) {
+      const m = mappings.find(x => x.csvColumn === headers[i]);
+      if (m) {
+        m.sampleValues = (sampleRows ?? [])
+          .slice(0, 3)
+          .map(row => (row[i] ?? "").trim())
+          .filter(Boolean);
+      }
+    }
+
+    // Guarantee category is assigned
+    const hasCategoryMapping = mappings.some(m => m.targetField === "category" && m.approved !== false);
+    if (!hasCategoryMapping && mappings.length > 0) {
+      const candidate = mappings.find(m =>
+        m.targetField !== "title" &&
+        m.targetField !== "skip" &&
+        m.approved !== false
+      );
+      if (candidate) candidate.targetField = "category";
+    }
+
+    // Build custom field definitions
+    const customFieldDefs: Array<{ value: string; label: string; description: string }> = [];
+    for (const m of mappings) {
+      if (typeof m.targetField === "string" && m.targetField.startsWith("custom_") && m.customLabel) {
+        if (!customFieldDefs.find(d => d.value === m.targetField)) {
+          customFieldDefs.push({
+            value: m.targetField,
+            label: m.customLabel,
+            description: `Custom section: ${m.customLabel}`,
+          });
+        }
+      }
+    }
+
+    req.log.info({ headers: headers.length, customFields: customFieldDefs.length }, "AI map complete");
+    res.json({ mappings, customFieldDefs });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to run AI mapping" });
+  }
+});
+
 // POST /api/import/analyze — parse headers + suggest mappings
 router.post("/analyze", requireEditor, async (req, res) => {
   try {

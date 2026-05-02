@@ -19,7 +19,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2,
-  CloudUpload, X, ArrowRight, ArrowLeft, Eye, Tag, FolderOpen, Info
+  CloudUpload, X, ArrowRight, ArrowLeft, Eye, Tag, FolderOpen, Info,
+  Sparkles, Wand2
 } from "lucide-react";
 
 type Step = "upload" | "map" | "progress";
@@ -30,12 +31,15 @@ interface ColumnMapping {
   sampleValues: string[];
   confidence: number;
   approved: boolean;
+  isAiMapped?: boolean;
+  customLabel?: string | null;
 }
 
 interface AvailableField {
   value: string;
   label: string;
   description: string;
+  isCustom?: boolean;
 }
 
 function parseCSVLine(line: string): string[] {
@@ -81,6 +85,7 @@ export default function AdminImportPage() {
   const [mappings, setMappings] = useState<ColumnMapping[]>([]);
   const [availableFields, setAvailableFields] = useState<AvailableField[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [isAiMapping, setIsAiMapping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -209,6 +214,67 @@ export default function AdminImportPage() {
     );
   };
 
+  const handleAiMap = async () => {
+    const content = csvContent.trim();
+    if (!content) return;
+    const lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
+    if (lines.length < 2) return;
+
+    const headers = parseCSVLine(lines[0]);
+    const sampleRows = lines.slice(1, 4).map(l => parseCSVLine(l));
+
+    setIsAiMapping(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/import/ai-map", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ headers, sampleRows }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { mappings: aiMappings, customFieldDefs } = await res.json() as {
+        mappings: ColumnMapping[];
+        customFieldDefs: AvailableField[];
+      };
+
+      // Merge AI mappings back (preserve sampleValues from current state)
+      setMappings(prev =>
+        prev.map(m => {
+          const ai = aiMappings.find(a => a.csvColumn === m.csvColumn);
+          if (!ai) return m;
+          return {
+            ...m,
+            targetField: ai.targetField,
+            confidence: ai.confidence ?? m.confidence,
+            approved: ai.approved !== false,
+            isAiMapped: true,
+            customLabel: ai.customLabel ?? null,
+          };
+        })
+      );
+
+      // Add any new custom fields to availableFields
+      if (customFieldDefs?.length) {
+        setAvailableFields(prev => {
+          const existing = new Set(prev.map(f => f.value));
+          const newOnes = customFieldDefs
+            .filter(d => !existing.has(d.value))
+            .map(d => ({ ...d, isCustom: true }));
+          return [...prev, ...newOnes];
+        });
+      }
+
+      toast({ title: "Gemini mapped your columns", description: `${aiMappings.length} columns mapped${customFieldDefs?.length ? `, ${customFieldDefs.length} new custom section${customFieldDefs.length > 1 ? "s" : ""} created` : ""}` });
+    } catch (e: any) {
+      toast({ title: "AI mapping failed", description: e.message, variant: "destructive" });
+    } finally {
+      setIsAiMapping(false);
+    }
+  };
+
   const approvedCount = mappings.filter(m => m.approved).length;
   const skippedCount = mappings.filter(m => !m.approved || m.targetField === "skip").length;
   const rowCount = csvContent.trim().split("\n").filter(Boolean).length - 1;
@@ -312,17 +378,32 @@ export default function AdminImportPage() {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Map Your Columns</h1>
             <p className="text-gray-500 mt-1">
               Review how each CSV column maps to a directory field. Toggle off columns to skip them.
             </p>
           </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
-            <Badge variant="outline">{rowCount} data rows</Badge>
-            <Badge variant="secondary">{approvedCount} columns mapped</Badge>
-            {skippedCount > 0 && <Badge variant="outline">{skippedCount} skipped</Badge>}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="outline">{rowCount} data rows</Badge>
+              <Badge variant="secondary">{approvedCount} columns mapped</Badge>
+              {skippedCount > 0 && <Badge variant="outline">{skippedCount} skipped</Badge>}
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleAiMap}
+              disabled={isAiMapping}
+              className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0 shadow-sm"
+            >
+              {isAiMapping ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Mapping with Gemini…</>
+              ) : (
+                <><Sparkles className="h-4 w-4" /> Map With Gemini</>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -410,6 +491,9 @@ export default function AdminImportPage() {
                   {mappings.map((m) => {
                     const isCategory = m.approved && m.targetField === "category";
                     const isTags = m.approved && m.targetField === "tags";
+                    const isCustom = m.approved && typeof m.targetField === "string" && m.targetField.startsWith("custom_");
+                    const customFieldDef = isCustom ? availableFields.find(f => f.value === m.targetField) : null;
+                    const customLabel = m.customLabel || customFieldDef?.label || m.targetField.replace("custom_", "").replace(/_/g, " ");
                     return (
                       <tr
                         key={m.csvColumn}
@@ -420,6 +504,8 @@ export default function AdminImportPage() {
                             ? "bg-violet-50/50 dark:bg-violet-950/20 hover:bg-violet-50 dark:hover:bg-violet-950/30"
                             : isTags
                             ? "bg-teal-50/50 dark:bg-teal-950/20 hover:bg-teal-50 dark:hover:bg-teal-950/30"
+                            : isCustom
+                            ? "bg-amber-50/40 dark:bg-amber-950/10 hover:bg-amber-50/70 dark:hover:bg-amber-950/20"
                             : "hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
                         }`}
                       >
@@ -436,10 +522,15 @@ export default function AdminImportPage() {
 
                         {/* Column name */}
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <code className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
                               {m.csvColumn}
                             </code>
+                            {m.isAiMapped && (
+                              <span className="inline-flex items-center gap-0.5 text-xs text-indigo-500 dark:text-indigo-400">
+                                <Sparkles className="h-3 w-3" />
+                              </span>
+                            )}
                             {isCategory && (
                               <span className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
                                 <FolderOpen className="h-3 w-3" /> Category
@@ -448,6 +539,11 @@ export default function AdminImportPage() {
                             {isTags && (
                               <span className="inline-flex items-center gap-1 text-xs font-medium text-teal-600 dark:text-teal-400">
                                 <Tag className="h-3 w-3" /> Tags
+                              </span>
+                            )}
+                            {isCustom && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                                <Wand2 className="h-3 w-3" /> Custom Section
                               </span>
                             )}
                           </div>
@@ -473,12 +569,14 @@ export default function AdminImportPage() {
                               onValueChange={(val) => {
                                 updateMapping(m.csvColumn, "targetField", val);
                                 updateMapping(m.csvColumn, "approved", val !== "skip");
+                                updateMapping(m.csvColumn, "isAiMapped", m.isAiMapped);
                               }}
                               disabled={!m.approved}
                             >
                               <SelectTrigger className={`h-8 text-xs w-[220px] ${
-                                isCategory ? "border-violet-300 dark:border-violet-700 ring-violet-100" :
-                                isTags ? "border-teal-300 dark:border-teal-700 ring-teal-100" : ""
+                                isCategory ? "border-violet-300 dark:border-violet-700" :
+                                isTags ? "border-teal-300 dark:border-teal-700" :
+                                isCustom ? "border-amber-300 dark:border-amber-700" : ""
                               }`}>
                                 <SelectValue />
                               </SelectTrigger>
@@ -488,7 +586,9 @@ export default function AdminImportPage() {
                                     <div className="flex items-center gap-2">
                                       {f.value === "category" && <FolderOpen className="h-3 w-3 text-violet-500 shrink-0" />}
                                       {f.value === "tags" && <Tag className="h-3 w-3 text-teal-500 shrink-0" />}
+                                      {f.isCustom && <Wand2 className="h-3 w-3 text-amber-500 shrink-0" />}
                                       <span className="font-medium">{f.label}</span>
+                                      {f.isCustom && <span className="text-xs text-amber-600 dark:text-amber-400 ml-1">custom</span>}
                                     </div>
                                   </SelectItem>
                                 ))}
@@ -504,6 +604,12 @@ export default function AdminImportPage() {
                               <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1">
                                 <Info className="h-3 w-3 shrink-0" />
                                 Comma-separated — each value becomes a searchable tag
+                              </p>
+                            )}
+                            {isCustom && (
+                              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                                <Info className="h-3 w-3 shrink-0" />
+                                Shown as "{customLabel}" section on the entry page
                               </p>
                             )}
                           </div>

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { entries, directorySettings } from "@workspace/db";
+import { entries, directorySettings, categories } from "@workspace/db";
 import { eq, ilike, and, desc, asc, count, sql, or } from "drizzle-orm";
 
 const router = Router();
@@ -100,10 +100,17 @@ router.get("/stats", async (req, res) => {
       .groupBy(entries.category)
       .orderBy(desc(count()));
 
+    const cats = await db.select({ name: categories.name, imageUrl: categories.imageUrl }).from(categories);
+    const imageMap = new Map(cats.map(c => [c.name, c.imageUrl]));
+
     res.json({
       totalEntries: Number(totalEntries.count),
       totalCategories: breakdown.length,
-      categoryBreakdown: breakdown.map(b => ({ category: b.category!, count: Number(b.count) })),
+      categoryBreakdown: breakdown.map(b => ({
+        category: b.category!,
+        count: Number(b.count),
+        imageUrl: imageMap.get(b.category!) ?? null,
+      })),
     });
   } catch (err) {
     req.log.error(err);

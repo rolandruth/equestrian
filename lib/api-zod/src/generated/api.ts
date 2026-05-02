@@ -8,6 +8,32 @@
 import * as zod from "zod";
 
 /**
+ * @summary Request a presigned upload URL
+ */
+export const RequestUploadUrlBody = zod.object({
+  name: zod.string(),
+  size: zod.number(),
+  contentType: zod.string(),
+});
+
+export const RequestUploadUrlResponse = zod.object({
+  uploadURL: zod.string(),
+  objectPath: zod.string(),
+  metadata: zod.object({
+    name: zod.string(),
+    size: zod.number(),
+    contentType: zod.string(),
+  }),
+});
+
+/**
+ * @summary Serve a stored object
+ */
+export const GetStorageObjectParams = zod.object({
+  objectPath: zod.coerce.string(),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

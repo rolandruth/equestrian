@@ -27,9 +27,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, Tag, Loader2 } from "lucide-react";
+import { Plus, Edit, Trash2, Tag, Loader2, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+
+type FormData = { id: number; name: string; description: string; imageUrl: string };
 
 export default function AdminCategoriesPage() {
   const queryClient = useQueryClient();
@@ -38,15 +40,17 @@ export default function AdminCategoriesPage() {
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [imagePreviewError, setImagePreviewError] = useState(false);
   
-  const [formData, setFormData] = useState({ id: 0, name: "", description: "" });
+  const [formData, setFormData] = useState<FormData>({ id: 0, name: "", description: "", imageUrl: "" });
   
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
   const deleteMutation = useDeleteCategory();
 
   const handleOpenNew = () => {
-    setFormData({ id: 0, name: "", description: "" });
+    setFormData({ id: 0, name: "", description: "", imageUrl: "" });
+    setImagePreviewError(false);
     setIsFormOpen(true);
   };
 
@@ -54,8 +58,10 @@ export default function AdminCategoriesPage() {
     setFormData({ 
       id: category.id, 
       name: category.name, 
-      description: category.description || "" 
+      description: category.description || "",
+      imageUrl: category.imageUrl || "",
     });
+    setImagePreviewError(false);
     setIsFormOpen(true);
   };
 
@@ -63,17 +69,18 @@ export default function AdminCategoriesPage() {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
+    const payload = {
+      name: formData.name,
+      description: formData.description || null,
+      imageUrl: formData.imageUrl || null,
+    } as any;
+
     try {
       if (formData.id) {
-        await updateMutation.mutateAsync({ 
-          id: formData.id, 
-          data: { name: formData.name, description: formData.description || null } 
-        });
+        await updateMutation.mutateAsync({ id: formData.id, data: payload });
         toast({ title: "Category updated" });
       } else {
-        await createMutation.mutateAsync({ 
-          data: { name: formData.name, description: formData.description || null } 
-        });
+        await createMutation.mutateAsync({ data: payload });
         toast({ title: "Category created" });
       }
       queryClient.invalidateQueries({ queryKey: getListCategoriesQueryKey() });
@@ -97,6 +104,7 @@ export default function AdminCategoriesPage() {
   };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const showPreview = !imagePreviewError && !!formData.imageUrl?.trim();
 
   return (
     <div className="space-y-6">
@@ -139,8 +147,23 @@ export default function AdminCategoriesPage() {
                 categories?.map((cat) => (
                   <tr key={cat.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900 dark:text-white">{cat.name}</div>
-                      {cat.description && <div className="text-xs text-muted-foreground mt-1 line-clamp-1">{cat.description}</div>}
+                      <div className="flex items-center gap-3">
+                        {(cat as any).imageUrl ? (
+                          <img
+                            src={(cat as any).imageUrl}
+                            alt={cat.name}
+                            className="h-8 w-8 rounded object-cover flex-shrink-0 border"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded border bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
+                            <ImageIcon className="h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-white">{cat.name}</div>
+                          {cat.description && <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{cat.description}</div>}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full px-2.5 py-0.5 text-xs font-medium">
@@ -173,6 +196,7 @@ export default function AdminCategoriesPage() {
         </div>
       </div>
 
+      {/* Create / Edit Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
@@ -194,10 +218,41 @@ export default function AdminCategoriesPage() {
                 value={formData.description} 
                 onChange={(e) => setFormData({...formData, description: e.target.value})} 
                 placeholder="Optional description" 
-                rows={3}
+                rows={2}
               />
             </div>
-            <DialogFooter className="pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-1.5">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                Category Image URL
+                <span className="text-xs font-normal text-muted-foreground">(optional)</span>
+              </label>
+              <Input
+                value={formData.imageUrl}
+                onChange={(e) => {
+                  setFormData({...formData, imageUrl: e.target.value});
+                  setImagePreviewError(false);
+                }}
+                placeholder="https://example.com/image.jpg"
+                type="url"
+              />
+              <p className="text-xs text-muted-foreground">Shown on the category cards on the homepage.</p>
+              {/* Live preview */}
+              {showPreview && (
+                <div className="mt-2 rounded-lg border overflow-hidden bg-gray-50 dark:bg-gray-800">
+                  <img
+                    src={formData.imageUrl}
+                    alt="Preview"
+                    className="w-full h-32 object-cover"
+                    onError={() => setImagePreviewError(true)}
+                  />
+                </div>
+              )}
+              {imagePreviewError && (
+                <p className="text-xs text-destructive">Could not load image. Check the URL.</p>
+              )}
+            </div>
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isPending || !formData.name.trim()}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

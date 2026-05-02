@@ -84,6 +84,11 @@
     "@tiptap/extension-underline": "^3.22.5",
     "@tiptap/pm": "^3.22.5",
     "@tiptap/react": "^3.22.5",
-    "@tiptap/starter-kit": "^3.22.5"
+    "@tiptap/starter-kit": "^3.22.5",
+    "@uppy/aws-s3": "^5.1.0",
+    "@uppy/core": "^5.2.0",
+    "@uppy/dashboard": "^5.1.1",
+    "@uppy/react": "^5.2.0",
+    "@workspace/object-storage-web": "workspace:*"
   }
 }

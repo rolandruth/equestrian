@@ -7,6 +7,8 @@ servers:
   - url: /api
     description: Base API path
 tags:
+  - name: storage
+    description: Object storage
   - name: health
     description: Health operations
   - name: setup
@@ -27,6 +29,45 @@ tags:
     description: Public directory browsing
 
 paths:
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestUploadUrlBody"
+      responses:
+        "200":
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestUploadUrlResponse"
+
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getStorageObject
+      tags: [storage]
+      summary: Serve a stored object
+      parameters:
+        - in: path
+          name: objectPath
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+
   /healthz:
     get:
       operationId: healthCheck
@@ -1068,3 +1109,33 @@ components:
         count:
           type: integer
       required: [category, count]
+
+    RequestUploadUrlBody:
+      type: object
+      properties:
+        name:
+          type: string
+        size:
+          type: integer
+        contentType:
+          type: string
+      required: [name, size, contentType]
+
+    RequestUploadUrlResponse:
+      type: object
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          type: object
+          properties:
+            name:
+              type: string
+            size:
+              type: integer
+            contentType:
+              type: string
+          required: [name, size, contentType]
+      required: [uploadURL, objectPath, metadata]

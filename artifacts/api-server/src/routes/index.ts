@@ -9,6 +9,7 @@ import usersRouter from "./usersRoute.js";
 import importRouter from "./importRoute.js";
 import publicRouter from "./publicRoute.js";
 import seoRouter from "./seoRoute.js";
+import storageRouter from "./storage.js";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/users", usersRouter);
 router.use("/import", importRouter);
 router.use("/public", publicRouter);
 router.use("/seo", seoRouter);
+router.use(storageRouter);
 
 export default router;

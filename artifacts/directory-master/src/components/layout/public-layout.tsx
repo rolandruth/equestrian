@@ -44,10 +44,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <Link href="/" className="flex-shrink-0 flex items-center gap-2">
                 {settings?.logoUrl ? (
                   <img src={settings.logoUrl} alt={settings.siteTitle} className="h-8 w-auto" />
-                ) : null}
-                <span className="font-bold text-xl text-gray-900 dark:text-white" style={textStyle}>
-                  {settings?.siteTitle || "Directory"}
-                </span>
+                ) : (
+                  <span className="font-bold text-xl text-gray-900 dark:text-white" style={textStyle}>
+                    {settings?.siteTitle || "Directory"}
+                  </span>
+                )}
               </Link>
             </div>
             

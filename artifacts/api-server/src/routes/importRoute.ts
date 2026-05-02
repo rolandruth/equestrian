@@ -369,12 +369,9 @@ ${standardFieldList}
 
 RULES:
 1. Map each column to the best-matching standard field when a clear match exists.
-2. For columns that are domain-specific and don't fit any standard field, use a CUSTOM field:
-   - targetField format: "custom_<snake_case_slug>" (e.g. "custom_insurance_providers")
-   - Set customLabel to a short human-readable heading (e.g. "Insurance Providers")
-   - Custom fields are displayed as individual visible sections on the public entry page.
-3. CRITICAL: Exactly ONE column must be mapped to "category". If no column is obviously a category, pick the most suitable grouping column, or assign it to the column whose values would best group these entries.
-4. Use "skip" only for clearly internal/useless columns (IDs, row numbers, source URLs, etc.).
+2. For columns that don't clearly fit any standard field, use exactly the string "custom" as the targetField. The system will automatically use the original CSV column name as the section heading.
+3. CRITICAL: Exactly ONE column must be mapped to "category". If no column is obviously a category, pick the most suitable grouping column.
+4. Use "skip" only for clearly internal/useless columns (IDs, row numbers, source URLs, internal codes).
 5. Set approved: false only for skipped columns.
 
 CSV COLUMNS TO MAP:
@@ -385,8 +382,7 @@ Respond with ONLY this JSON (no markdown fences, no explanation):
   "mappings": [
     {
       "csvColumn": "<exact column header>",
-      "targetField": "<standard field OR custom_slug>",
-      "customLabel": "<human-readable label for custom fields, null otherwise>",
+      "targetField": "<standard field value, OR 'custom', OR 'skip'>",
       "confidence": <0.0 to 1.0>,
       "approved": <true or false>
     }
@@ -408,6 +404,17 @@ Respond with ONLY this JSON (no markdown fences, no explanation):
     const parsed = extractJson(text);
     const mappings: any[] = parsed.mappings ?? [];
 
+    // Convert "custom" → custom_<slug_of_csv_column_name>, label = original column name
+    for (const m of mappings) {
+      if (m.targetField === "custom") {
+        const slug = slugify(m.csvColumn);
+        m.targetField = `custom_${slug}`;
+        m.customLabel = m.csvColumn; // use the original CSV column name as the display label
+      } else {
+        m.customLabel = null;
+      }
+    }
+
     // Ensure sampleValues are included (AI doesn't return these)
     for (let i = 0; i < headers.length; i++) {
       const m = mappings.find(x => x.csvColumn === headers[i]);
@@ -427,10 +434,13 @@ Respond with ONLY this JSON (no markdown fences, no explanation):
         m.targetField !== "skip" &&
         m.approved !== false
       );
-      if (candidate) candidate.targetField = "category";
+      if (candidate) {
+        candidate.targetField = "category";
+        candidate.customLabel = null;
+      }
     }
 
-    // Build custom field definitions
+    // Build custom field definitions from resolved custom_* mappings
     const customFieldDefs: Array<{ value: string; label: string; description: string }> = [];
     for (const m of mappings) {
       if (typeof m.targetField === "string" && m.targetField.startsWith("custom_") && m.customLabel) {

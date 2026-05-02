@@ -345,7 +345,7 @@ export default function EntryPage() {
                 {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
                   if (!value) return null;
                   const label = key
-                    .replace(/_/g, " ")
+                    .replace(/[-_]/g, " ")
                     .replace(/\b\w/g, (c) => c.toUpperCase());
                   return (
                     <div key={key}>

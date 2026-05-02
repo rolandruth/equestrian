@@ -1,6 +1,6 @@
 # Workspace
 
-**Current version: 2.0.0** — See `CHANGELOG.md` for the full release history and developer notes.
+**Current version: 2.1.0** — See `CHANGELOG.md` for the full release history and developer notes.
 
 ## Overview
 
@@ -74,7 +74,7 @@ All routes under `/api`:
 - `GET /setup/status` — Check if app is installed
 - `POST /setup/complete` — Complete initial setup
 - `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`
-- `GET/POST /entries`, `GET/PATCH/DELETE /entries/:id`, `PATCH /entries/:id/publish`
+- `GET/POST /entries`, `GET/PATCH/DELETE /entries/:id`, `PATCH /entries/:id/publish`, `PATCH /entries/:id/featured`
 - `GET/POST /categories`, `PATCH/DELETE /categories/:id`
 - `GET/PATCH /settings`
 - `GET/POST /users`, `PATCH/DELETE /users/:id`

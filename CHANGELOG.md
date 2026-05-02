@@ -4,6 +4,48 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.1.0] — 2026-05-02
+
+Featured entries, AI-assisted column mapping, and custom field rendering.
+
+---
+
+### New Features
+
+#### Featured Entries
+- Added `featured` boolean column to the `entries` table (default `false`).
+- `PATCH /api/entries/:id/featured` — toggles featured status, protected by `requireEditor`.
+- `GET /public/featured` — public endpoint already existed; now backed by real DB data from the `featured` flag.
+- Star icon button in the admin entries table: filled gold star = featured, outline = not featured. Button color uses the site's primary theme color.
+- Virtual **"Featured"** row on the Categories screen shows a live count of currently featured entries. Not a real category — for visual reference only.
+
+#### "Map With Gemini" AI Column Mapping
+- New **"Map With Gemini"** button on the Map Your Columns import step (Step 2).
+- Calls `POST /api/import/ai-map` with the CSV headers and up to 3 sample rows per column.
+- Gemini (`gemini-3-flash-preview`) reads column names + sample data and returns one mapping per column: either a standard field name (e.g. `title`, `location`, `contactPhone`) or the literal string `"custom"` for domain-specific columns it cannot match to a standard field.
+- Server-side post-processing converts `"custom"` → `custom_<slugify(csvColumnName)>` and sets `customLabel = original CSV column name` — Gemini never invents arbitrary slugs.
+- Guarantees exactly one `category` mapping is assigned; falls back to the first non-title, non-skip column if Gemini omits it.
+- AI-mapped rows are highlighted in amber with a sparkle (✦) icon. Each row shows an inline description of what the field stores.
+- `customFieldDefs` array is returned alongside `mappings` and registered as selectable options in the field dropdown for subsequent manual adjustments.
+
+#### Custom Fields on Entry Detail Page
+- `entry.tsx` now renders every key in `customFields` JSONB as its own visible section below the main description.
+- Section heading is derived from the custom field key: hyphens and underscores are replaced with spaces, then title-cased (e.g. `accepted-dental-insurance-providers` → "Accepted Dental Insurance Providers").
+- Content is rendered `whitespace-pre-wrap` to preserve multi-line values.
+- Sections are only shown when the field has a non-empty value.
+
+---
+
+### Developer Notes for v2.1
+
+- **`custom_*` key convention**: Custom field keys in the `customFields` JSONB column always follow the pattern `custom_<slug>` at the mapping stage, then are stored without the `custom_` prefix (e.g. key `accepted-dental-insurance-providers`). The slugifier uses hyphens (`-`), not underscores — the entry detail page now handles both with `/[-_]/g` replacement.
+- **Gemini prompt contract**: The AI map prompt explicitly forbids Gemini from inventing slugs. The only valid values for `targetField` are a standard field string (from `AVAILABLE_FIELDS`), `"custom"`, or `"skip"`. All slug generation is done deterministically server-side using `slugify(csvColumn)`.
+- **`customLabel` field**: Returned in each mapping object. For custom fields it holds the exact original CSV column header string. For standard and skipped fields it is `null`. The frontend uses this value as the display label in the amber custom-field rows.
+- **`PATCH /api/entries/:id/featured`**: Accepts `{ featured: boolean }` body. Returns the updated entry. Guarded by `requireEditor`.
+- **Featured count on Categories page**: The "Featured" virtual row is computed client-side from `entries` data already loaded on the page — no extra API call.
+
+---
+
 ## [2.0.0] — 2026-05-01
 
 Visual Page Builder release. Introduces a full Elementor-like drag-and-drop builder for all three public pages, WYSIWYG rich text editing, per-section typography and color controls, and end-to-end live preview — builder changes are reflected on public pages immediately after save.

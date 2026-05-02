@@ -4,6 +4,45 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.2.0] — 2026-05-02
+
+Mobile admin navigation, public nav session awareness, and admin Dashboard shortcut.
+
+---
+
+### New Features
+
+#### Mobile Admin Navigation (Hamburger Menu)
+- On screens narrower than `md` breakpoint, the desktop sidebar in `AdminLayout` is hidden and replaced with a sticky top bar showing the site title and a hamburger (☰) icon on the right.
+- Tapping the hamburger slides in a full-height drawer from the left edge (width 272 px, `z-50`) with all nav links: Dashboard, Entries, Categories, Import CSV, SEO, Users, Settings, View Site, and Log out.
+- A semi-transparent dark overlay (`bg-black/50`, `z-40`) sits behind the drawer; tapping it closes the drawer.
+- An X button inside the drawer header provides an explicit close action.
+- Tapping any nav link closes the drawer automatically via an `onNavigate` callback.
+- Drawer open/close is animated with a CSS `transition-transform duration-300 ease-in-out` (`translateX`). Desktop sidebar layout is unchanged.
+
+#### Public Nav Session Awareness (Sign In / Sign Out)
+- The public header now reads the auth token from `useAuth` to determine login state.
+- When **not logged in**: "Sign In" link navigates to `/admin/login` (existing behaviour).
+- When **logged in**: "Sign In" is replaced with a "Sign Out" button that calls `POST /api/auth/logout`, then clears the local token via `clearToken()`.
+- Both the desktop nav bar and the mobile hamburger menu reflect this state.
+
+#### Admin Dashboard Shortcut in Public Nav
+- When the logged-in user has `role === "admin"`, a **Dashboard** link (with `LayoutDashboard` icon) appears in the public nav between "Browse All" and "Sign Out".
+- Non-admin roles (editor, viewer) do not see this link.
+- The link appears in both desktop nav and mobile menu.
+- Implemented by calling `useGetCurrentUser` with `{ query: { enabled: isLoggedIn } }` so the API call is skipped entirely when no session token is present.
+
+---
+
+### Developer Notes for v2.2
+
+- **`AdminLayout` mobile drawer**: State is managed with `useState(false)` inside the component — no global state or context required. The `NavLinks` sub-component accepts an optional `onNavigate` prop so the same JSX is shared between desktop sidebar and mobile drawer.
+- **`PublicLayout` auth state**: `isLoggedIn = Boolean(token)` from `useAuth`. Role check: `isAdmin = isLoggedIn && currentUser?.role === "admin"`. Both are derived values, not stored in state. The `useGetCurrentUser` query is conditionally disabled when `isLoggedIn` is false to prevent unnecessary 401 requests.
+- **Sign Out from public nav**: Calls `logoutMutation.mutateAsync(undefined)` first (invalidates the server session), then `clearToken()` regardless of whether the mutation succeeds, so the UI never gets stuck in a signed-in state if the server is unreachable.
+- **Dashboard link visibility**: Intentionally restricted to `admin` role. Editors and viewers can still reach `/admin` directly — the link just isn't surfaced on the public site for them.
+
+---
+
 ## [2.1.0] — 2026-05-02
 
 Featured entries, AI-assisted column mapping, and custom field rendering.

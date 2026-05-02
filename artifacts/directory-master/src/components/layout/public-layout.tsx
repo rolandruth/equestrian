@@ -1,15 +1,30 @@
 import { Link, useLocation } from "wouter";
-import { useGetPublicSettings, useGetSetupStatus } from "@workspace/api-client-react";
+import { useGetPublicSettings, useLogout } from "@workspace/api-client-react";
 import { Search, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScriptInjector } from "./ScriptInjector";
+import { useAuth } from "@/hooks/use-auth";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { data: settings } = useGetPublicSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { token, logout: clearToken } = useAuth();
+  const logoutMutation = useLogout();
+  const isLoggedIn = Boolean(token);
+
+  const handleSignOut = async () => {
+    setIsMenuOpen(false);
+    try {
+      await logoutMutation.mutateAsync(undefined);
+    } catch {
+      // Ignore
+    } finally {
+      clearToken();
+    }
+  };
 
   const navbarBg = (settings as any)?.navbarBgColor || undefined;
   const navbarText = (settings as any)?.navbarTextColor || undefined;
@@ -79,13 +94,23 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               >
                 Browse All
               </Link>
-              <Link
-                href="/admin/login"
-                className={linkClass}
-                style={textStyle}
-              >
-                Sign In
-              </Link>
+              {isLoggedIn ? (
+                <button
+                  onClick={handleSignOut}
+                  className={linkClass}
+                  style={textStyle}
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <Link
+                  href="/admin/login"
+                  className={linkClass}
+                  style={textStyle}
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -132,14 +157,24 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               >
                 Browse All
               </Link>
-              <Link
-                href="/admin/login"
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium"
-                style={navbarText ? textStyle : undefined}
-              >
-                Sign In
-              </Link>
+              {isLoggedIn ? (
+                <button
+                  onClick={handleSignOut}
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium"
+                  style={navbarText ? textStyle : undefined}
+                >
+                  Sign Out
+                </button>
+              ) : (
+                <Link
+                  href="/admin/login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium"
+                  style={navbarText ? textStyle : undefined}
+                >
+                  Sign In
+                </Link>
+              )}
             </div>
           </div>
         )}

@@ -169,6 +169,8 @@ router.get("/settings", async (req, res) => {
       footerText: settings.footerText,
       privacyPolicyUrl: settings.privacyPolicyUrl,
       termsUrl: settings.termsUrl,
+      headScripts: settings.headScripts,
+      bodyScripts: settings.bodyScripts,
       calloutSections: settings.calloutSections,
       templateSettings: settings.templateSettings ?? null,
       installed: settings.installed,

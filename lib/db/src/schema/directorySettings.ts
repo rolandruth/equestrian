@@ -16,6 +16,8 @@ export const directorySettings = pgTable("directory_settings", {
   footerText: text("footer_text"),
   privacyPolicyUrl: text("privacy_policy_url"),
   termsUrl: text("terms_url"),
+  headScripts: text("head_scripts"),
+  bodyScripts: text("body_scripts"),
   calloutSections: text("callout_sections"),
   templateSettings: jsonb("template_settings"),
   installed: boolean("installed").notNull().default(false),

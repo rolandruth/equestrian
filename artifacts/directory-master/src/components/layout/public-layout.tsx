@@ -3,6 +3,7 @@ import { useGetPublicSettings, useGetSetupStatus } from "@workspace/api-client-r
 import { Search, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { ScriptInjector } from "./ScriptInjector";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -34,6 +35,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+      <ScriptInjector
+        headScripts={(settings as any)?.headScripts}
+        bodyScripts={(settings as any)?.bodyScripts}
+      />
       <header
         className="bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50"
         style={navbarStyle}

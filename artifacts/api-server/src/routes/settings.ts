@@ -21,6 +21,8 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     footerText: s.footerText,
     privacyPolicyUrl: s.privacyPolicyUrl,
     termsUrl: s.termsUrl,
+    headScripts: s.headScripts,
+    bodyScripts: s.bodyScripts,
     calloutSections: s.calloutSections,
     templateSettings: s.templateSettings ?? null,
     installed: s.installed,
@@ -57,6 +59,8 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.footerText !== undefined)              dbUpdates.footerText = req.body.footerText;
     if (req.body.privacyPolicyUrl !== undefined)        dbUpdates.privacyPolicyUrl = req.body.privacyPolicyUrl;
     if (req.body.termsUrl !== undefined)                dbUpdates.termsUrl = req.body.termsUrl;
+    if (req.body.headScripts !== undefined)             dbUpdates.headScripts = req.body.headScripts;
+    if (req.body.bodyScripts !== undefined)             dbUpdates.bodyScripts = req.body.bodyScripts;
     if (req.body.calloutSections !== undefined)         dbUpdates.calloutSections = req.body.calloutSections;
     if (req.body.templateSettings !== undefined)    dbUpdates.templateSettings = req.body.templateSettings;
 

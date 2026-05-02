@@ -33,6 +33,8 @@ const settingsSchema = z.object({
   footerText: z.string().optional().nullable(),
   privacyPolicyUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   termsUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  headScripts: z.string().optional().nullable(),
+  bodyScripts: z.string().optional().nullable(),
   calloutSections: z.string().optional().nullable(),
 });
 
@@ -94,6 +96,8 @@ export default function AdminSettingsPage() {
       footerText: "",
       privacyPolicyUrl: "",
       termsUrl: "",
+      headScripts: "",
+      bodyScripts: "",
       calloutSections: "",
     }
   });
@@ -113,6 +117,8 @@ export default function AdminSettingsPage() {
         footerText: (settings as any).footerText || "",
         privacyPolicyUrl: (settings as any).privacyPolicyUrl || "",
         termsUrl: (settings as any).termsUrl || "",
+        headScripts: (settings as any).headScripts || "",
+        bodyScripts: (settings as any).bodyScripts || "",
         calloutSections: settings.calloutSections || "",
       });
       setTemplateSettings(mergeTemplateSettings((settings as any).templateSettings));
@@ -484,6 +490,62 @@ export default function AdminSettingsPage() {
                   )}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Custom Code & Tracking */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Custom Code &amp; Tracking</CardTitle>
+              <CardDescription>
+                Inject scripts and styles into every public page — ideal for Google Tag Manager, Meta Pixel, Google Analytics, or any other tracking snippet.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <FormField
+                control={form.control}
+                name="headScripts"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Head Scripts / CSS</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={6}
+                        className="font-mono text-xs"
+                        placeholder={`<!-- Google Tag Manager -->\n<script>(function(w,d,s,l,i){...})(window,document,'script','dataLayer','GTM-XXXXXX');</script>\n\n<!-- or any <style> block -->`}
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Injected inside <code className="text-xs bg-muted px-1 rounded">&lt;head&gt;</code> on every public page. Paste full <code className="text-xs bg-muted px-1 rounded">&lt;script&gt;</code> or <code className="text-xs bg-muted px-1 rounded">&lt;style&gt;</code> tags.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="bodyScripts"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Body / Footer Scripts</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={6}
+                        className="font-mono text-xs"
+                        placeholder={`<!-- Google Tag Manager (noscript) -->\n<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXX"\nheight="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>`}
+                        {...field}
+                        value={field.value || ''}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Injected at the end of <code className="text-xs bg-muted px-1 rounded">&lt;body&gt;</code> on every public page. Use for GTM noscript fallbacks, chat widgets, or other footer scripts.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 

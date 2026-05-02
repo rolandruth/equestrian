@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2,
-  CloudUpload, X, ArrowRight, ArrowLeft, Eye
+  CloudUpload, X, ArrowRight, ArrowLeft, Eye, Tag, FolderOpen, Info
 } from "lucide-react";
 
 type Step = "upload" | "map" | "progress";
@@ -305,6 +305,9 @@ export default function AdminImportPage() {
   }
 
   // ── STEP 2: Column Mapping ─────────────────────────────────────────
+  const categoryMapped = mappings.find(m => m.approved && m.targetField === "category");
+  const tagsMapped = mappings.find(m => m.approved && m.targetField === "tags");
+
   if (step === "map") {
     return (
       <div className="max-w-5xl mx-auto space-y-6">
@@ -320,6 +323,65 @@ export default function AdminImportPage() {
             <Badge variant="outline">{rowCount} data rows</Badge>
             <Badge variant="secondary">{approvedCount} columns mapped</Badge>
             {skippedCount > 0 && <Badge variant="outline">{skippedCount} skipped</Badge>}
+          </div>
+        </div>
+
+        {/* Special fields callout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Category */}
+          <div className={`rounded-lg border p-4 flex items-start gap-3 transition-colors ${
+            categoryMapped
+              ? "bg-violet-50 dark:bg-violet-950/30 border-violet-200 dark:border-violet-800"
+              : "bg-gray-50 dark:bg-gray-800/40 border-dashed"
+          }`}>
+            <div className={`mt-0.5 rounded-md p-1.5 ${categoryMapped ? "bg-violet-100 dark:bg-violet-900/50 text-violet-600" : "bg-gray-200 dark:bg-gray-700 text-gray-400"}`}>
+              <FolderOpen className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-semibold ${categoryMapped ? "text-violet-900 dark:text-violet-100" : "text-muted-foreground"}`}>
+                  Category
+                </span>
+                {categoryMapped ? (
+                  <Badge className="text-xs bg-violet-100 text-violet-700 dark:bg-violet-900 dark:text-violet-300 border-0">
+                    ✓ mapped from <code className="font-mono ml-1">{categoryMapped.csvColumn}</code>
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">not mapped</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Each value is matched to an existing category or created automatically. One category per entry.
+              </p>
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className={`rounded-lg border p-4 flex items-start gap-3 transition-colors ${
+            tagsMapped
+              ? "bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-800"
+              : "bg-gray-50 dark:bg-gray-800/40 border-dashed"
+          }`}>
+            <div className={`mt-0.5 rounded-md p-1.5 ${tagsMapped ? "bg-teal-100 dark:bg-teal-900/50 text-teal-600" : "bg-gray-200 dark:bg-gray-700 text-gray-400"}`}>
+              <Tag className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-semibold ${tagsMapped ? "text-teal-900 dark:text-teal-100" : "text-muted-foreground"}`}>
+                  Tags
+                </span>
+                {tagsMapped ? (
+                  <Badge className="text-xs bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300 border-0">
+                    ✓ mapped from <code className="font-mono ml-1">{tagsMapped.csvColumn}</code>
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">not mapped</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Accepts a comma-separated list of keywords (e.g. <span className="font-mono">react, startup, saas</span>). Multiple tags per entry.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -345,74 +407,115 @@ export default function AdminImportPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {mappings.map((m) => (
-                    <tr
-                      key={m.csvColumn}
-                      className={`transition-colors ${
-                        !m.approved || m.targetField === "skip"
-                          ? "opacity-50 bg-gray-50/50 dark:bg-gray-900/30"
-                          : "hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
-                      }`}
-                    >
-                      {/* Toggle */}
-                      <td className="px-4 py-3">
-                        <Switch
-                          checked={m.approved && m.targetField !== "skip"}
-                          onCheckedChange={(checked) => {
-                            updateMapping(m.csvColumn, "approved", checked);
-                            if (!checked) updateMapping(m.csvColumn, "targetField", "skip");
-                          }}
-                        />
-                      </td>
+                  {mappings.map((m) => {
+                    const isCategory = m.approved && m.targetField === "category";
+                    const isTags = m.approved && m.targetField === "tags";
+                    return (
+                      <tr
+                        key={m.csvColumn}
+                        className={`transition-colors ${
+                          !m.approved || m.targetField === "skip"
+                            ? "opacity-50 bg-gray-50/50 dark:bg-gray-900/30"
+                            : isCategory
+                            ? "bg-violet-50/50 dark:bg-violet-950/20 hover:bg-violet-50 dark:hover:bg-violet-950/30"
+                            : isTags
+                            ? "bg-teal-50/50 dark:bg-teal-950/20 hover:bg-teal-50 dark:hover:bg-teal-950/30"
+                            : "hover:bg-gray-50/50 dark:hover:bg-gray-800/30"
+                        }`}
+                      >
+                        {/* Toggle */}
+                        <td className="px-4 py-3">
+                          <Switch
+                            checked={m.approved && m.targetField !== "skip"}
+                            onCheckedChange={(checked) => {
+                              updateMapping(m.csvColumn, "approved", checked);
+                              if (!checked) updateMapping(m.csvColumn, "targetField", "skip");
+                            }}
+                          />
+                        </td>
 
-                      {/* Column name */}
-                      <td className="px-4 py-3">
-                        <code className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                          {m.csvColumn}
-                        </code>
-                      </td>
+                        {/* Column name */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <code className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                              {m.csvColumn}
+                            </code>
+                            {isCategory && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
+                                <FolderOpen className="h-3 w-3" /> Category
+                              </span>
+                            )}
+                            {isTags && (
+                              <span className="inline-flex items-center gap-1 text-xs font-medium text-teal-600 dark:text-teal-400">
+                                <Tag className="h-3 w-3" /> Tags
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* Sample values */}
-                      <td className="px-4 py-3 max-w-[260px]">
-                        <div className="space-y-0.5">
-                          {m.sampleValues.slice(0, 2).map((v, i) => (
-                            <div key={i} className="text-xs text-muted-foreground truncate" title={v}>
-                              <Eye className="inline h-3 w-3 mr-1 opacity-50" />
-                              {v || <span className="italic opacity-40">empty</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-
-                      {/* Target field dropdown */}
-                      <td className="px-4 py-3">
-                        <Select
-                          value={m.targetField}
-                          onValueChange={(val) => {
-                            updateMapping(m.csvColumn, "targetField", val);
-                            updateMapping(m.csvColumn, "approved", val !== "skip");
-                          }}
-                          disabled={!m.approved}
-                        >
-                          <SelectTrigger className="h-8 text-xs w-[220px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableFields.map(f => (
-                              <SelectItem key={f.value} value={f.value}>
-                                <span className="font-medium">{f.label}</span>
-                              </SelectItem>
+                        {/* Sample values */}
+                        <td className="px-4 py-3 max-w-[260px]">
+                          <div className="space-y-0.5">
+                            {m.sampleValues.slice(0, 2).map((v, i) => (
+                              <div key={i} className="text-xs text-muted-foreground truncate" title={v}>
+                                <Eye className="inline h-3 w-3 mr-1 opacity-50" />
+                                {v || <span className="italic opacity-40">empty</span>}
+                              </div>
                             ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
+                          </div>
+                        </td>
 
-                      {/* Confidence */}
-                      <td className="px-4 py-3">
-                        <ConfidenceDot confidence={m.confidence} />
-                      </td>
-                    </tr>
-                  ))}
+                        {/* Target field dropdown */}
+                        <td className="px-4 py-3">
+                          <div className="space-y-1">
+                            <Select
+                              value={m.targetField}
+                              onValueChange={(val) => {
+                                updateMapping(m.csvColumn, "targetField", val);
+                                updateMapping(m.csvColumn, "approved", val !== "skip");
+                              }}
+                              disabled={!m.approved}
+                            >
+                              <SelectTrigger className={`h-8 text-xs w-[220px] ${
+                                isCategory ? "border-violet-300 dark:border-violet-700 ring-violet-100" :
+                                isTags ? "border-teal-300 dark:border-teal-700 ring-teal-100" : ""
+                              }`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {availableFields.map(f => (
+                                  <SelectItem key={f.value} value={f.value}>
+                                    <div className="flex items-center gap-2">
+                                      {f.value === "category" && <FolderOpen className="h-3 w-3 text-violet-500 shrink-0" />}
+                                      {f.value === "tags" && <Tag className="h-3 w-3 text-teal-500 shrink-0" />}
+                                      <span className="font-medium">{f.label}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {isCategory && (
+                              <p className="text-xs text-violet-600 dark:text-violet-400 flex items-center gap-1">
+                                <Info className="h-3 w-3 shrink-0" />
+                                Creates a new category if the value doesn't exist yet
+                              </p>
+                            )}
+                            {isTags && (
+                              <p className="text-xs text-teal-600 dark:text-teal-400 flex items-center gap-1">
+                                <Info className="h-3 w-3 shrink-0" />
+                                Comma-separated — each value becomes a searchable tag
+                              </p>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Confidence */}
+                        <td className="px-4 py-3">
+                          <ConfidenceDot confidence={m.confidence} />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

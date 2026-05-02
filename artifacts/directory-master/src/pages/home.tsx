@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   useGetPublicStats,
   useGetFeaturedEntries,
@@ -8,7 +8,8 @@ import {
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight, Search } from "lucide-react";
+import { useState } from "react";
 import { FontLoader } from "@/components/template/FontLoader";
 import {
   mergeTemplateSettings,
@@ -31,10 +32,19 @@ function alignClass(p: SectionProps | undefined): string {
 }
 
 export default function HomePage() {
+  const [, setLocation] = useLocation();
+  const [heroSearch, setHeroSearch] = useState("");
   const { data: settings } = useGetPublicSettings();
   const { data: stats } = useGetPublicStats();
   const { data: featured } = useGetFeaturedEntries();
   const { data: recent, isLoading: recentLoading } = useGetRecentEntries();
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (heroSearch.trim()) {
+      setLocation(`/browse?search=${encodeURIComponent(heroSearch.trim())}`);
+    }
+  };
 
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const themeColor = (settings as any)?.themeColor || "#2563eb";
@@ -132,6 +142,33 @@ export default function HomePage() {
             >
               {settings?.homepageDescription || "A curated directory of tools, companies, and events."}
             </p>
+
+            {/* Hero Search Bar */}
+            <form
+              onSubmit={handleHeroSearch}
+              className="flex items-center w-full max-w-2xl mx-auto mb-6 rounded-xl overflow-hidden shadow-lg"
+            >
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-12 pr-4 py-4 text-gray-900 bg-white border-0 focus:outline-none focus:ring-0 text-base"
+                  placeholder={(settings as any)?.heroSearchPlaceholder || "Search directory..."}
+                  value={heroSearch}
+                  onChange={(e) => setHeroSearch(e.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                className="px-7 py-4 font-semibold text-white text-base transition-opacity hover:opacity-90 whitespace-nowrap flex-shrink-0"
+                style={{ backgroundColor: p.buttonColor || themeColor }}
+              >
+                {(settings as any)?.heroSearchButtonText || "Search"}
+              </button>
+            </form>
+
             {p.buttonText && (
               <a
                 href={p.buttonUrl || "/browse"}

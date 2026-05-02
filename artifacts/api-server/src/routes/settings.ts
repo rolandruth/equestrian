@@ -16,6 +16,8 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     themeColor: s.themeColor,
     navbarBgColor: s.navbarBgColor,
     navbarTextColor: s.navbarTextColor,
+    heroSearchPlaceholder: s.heroSearchPlaceholder,
+    heroSearchButtonText: s.heroSearchButtonText,
     calloutSections: s.calloutSections,
     templateSettings: s.templateSettings ?? null,
     installed: s.installed,
@@ -45,9 +47,11 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.homepageHeadline !== undefined)    dbUpdates.homepageHeadline = req.body.homepageHeadline;
     if (req.body.homepageDescription !== undefined) dbUpdates.homepageDescription = req.body.homepageDescription;
     if (req.body.themeColor !== undefined)          dbUpdates.themeColor = req.body.themeColor;
-    if (req.body.navbarBgColor !== undefined)       dbUpdates.navbarBgColor = req.body.navbarBgColor;
-    if (req.body.navbarTextColor !== undefined)     dbUpdates.navbarTextColor = req.body.navbarTextColor;
-    if (req.body.calloutSections !== undefined)     dbUpdates.calloutSections = req.body.calloutSections;
+    if (req.body.navbarBgColor !== undefined)           dbUpdates.navbarBgColor = req.body.navbarBgColor;
+    if (req.body.navbarTextColor !== undefined)         dbUpdates.navbarTextColor = req.body.navbarTextColor;
+    if (req.body.heroSearchPlaceholder !== undefined)   dbUpdates.heroSearchPlaceholder = req.body.heroSearchPlaceholder;
+    if (req.body.heroSearchButtonText !== undefined)    dbUpdates.heroSearchButtonText = req.body.heroSearchButtonText;
+    if (req.body.calloutSections !== undefined)         dbUpdates.calloutSections = req.body.calloutSections;
     if (req.body.templateSettings !== undefined)    dbUpdates.templateSettings = req.body.templateSettings;
 
     const [updated] = await db.update(directorySettings).set(dbUpdates).where(eq(directorySettings.id, existing.id)).returning();

@@ -28,6 +28,8 @@ const settingsSchema = z.object({
   themeColor: z.string().optional().nullable(),
   navbarBgColor: z.string().optional().nullable(),
   navbarTextColor: z.string().optional().nullable(),
+  heroSearchPlaceholder: z.string().optional().nullable(),
+  heroSearchButtonText: z.string().optional().nullable(),
   calloutSections: z.string().optional().nullable(),
 });
 
@@ -84,6 +86,8 @@ export default function AdminSettingsPage() {
       themeColor: "",
       navbarBgColor: "",
       navbarTextColor: "",
+      heroSearchPlaceholder: "",
+      heroSearchButtonText: "",
       calloutSections: "",
     }
   });
@@ -98,6 +102,8 @@ export default function AdminSettingsPage() {
         themeColor: settings.themeColor || "",
         navbarBgColor: (settings as any).navbarBgColor || "",
         navbarTextColor: (settings as any).navbarTextColor || "",
+        heroSearchPlaceholder: (settings as any).heroSearchPlaceholder || "",
+        heroSearchButtonText: (settings as any).heroSearchButtonText || "",
         calloutSections: settings.calloutSections || "",
       });
       setTemplateSettings(mergeTemplateSettings((settings as any).templateSettings));
@@ -320,6 +326,41 @@ export default function AdminSettingsPage() {
                   </FormItem>
                 )}
               />
+
+              <div className="pt-2 border-t">
+                <p className="text-sm font-medium mb-1">Hero Search Bar</p>
+                <p className="text-sm text-muted-foreground mb-4">A prominent search field displayed in the centre of the hero banner.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="heroSearchPlaceholder"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Search Placeholder Text</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Search directory..." {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormDescription>Hint text shown inside the search box.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="heroSearchButtonText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Search Button Label</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Search" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <FormDescription>Label on the button next to the search field.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 

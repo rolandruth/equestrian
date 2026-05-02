@@ -164,6 +164,8 @@ router.get("/settings", async (req, res) => {
       themeColor: settings.themeColor,
       navbarBgColor: settings.navbarBgColor,
       navbarTextColor: settings.navbarTextColor,
+      heroSearchPlaceholder: settings.heroSearchPlaceholder,
+      heroSearchButtonText: settings.heroSearchButtonText,
       calloutSections: settings.calloutSections,
       templateSettings: settings.templateSettings ?? null,
       installed: settings.installed,

@@ -11,6 +11,8 @@ export const directorySettings = pgTable("directory_settings", {
   themeColor: text("theme_color"),
   navbarBgColor: text("navbar_bg_color"),
   navbarTextColor: text("navbar_text_color"),
+  heroSearchPlaceholder: text("hero_search_placeholder"),
+  heroSearchButtonText: text("hero_search_button_text"),
   calloutSections: text("callout_sections"),
   templateSettings: jsonb("template_settings"),
   installed: boolean("installed").notNull().default(false),

@@ -157,7 +157,7 @@ export default function AdminEntryFormPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select value={field.value || undefined} onValueChange={field.onChange}>
+                      <Select key={field.value ?? "__empty__"} value={field.value || undefined} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a category" />

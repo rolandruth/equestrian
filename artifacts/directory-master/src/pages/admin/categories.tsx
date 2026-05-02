@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { 
   useListCategories, 
   useCreateCategory,
   useUpdateCategory,
   useDeleteCategory,
+  useGetPublicSettings,
   getListCategoriesQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,7 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Edit, Trash2, Tag, Loader2, ImageIcon } from "lucide-react";
+import { Plus, Edit, Trash2, Tag, Loader2, ImageIcon, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 
@@ -37,6 +39,21 @@ export default function AdminCategoriesPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: categories, isLoading } = useListCategories();
+  const { data: publicSettings } = useGetPublicSettings();
+  const primaryColor = (publicSettings as any)?.primaryColor as string | undefined;
+
+  const { data: featuredData } = useQuery({
+    queryKey: ["featured-count"],
+    queryFn: async () => {
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/entries?featured=true&limit=1", {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) return { total: 0 };
+      return res.json() as Promise<{ total: number }>;
+    },
+  });
+  const featuredCount = featuredData?.total ?? 0;
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -106,6 +123,8 @@ export default function AdminCategoriesPage() {
   const isPending = createMutation.isPending || updateMutation.isPending;
   const showPreview = !imagePreviewError && !!formData.imageUrl?.trim();
 
+  const starColor = primaryColor || "hsl(var(--primary))";
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -131,16 +150,55 @@ export default function AdminCategoriesPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
+              {/* Virtual "Featured" row — always shown at top */}
+              <tr className="bg-amber-50/40 dark:bg-amber-900/10 hover:bg-amber-50/60 dark:hover:bg-amber-900/20 transition-colors">
+                <td className="px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded border flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: `${starColor}15`, borderColor: `${starColor}30` }}>
+                      <Star className="h-4 w-4" fill={starColor} color={starColor} />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                        Featured
+                        <span className="text-xs font-normal px-1.5 py-0.5 rounded-full"
+                          style={{ backgroundColor: `${starColor}15`, color: starColor }}>
+                          Built-in
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Entries starred as featured across all categories
+                      </div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className="inline-flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-full px-2.5 py-0.5 text-xs font-medium">
+                    {featuredCount} entries
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-muted-foreground text-xs italic">
+                  Auto-managed
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <span className="text-xs text-muted-foreground pr-2">
+                    Star entries to add
+                  </span>
+                </td>
+              </tr>
+
               {isLoading ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">Loading...</td>
                 </tr>
               ) : categories?.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground flex flex-col items-center">
-                    <Tag className="h-8 w-8 mb-2 opacity-20" />
-                    <p>No categories found.</p>
-                    <Button variant="link" onClick={handleOpenNew}>Create your first category</Button>
+                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center">
+                      <Tag className="h-8 w-8 mb-2 opacity-20" />
+                      <p>No categories found.</p>
+                      <Button variant="link" onClick={handleOpenNew}>Create your first category</Button>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -237,7 +295,6 @@ export default function AdminCategoriesPage() {
                 type="url"
               />
               <p className="text-xs text-muted-foreground">Shown on the category cards on the homepage.</p>
-              {/* Live preview */}
               {showPreview && (
                 <div className="mt-2 rounded-lg border overflow-hidden bg-gray-50 dark:bg-gray-800">
                   <img

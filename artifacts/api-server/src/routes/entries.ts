@@ -15,11 +15,15 @@ router.get("/", requireAuth, async (req, res) => {
     const category = (req.query.category as string) || "";
     const publishedParam = req.query.published as string;
 
+    const featuredParam = req.query.featured as string;
+
     const conditions = [];
     if (search && search !== "null") conditions.push(ilike(entries.title, `%${search}%`));
     if (category && category !== "null") conditions.push(eq(entries.category, category));
     if (publishedParam === "true") conditions.push(eq(entries.published, true));
     if (publishedParam === "false") conditions.push(eq(entries.published, false));
+    if (featuredParam === "true") conditions.push(eq(entries.featured, true));
+    if (featuredParam === "false") conditions.push(eq(entries.featured, false));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -104,6 +108,20 @@ router.patch("/:id/publish", requireEditor, async (req, res) => {
   }
 });
 
+router.patch("/:id/featured", requireEditor, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { featured } = req.body;
+    const [entry] = await db.update(entries).set({ featured, updatedAt: new Date() })
+      .where(eq(entries.id, id)).returning();
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+    res.json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to update featured status" });
+  }
+});
+
 // DELETE /api/entries — wipe all entries + categories (admin only)
 router.delete("/", requireAdmin, async (req, res) => {
   try {
@@ -137,6 +155,7 @@ function formatEntry(e: typeof entries.$inferSelect) {
     customFields: e.customFields,
     sourceCsvRow: e.sourceCsvRow,
     published: e.published,
+    featured: e.featured,
     slug: e.slug,
     metaTitle: e.metaTitle,
     metaDescription: e.metaDescription,

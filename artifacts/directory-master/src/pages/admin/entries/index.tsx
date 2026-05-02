@@ -4,6 +4,7 @@ import {
   useListEntries, 
   useDeleteEntry,
   useToggleEntryPublished,
+  useGetPublicSettings,
   getListEntriesQueryKey,
   getListCategoriesQueryKey
 } from "@workspace/api-client-react";
@@ -23,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert, Star } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
@@ -39,6 +40,10 @@ export default function AdminEntriesPage() {
   const [showClearAll, setShowClearAll] = useState(false);
   const [clearConfirmText, setClearConfirmText] = useState("");
   const [isClearing, setIsClearing] = useState(false);
+  const [togglingFeatured, setTogglingFeatured] = useState<number | null>(null);
+
+  const { data: publicSettings } = useGetPublicSettings();
+  const primaryColor = (publicSettings as any)?.primaryColor as string | undefined;
 
   const { data: entriesData, isLoading } = useListEntries({
     page,
@@ -69,6 +74,28 @@ export default function AdminEntriesPage() {
       queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
     } catch (e: any) {
       toast({ title: "Failed to update status", description: e.message, variant: "destructive" });
+    }
+  };
+
+  const handleToggleFeatured = async (id: number, currentFeatured: boolean) => {
+    setTogglingFeatured(id);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/entries/${id}/featured`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ featured: !currentFeatured }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+      toast({ title: currentFeatured ? "Removed from featured" : "Added to featured" });
+    } catch (e: any) {
+      toast({ title: "Failed to update featured", description: e.message, variant: "destructive" });
+    } finally {
+      setTogglingFeatured(null);
     }
   };
 
@@ -176,50 +203,73 @@ export default function AdminEntriesPage() {
                   <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">No entries found matching your criteria.</td>
                 </tr>
               ) : (
-                entriesData?.entries.map((entry) => (
-                  <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900 dark:text-white mb-1">{entry.title}</div>
-                      {entry.location && <div className="text-xs text-muted-foreground">{entry.location}</div>}
-                    </td>
-                    <td className="px-6 py-4">
-                      {entry.category ? (
-                        <Badge variant="secondary" className="font-normal">{entry.category}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                      {format(new Date(entry.updatedAt), "MMM d, yyyy")}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <Switch 
-                          checked={entry.published} 
-                          onCheckedChange={() => handleTogglePublish(entry.id, entry.published)}
-                        />
-                        <span className={`text-xs font-medium ${entry.published ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                          {entry.published ? "Published" : "Draft"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
-                      <Link href={`/admin/entries/${entry.id}/edit`}>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20">
-                          <Edit className="h-4 w-4" />
+                entriesData?.entries.map((entry) => {
+                  const isFeatured = (entry as any).featured as boolean;
+                  const isToggling = togglingFeatured === entry.id;
+                  return (
+                    <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-gray-900 dark:text-white mb-1">{entry.title}</div>
+                        {entry.location && <div className="text-xs text-muted-foreground">{entry.location}</div>}
+                      </td>
+                      <td className="px-6 py-4">
+                        {entry.category ? (
+                          <Badge variant="secondary" className="font-normal">{entry.category}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
+                        {format(new Date(entry.updatedAt), "MMM d, yyyy")}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <Switch 
+                            checked={entry.published} 
+                            onCheckedChange={() => handleTogglePublish(entry.id, entry.published)}
+                          />
+                          <span className={`text-xs font-medium ${entry.published ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                            {entry.published ? "Published" : "Draft"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 ml-1"
+                          disabled={isToggling}
+                          title={isFeatured ? "Remove from Featured" : "Add to Featured"}
+                          onClick={() => handleToggleFeatured(entry.id, isFeatured)}
+                          style={isFeatured ? { color: primaryColor || "hsl(var(--primary))" } : {}}
+                        >
+                          {isToggling ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Star
+                              className="h-4 w-4 transition-all"
+                              fill={isFeatured ? (primaryColor || "hsl(var(--primary))") : "none"}
+                              color={isFeatured ? (primaryColor || "hsl(var(--primary))") : "currentColor"}
+                            />
+                          )}
                         </Button>
-                      </Link>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 ml-1"
-                        onClick={() => setDeleteId(entry.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
+                        <Link href={`/admin/entries/${entry.id}/edit`}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 ml-1"
+                          onClick={() => setDeleteId(entry.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

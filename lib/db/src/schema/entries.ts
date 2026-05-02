@@ -21,6 +21,7 @@ export const entries = pgTable("entries", {
   customFields: jsonb("custom_fields"),
   sourceCsvRow: text("source_csv_row"),
   published: boolean("published").notNull().default(false),
+  featured: boolean("featured").notNull().default(false),
   slug: text("slug"),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),

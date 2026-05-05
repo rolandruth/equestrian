@@ -1,6 +1,6 @@
 # Workspace
 
-**Current version: 2.3.0** — See `CHANGELOG.md` for the full release history and developer notes.
+**Current version: 2.4.0** — See `CHANGELOG.md` for the full release history and developer notes.
 
 ## Overview
 
@@ -45,6 +45,8 @@ A self-hosted, white-label directory website builder. Users install it via a set
 - Per-section typography controls: font family, heading/body size, heading color
 - Per-section color pickers: background, text, heading, button, overlay
 - `templateSettings` JSONB column drives all public page rendering in real time
+- **Inline Homepage Template Editor** — admin "Edit Layout" bar on homepage activates full-screen split editor with left Add Section panel, sortable section list (drag/reorder), inline section edit dialogs, and global save
+- **Inline Entry Template Editor** — "Edit Layout" button on entry pages; drag-and-drop section reorder, eye-toggle, sidebar field row reordering via grip handles
 
 **Pages:**
 - `/` — Public homepage (or setup wizard redirect if not installed)

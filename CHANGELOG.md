@@ -4,6 +4,29 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.4.0] — 2026-05-05
+
+Inline Homepage Template Editor for admins.
+
+---
+
+### New Features
+
+#### Inline Homepage Template Editor (Admin Only)
+- An **Edit Layout** button now appears in a dark admin bar at the top of the homepage for admin users (hidden from public visitors).
+- Clicking it enters **edit mode** — a full-screen split layout with:
+  - **Left "Add Section" panel** — lists all available block types (Hero Banner, Category Grid, Featured Entries, Recent Entries, Text Block, Image Block). Singleton blocks (hero, categories, featured, recent) show an "Added" badge when already present. Text Block and Image Block show "+" buttons and can be added multiple times.
+  - **Right content area** — shows all current homepage sections in a sortable vertical list using `@dnd-kit`, each wrapped in a blue "Drag to move" overlay with grip handle, eye-toggle, pencil (edit), and trash (delete) controls.
+  - **Control bar** — sticky at top with "Template edit mode" badge, Cancel, and Save Template buttons.
+- **Pencil icon** on each section opens an inline dialog for editing the section's heading; Text Blocks also expose a body text textarea; Image Blocks expose image URL and caption fields.
+- **Eye icon** hides/shows a section without removing it (same as entry editor).
+- **Trash icon** removes a custom section (Text Block or Image Block only; singleton sections cannot be deleted).
+- **Drag to reorder** — drag any section up or down to change its position on the homepage.
+- **Save Template** — persists the updated `homepage.sections` array to `templateSettings` via `PATCH /api/settings`, invalidates public settings cache, and returns to the normal homepage view. Changes apply globally to all visitors immediately.
+- Consistent visual design with the entry template editor (blue dashed section borders, same blue handle bar, same ghost overlay on drag).
+
+---
+
 ## [2.3.0] — 2026-05-05
 
 AI-powered Homepage Enhancement, and inline Entry Template Editor for admins.

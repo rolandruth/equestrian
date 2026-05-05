@@ -33,6 +33,11 @@ import {
   useSensor, useSensors, PointerSensor,
   useDraggable, useDroppable,
 } from "@dnd-kit/core";
+import {
+  SortableContext, useSortable,
+  verticalListSortingStrategy, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ─── Edit-mode overlay wrapper ────────────────────────────────────────────────
 // Wraps each section in edit mode with a "Drag to move" handle bar + drop target.
@@ -40,19 +45,22 @@ function EditSectionWrapper({
   section,
   children,
   onToggle,
-  isActive,        // currently being dragged
-  isDropTarget,    // another section is hovering over this one
+  isActive,
+  disableDropZone,  // disable drop detection while a sidebar field is being dragged
 }: {
   section: SectionConfig;
   children: React.ReactNode;
   onToggle: () => void;
   isActive?: boolean;
-  isDropTarget?: boolean;
+  disableDropZone?: boolean;
 }) {
   const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
     id: section.id,
   });
-  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: section.id });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: section.id,
+    disabled: disableDropZone,
+  });
 
   // Compose both refs onto the same element
   const composedRef = (el: HTMLElement | null) => {
@@ -124,6 +132,41 @@ function EditSectionWrapper({
   );
 }
 
+// ─── Sortable row for individual sidebar fields in edit mode ─────────────────
+function SortableSidebarField({
+  fieldId,
+  children,
+}: {
+  fieldId: string;
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: `sf-${fieldId}` });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.35 : 1,
+      }}
+      className="flex items-start gap-1 group"
+    >
+      {/* Grip handle — only shown in edit mode */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing mt-0.5 p-1 rounded text-blue-400 opacity-50 group-hover:opacity-100 transition-opacity touch-none flex-shrink-0"
+        title="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
 // ─── Drag overlay ghost (shown while dragging) ────────────────────────────────
 function SectionGhost({ label }: { label: string }) {
   return (
@@ -188,6 +231,7 @@ export default function EntryPage() {
   // ── Edit mode state ────────────────────────────────────────────────────────
   const [editMode, setEditMode] = useState(false);
   const [editSections, setEditSections] = useState<SectionConfig[]>([]);
+  const [editSidebarFields, setEditSidebarFields] = useState<string[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const updateSettings = useUpdateSettings();
@@ -198,8 +242,9 @@ export default function EntryPage() {
 
   const enterEditMode = useCallback(() => {
     setEditSections(ts.entry.sections.map((s) => ({ ...s })));
+    setEditSidebarFields([...ts.entry.sidebarFields]);
     setEditMode(true);
-  }, [ts.entry.sections]);
+  }, [ts.entry.sections, ts.entry.sidebarFields]);
 
   const exitEditMode = () => { setEditMode(false); setActiveId(null); };
 
@@ -207,20 +252,38 @@ export default function EntryPage() {
     setActiveId(String(event.active.id));
   };
 
-  // Swap source and target sections in the list
+  // Unified drag end — routes by ID prefix:
+  //   "sf-*"  → sidebar field vertical sort (arrayMove)
+  //   others  → section swap (swap two sections)
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    setEditSections((prev) => {
-      const next = [...prev];
-      const aIdx = next.findIndex((s) => s.id === active.id);
-      const bIdx = next.findIndex((s) => s.id === over.id);
-      if (aIdx === -1 || bIdx === -1) return prev;
-      [next[aIdx], next[bIdx]] = [next[bIdx], next[aIdx]];
-      return next;
-    });
+
+    const activeStr = String(active.id);
+    const overStr   = String(over.id);
+
+    if (activeStr.startsWith("sf-") && overStr.startsWith("sf-")) {
+      // Sidebar field sort
+      setEditSidebarFields((prev) => {
+        const oldIdx = prev.findIndex((f) => `sf-${f}` === activeStr);
+        const newIdx = prev.findIndex((f) => `sf-${f}` === overStr);
+        if (oldIdx === -1 || newIdx === -1) return prev;
+        return arrayMove(prev, oldIdx, newIdx);
+      });
+    } else if (!activeStr.startsWith("sf-") && !overStr.startsWith("sf-")) {
+      // Section swap
+      setEditSections((prev) => {
+        const next = [...prev];
+        const aIdx = next.findIndex((s) => s.id === activeStr);
+        const bIdx = next.findIndex((s) => s.id === overStr);
+        if (aIdx === -1 || bIdx === -1) return prev;
+        [next[aIdx], next[bIdx]] = [next[bIdx], next[aIdx]];
+        return next;
+      });
+    }
   };
+
 
   const toggleSection = (id: string) => {
     setEditSections((prev) =>
@@ -236,7 +299,7 @@ export default function EntryPage() {
     try {
       const stored = (settings as any)?.templateSettings ?? {};
       const merged = mergeTemplateSettings(stored);
-      const updated = { ...merged, entry: { ...merged.entry, sections: editSections } };
+      const updated = { ...merged, entry: { ...merged.entry, sections: editSections, sidebarFields: editSidebarFields } };
       await updateSettings.mutateAsync({ data: { templateSettings: updated } as any });
       qc.invalidateQueries({ queryKey: getGetPublicSettingsQueryKey() });
       qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
@@ -436,6 +499,37 @@ export default function EntryPage() {
     </div>
   );
 
+  // ── Edit-mode sidebar: fields are individually sortable ────────────────────
+  const renderEditModeSidebarContent = (props: SectionProps = sidebarProps) => (
+    <div className="p-6" style={{ backgroundColor: props.backgroundColor || undefined, fontFamily: props.fontFamily ? getFontFamily(props.fontFamily) : undefined }}>
+      <h3 className="font-semibold text-lg mb-4" style={{ color: props.headingColor || undefined }}>
+        {getEntrySection("sidebar")?.props?.sidebarTitle || "Contact & Details"}
+      </h3>
+      <p className="text-xs text-blue-500 mb-4 flex items-center gap-1">
+        <GripVertical className="h-3 w-3" /> Drag rows to reorder · hidden fields still save their position
+      </p>
+      <SortableContext
+        items={editSidebarFields.map((f) => `sf-${f}`)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-4">
+          {editSidebarFields.map((fieldId) => {
+            const content = renderSidebarField(fieldId);
+            return (
+              <SortableSidebarField key={fieldId} fieldId={fieldId}>
+                {content ?? (
+                  <div className="text-xs text-muted-foreground italic py-1">
+                    {fieldId} — no data for this entry
+                  </div>
+                )}
+              </SortableSidebarField>
+            );
+          })}
+        </div>
+      </SortableContext>
+    </div>
+  );
+
   const renderRelatedContent = () => {
     const relatedEntries = relatedData?.entries.filter((e) => e.id !== entryNumericId) ?? [];
     return relatedEntries.length > 0 && !isDemo ? (
@@ -512,7 +606,12 @@ export default function EntryPage() {
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm space-y-0">
 
               {/* Header — full width */}
-              <EditSectionWrapper section={hSec} onToggle={() => toggleSection("header")} isActive={activeId === "header"}>
+              <EditSectionWrapper
+                section={hSec}
+                onToggle={() => toggleSection("header")}
+                isActive={activeId === "header"}
+                disableDropZone={activeId?.startsWith("sf-")}
+              >
                 {renderHeaderContent()}
               </EditSectionWrapper>
 
@@ -524,8 +623,9 @@ export default function EntryPage() {
                     section={descOnLeft ? dSec : sSec}
                     onToggle={() => toggleSection(descOnLeft ? "description" : "sidebar")}
                     isActive={activeId === (descOnLeft ? "description" : "sidebar")}
+                    disableDropZone={activeId?.startsWith("sf-")}
                   >
-                    {descOnLeft ? renderDescriptionContent() : renderSidebarContent()}
+                    {descOnLeft ? renderDescriptionContent() : renderEditModeSidebarContent()}
                   </EditSectionWrapper>
                 </div>
 
@@ -535,15 +635,21 @@ export default function EntryPage() {
                     section={descOnLeft ? sSec : dSec}
                     onToggle={() => toggleSection(descOnLeft ? "sidebar" : "description")}
                     isActive={activeId === (descOnLeft ? "sidebar" : "description")}
+                    disableDropZone={activeId?.startsWith("sf-")}
                   >
-                    {descOnLeft ? renderSidebarContent() : renderDescriptionContent()}
+                    {descOnLeft ? renderEditModeSidebarContent() : renderDescriptionContent()}
                   </EditSectionWrapper>
                 </div>
               </div>
             </div>
 
             {/* Related — full width, outside card */}
-            <EditSectionWrapper section={rSec} onToggle={() => toggleSection("related")} isActive={activeId === "related"}>
+            <EditSectionWrapper
+              section={rSec}
+              onToggle={() => toggleSection("related")}
+              isActive={activeId === "related"}
+              disableDropZone={activeId?.startsWith("sf-")}
+            >
               {renderRelatedContent()}
             </EditSectionWrapper>
 

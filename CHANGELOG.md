@@ -4,6 +4,36 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.3.0] — 2026-05-05
+
+AI-powered Homepage Enhancement, and inline Entry Template Editor for admins.
+
+---
+
+### New Features
+
+#### "Enhance With AI" in Homepage Builder
+- A new **Enhance With AI** button (purple, sparkle icon) appears in the Homepage Builder top bar.
+- Clicking it sends the current sections and site title to Gemini, which returns a fully redesigned layout including a bold hero, intro text section, enriched headings for categories/featured/recent, and a CTA section at the bottom.
+- While the AI processes, the button shows "Enhancing…" with a spinner.
+- On success, a toast confirms the enhancement and the canvas updates immediately with the new sections.
+- A **Restore Defaults** button appears after enhancement; one click reverts to the four default homepage sections.
+- Both buttons are homepage-only (not shown on Browse or Entry builders).
+
+#### Inline Entry Template Editor (Admin Only)
+- An **Edit Layout** button (blue outlined, pencil icon) now appears on every entry detail page for admin users, positioned top-right next to the "Back to Directory" link.
+- Clicking it enters **edit mode**, replacing the normal view with a drag-and-drop template canvas:
+  - A blue sticky top bar displays "Editing Entry Template" with **Save Template** and **Cancel** buttons.
+  - Each entry section (Title & Summary, Description, Additional Information, Details Sidebar, Related Entries) is rendered as a draggable card using `@dnd-kit`.
+  - Each card has a blue "Drag to move" header bar with a grip handle, section label, and eye-toggle button.
+  - Toggling a section's eye icon collapses its content and shows "This section is hidden" — toggling again restores it.
+  - Sections can be dragged to any position in the vertical stack.
+- **Save Template** persists the new section order and visibility globally (applied to all entry pages).
+- **Cancel** exits without saving.
+- The edit button is not rendered for non-admin users.
+
+---
+
 ## [2.2.0] — 2026-05-02
 
 Mobile admin navigation, public nav session awareness, and admin Dashboard shortcut.

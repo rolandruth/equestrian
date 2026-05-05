@@ -587,58 +587,85 @@ export default function EntryPage() {
         </div>
 
         {/* Main card */}
-        <div className="bg-white dark:bg-gray-900 border rounded-xl overflow-hidden shadow-sm">
-          {/* Header */}
-          {getSectionEnabled("header") && (
-            <div className="border-b" style={{ backgroundColor: headerProps.backgroundColor || undefined, fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined }}>
-              {renderHeaderContent(headerProps)}
-            </div>
-          )}
+        {(() => {
+          // Respect saved section order for left/right column assignment
+          const savedDescIdx = ts.entry.sections.findIndex((s) => s.id === "description");
+          const savedSidebarIdx = ts.entry.sections.findIndex((s) => s.id === "sidebar");
+          const savedDescOnLeft = savedDescIdx <= savedSidebarIdx;
 
-          {/* Content + Sidebar */}
-          {(getSectionEnabled("description") || getSectionEnabled("moreDetails") || getSectionEnabled("sidebar")) && (
-            <div className="flex flex-col md:flex-row">
-              {(getSectionEnabled("description") || getSectionEnabled("moreDetails")) && (
-                <div className="flex-1 p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
-                  {getSectionEnabled("description") && (
-                    displayEntry.description
-                      ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
-                      : <p className="text-muted-foreground italic">No detailed description provided.</p>
-                  )}
-                  {getSectionEnabled("moreDetails") && (displayEntry as any).moreDetails && (
+          const descEnabled = getSectionEnabled("description") || getSectionEnabled("moreDetails");
+          const sidebarEnabled = getSectionEnabled("sidebar");
+
+          const descCol = (
+            <div className={`${savedDescOnLeft ? "flex-1" : "w-full md:w-80"} p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none`}>
+              {getSectionEnabled("description") && (
+                displayEntry.description
+                  ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
+                  : <p className="text-muted-foreground italic">No detailed description provided.</p>
+              )}
+              {getSectionEnabled("moreDetails") && (displayEntry as any).moreDetails && (
+                <>
+                  <Separator className="my-8" />
+                  <h3 className="text-xl font-bold">Additional Information</h3>
+                  <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
+                </>
+              )}
+              {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
+                if (!value) return null;
+                const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                return (
+                  <div key={key}>
+                    <Separator className="my-8" />
+                    <h3 className="text-xl font-bold mb-3">{label}</h3>
+                    <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{String(value)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+
+          const sidebarCol = (
+            <div
+              className={`${savedDescOnLeft ? "w-full md:w-80" : "flex-1"} border-t md:border-t-0 ${savedDescOnLeft ? "md:border-l" : "md:border-r"} p-8`}
+              style={{ backgroundColor: sidebarProps.backgroundColor || undefined, fontFamily: sidebarProps.fontFamily ? getFontFamily(sidebarProps.fontFamily) : undefined }}
+            >
+              <h3 className="font-semibold text-lg mb-6" style={{ color: sidebarProps.headingColor || undefined }}>
+                {getEntrySection("sidebar")?.props?.sidebarTitle || "Contact & Details"}
+              </h3>
+              <div className="space-y-5">
+                {sidebarFields.map((fieldId) => renderSidebarField(fieldId)).filter(Boolean)}
+              </div>
+            </div>
+          );
+
+          return (
+            <div className="bg-white dark:bg-gray-900 border rounded-xl overflow-hidden shadow-sm">
+              {/* Header */}
+              {getSectionEnabled("header") && (
+                <div className="border-b" style={{ backgroundColor: headerProps.backgroundColor || undefined, fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined }}>
+                  {renderHeaderContent(headerProps)}
+                </div>
+              )}
+
+              {/* Content + Sidebar — order respects saved template */}
+              {(descEnabled || sidebarEnabled) && (
+                <div className="flex flex-col md:flex-row">
+                  {savedDescOnLeft ? (
                     <>
-                      <Separator className="my-8" />
-                      <h3 className="text-xl font-bold">Additional Information</h3>
-                      <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
+                      {descEnabled && descCol}
+                      {sidebarEnabled && sidebarCol}
+                    </>
+                  ) : (
+                    <>
+                      {sidebarEnabled && sidebarCol}
+                      {descEnabled && descCol}
                     </>
                   )}
-                  {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
-                    if (!value) return null;
-                    const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                    return (
-                      <div key={key}>
-                        <Separator className="my-8" />
-                        <h3 className="text-xl font-bold mb-3">{label}</h3>
-                        <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{String(value)}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {getSectionEnabled("sidebar") && (
-                <div className="w-full md:w-80 border-t md:border-t-0 md:border-l p-8"
-                  style={{ backgroundColor: sidebarProps.backgroundColor || undefined, fontFamily: sidebarProps.fontFamily ? getFontFamily(sidebarProps.fontFamily) : undefined }}>
-                  <h3 className="font-semibold text-lg mb-6" style={{ color: sidebarProps.headingColor || undefined }}>
-                    {getEntrySection("sidebar")?.props?.sidebarTitle || "Contact & Details"}
-                  </h3>
-                  <div className="space-y-5">
-                    {sidebarFields.map((fieldId) => renderSidebarField(fieldId)).filter(Boolean)}
-                  </div>
                 </div>
               )}
             </div>
-          )}
-        </div>
+          );
+        })()}
 
         {/* Related Entries */}
         {getSectionEnabled("related") && !isDemo && relatedData &&

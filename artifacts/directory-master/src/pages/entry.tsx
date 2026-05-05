@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link, useLocation } from "wouter";
+import { useParams, Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useGetPublicEntry,
@@ -15,100 +15,92 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  MapPin,
-  Globe,
-  Mail,
-  Phone,
-  ChevronLeft,
-  Tag,
-  Loader2,
-  Building2,
-  CalendarDays,
-  Layers,
-  Pencil,
-  GripVertical,
-  EyeOff,
-  Eye,
-  Save,
-  X,
-  LayoutTemplate,
-  CheckCircle2,
+  MapPin, Globe, Mail, Phone, ChevronLeft, Tag, Loader2,
+  Building2, CalendarDays, Layers, Pencil, GripVertical,
+  EyeOff, Eye, Save, X, LayoutTemplate, CheckCircle2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { FontLoader } from "@/components/template/FontLoader";
 import {
-  mergeTemplateSettings,
-  getFontFamily,
-  ENTRY_SIDEBAR_FIELDS,
-  DEFAULT_ENTRY_SECTIONS,
+  mergeTemplateSettings, getFontFamily, ENTRY_SIDEBAR_FIELDS,
   ENTRY_BLOCK_DEFS,
 } from "@/lib/templateTypes";
 import type { SectionConfig, SectionProps } from "@/lib/templateTypes";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import {
-  DndContext,
-  closestCenter,
-  DragEndEvent,
-  useSensor,
-  useSensors,
-  PointerSensor,
+  DndContext, DragOverlay, DragEndEvent, DragStartEvent,
+  useSensor, useSensors, PointerSensor,
+  useDraggable, useDroppable,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  useSortable,
-  arrayMove,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
-// ─── Sortable section wrapper used in edit mode ───────────────────────────────
-function SortableEntrySection({
+// ─── Edit-mode overlay wrapper ────────────────────────────────────────────────
+// Wraps each section in edit mode with a "Drag to move" handle bar + drop target.
+function EditSectionWrapper({
   section,
   children,
   onToggle,
+  isActive,        // currently being dragged
+  isDropTarget,    // another section is hovering over this one
 }: {
   section: SectionConfig;
   children: React.ReactNode;
   onToggle: () => void;
+  isActive?: boolean;
+  isDropTarget?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: section.id });
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: section.id,
+  });
+  const { setNodeRef: setDropRef, isOver } = useDroppable({ id: section.id });
+
+  // Compose both refs onto the same element
+  const composedRef = (el: HTMLElement | null) => {
+    setDragRef(el);
+    setDropRef(el);
+  };
 
   const def = ENTRY_BLOCK_DEFS.find((d) => d.type === section.id);
+  const label = def?.label ?? section.label;
 
   return (
     <div
-      ref={setNodeRef}
-      style={{
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.35 : 1,
-      }}
-      className={`relative rounded-xl border-2 border-dashed overflow-hidden ${
-        section.enabled
-          ? "border-blue-400 bg-white dark:bg-gray-900"
-          : "border-gray-300 bg-gray-50 dark:bg-gray-900/50"
-      } shadow-sm`}
+      ref={composedRef}
+      className={`relative rounded-xl border-2 border-dashed overflow-hidden transition-all ${
+        isDragging
+          ? "opacity-30"
+          : isOver
+          ? "border-blue-600 ring-2 ring-blue-300 ring-offset-1"
+          : "border-blue-400"
+      } ${section.enabled ? "bg-white dark:bg-gray-900" : "bg-gray-50 dark:bg-gray-900/50"}`}
     >
-      {/* "Drag to move" badge */}
-      <div className="flex items-center justify-between px-3 py-2 bg-blue-500 text-white text-xs font-medium select-none">
+      {/* ── "Drag to move" handle bar ── */}
+      <div
+        className={`flex items-center justify-between px-3 py-2 text-white text-xs font-medium select-none transition-colors ${
+          isOver ? "bg-blue-700" : "bg-blue-500"
+        }`}
+      >
         <div className="flex items-center gap-2">
+          {/* Grip handle — drag here */}
           <div
             {...attributes}
             {...listeners}
-            className="cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-blue-400 transition-colors"
+            className="cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-blue-400 transition-colors touch-none"
             title="Drag to reorder"
           >
             <GripVertical className="h-4 w-4" />
           </div>
-          <span>Drag to move</span>
-          <span className="opacity-70">·</span>
-          <span className="font-semibold">{def?.label ?? section.label}</span>
+          <span className="opacity-80">Drag to move</span>
+          <span className="opacity-50">·</span>
+          <span className="font-semibold">{label}</span>
+          {isOver && (
+            <span className="ml-1 text-blue-200 text-[10px]">drop to swap</span>
+          )}
         </div>
+
         <button
-          onClick={onToggle}
-          title={section.enabled ? "Hide section" : "Show section"}
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
+          title={section.enabled ? "Hide this section" : "Show this section"}
           className="p-1 rounded hover:bg-blue-400 transition-colors"
         >
           {section.enabled ? (
@@ -119,15 +111,28 @@ function SortableEntrySection({
         </button>
       </div>
 
-      {/* Section content */}
+      {/* ── Section content ── */}
       {section.enabled ? (
         <div>{children}</div>
       ) : (
-        <div className="px-6 py-4 text-sm text-gray-400 italic flex items-center gap-2 bg-gray-50 dark:bg-gray-900/50">
+        <div className="px-6 py-5 text-sm text-gray-400 italic flex items-center gap-2">
           <EyeOff className="h-4 w-4 flex-shrink-0" />
-          This section is hidden — toggle the eye icon to show it again
+          Section hidden — click the eye icon to restore it
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Drag overlay ghost (shown while dragging) ────────────────────────────────
+function SectionGhost({ label }: { label: string }) {
+  return (
+    <div className="rounded-xl border-2 border-blue-500 bg-blue-50 shadow-xl opacity-90 pointer-events-none">
+      <div className="flex items-center gap-2 px-3 py-2 bg-blue-500 text-white text-xs font-semibold rounded-t-lg">
+        <GripVertical className="h-4 w-4" />
+        Moving: {label}
+      </div>
+      <div className="p-4 text-sm text-blue-400 italic">Drop onto another section to swap positions</div>
     </div>
   );
 }
@@ -142,7 +147,6 @@ async function fetchEntryBySlug(slug: string) {
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function EntryPage() {
   const { id: idOrSlug } = useParams();
-  const [, navigate] = useLocation();
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -156,7 +160,6 @@ export default function EntryPage() {
     isNumeric ? numericId : 0,
     { query: { enabled: !isDemo && isNumeric && numericId > 0 } }
   );
-
   const { data: entryBySlug, isLoading: loadingBySlug } = useQuery({
     queryKey: ["public-entry-slug", idOrSlug],
     queryFn: () => fetchEntryBySlug(idOrSlug!),
@@ -185,11 +188,12 @@ export default function EntryPage() {
   // ── Edit mode state ────────────────────────────────────────────────────────
   const [editMode, setEditMode] = useState(false);
   const [editSections, setEditSections] = useState<SectionConfig[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const updateSettings = useUpdateSettings();
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
   const enterEditMode = useCallback(() => {
@@ -197,15 +201,24 @@ export default function EntryPage() {
     setEditMode(true);
   }, [ts.entry.sections]);
 
-  const exitEditMode = () => setEditMode(false);
+  const exitEditMode = () => { setEditMode(false); setActiveId(null); };
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
+  // Swap source and target sections in the list
   const handleDragEnd = (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
     setEditSections((prev) => {
-      const oldIdx = prev.findIndex((s) => s.id === active.id);
-      const newIdx = prev.findIndex((s) => s.id === over.id);
-      return arrayMove(prev, oldIdx, newIdx);
+      const next = [...prev];
+      const aIdx = next.findIndex((s) => s.id === active.id);
+      const bIdx = next.findIndex((s) => s.id === over.id);
+      if (aIdx === -1 || bIdx === -1) return prev;
+      [next[aIdx], next[bIdx]] = [next[bIdx], next[aIdx]];
+      return next;
     });
   };
 
@@ -215,15 +228,15 @@ export default function EntryPage() {
     );
   };
 
+  const findEditSection = (id: string) =>
+    editSections.find((s) => s.id === id) ?? { id, label: id, enabled: true };
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const stored = (settings as any)?.templateSettings ?? {};
       const merged = mergeTemplateSettings(stored);
-      const updated = {
-        ...merged,
-        entry: { ...merged.entry, sections: editSections },
-      };
+      const updated = { ...merged, entry: { ...merged.entry, sections: editSections } };
       await updateSettings.mutateAsync({ data: { templateSettings: updated } as any });
       qc.invalidateQueries({ queryKey: getGetPublicSettingsQueryKey() });
       qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
@@ -241,8 +254,7 @@ export default function EntryPage() {
     title: "Tech Conference 2024",
     category: "Events",
     summary: "Annual gathering of tech enthusiasts and industry leaders.",
-    description:
-      "Join us for three days of inspiring keynotes, interactive workshops, and unparalleled networking opportunities. Learn from the best minds in software development, AI, and cloud architecture.",
+    description: "Join us for three days of inspiring keynotes, interactive workshops, and unparalleled networking opportunities. Learn from the best minds in software development, AI, and cloud architecture.",
     location: "San Francisco, CA",
     website: "https://example.com",
     contactEmail: "hello@example.com",
@@ -251,7 +263,6 @@ export default function EntryPage() {
     published: true,
     updatedAt: new Date().toISOString(),
   };
-
   const displayEntry = isDemo ? demoEntry : entry;
 
   const { data: relatedData } = useListPublicEntries(
@@ -263,264 +274,160 @@ export default function EntryPage() {
   useEffect(() => {
     if (!displayEntry) return;
     const e = displayEntry as any;
-    const metaTitle = e.metaTitle || `${e.title} | ${siteTitle}`;
-    const metaDescription = e.metaDescription || e.summary || "";
-    const ogTitle = e.ogTitle || e.title;
-    const ogDescription = e.ogDescription || e.summary || "";
-    document.title = metaTitle;
+    document.title = e.metaTitle || `${e.title} | ${siteTitle}`;
     const setMeta = (attr: string, value: string, content: string) => {
       let el = document.querySelector(`meta[${attr}="${value}"]`) as HTMLMetaElement | null;
-      if (!el) {
-        el = document.createElement("meta");
-        el.setAttribute(attr, value);
-        document.head.appendChild(el);
-      }
+      if (!el) { el = document.createElement("meta"); el.setAttribute(attr, value); document.head.appendChild(el); }
       el.setAttribute("content", content);
     };
-    setMeta("name", "description", metaDescription);
-    setMeta("property", "og:title", ogTitle);
-    setMeta("property", "og:description", ogDescription);
+    setMeta("name", "description", e.metaDescription || e.summary || "");
+    setMeta("property", "og:title", e.ogTitle || e.title);
+    setMeta("property", "og:description", e.ogDescription || e.summary || "");
     setMeta("property", "og:site_name", siteTitle);
     setMeta("property", "og:type", "article");
     return () => { document.title = siteTitle; };
   }, [displayEntry, siteTitle]);
 
-  // ── Loading / not found ────────────────────────────────────────────────────
   if (isLoading && !isDemo) {
-    return (
-      <div className="flex justify-center items-center py-32">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex justify-center items-center py-32"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
-
   if (!displayEntry) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
         <h2 className="text-2xl font-bold">Entry not found</h2>
-        <p className="text-muted-foreground mt-2">
-          The entry you are looking for does not exist or has been removed.
-        </p>
-        <Link href="/browse">
-          <Button className="mt-6">Back to Directory</Button>
-        </Link>
+        <p className="text-muted-foreground mt-2">The entry you are looking for does not exist or has been removed.</p>
+        <Link href="/browse"><Button className="mt-6">Back to Directory</Button></Link>
       </div>
     );
   }
 
-  // ── Sidebar field renderer ─────────────────────────────────────────────────
-  const renderSidebarField = (fieldId: string) => {
-    switch (fieldId) {
-      case "eventType":
-        return (displayEntry as any).eventType ? (
-          <div key="eventType" className="flex items-start">
-            <Layers className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium mb-1">Event Type</div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">{(displayEntry as any).eventType}</div>
-            </div>
-          </div>
-        ) : null;
-
-      case "startDate":
-        return (displayEntry as any).startDate || (displayEntry as any).endDate ? (
-          <div key="startDate" className="flex items-start">
-            <CalendarDays className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium mb-1">Dates</div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">
-                {(displayEntry as any).startDate}
-                {(displayEntry as any).endDate &&
-                (displayEntry as any).endDate !== (displayEntry as any).startDate
-                  ? ` – ${(displayEntry as any).endDate}`
-                  : ""}
-              </div>
-            </div>
-          </div>
-        ) : null;
-
-      case "venue":
-        return (displayEntry as any).venue ? (
-          <div key="venue" className="flex items-start">
-            <Building2 className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium mb-1">Venue</div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">{(displayEntry as any).venue}</div>
-            </div>
-          </div>
-        ) : null;
-
-      case "location":
-        return displayEntry.location ? (
-          <div key="location" className="flex items-start">
-            <MapPin className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium mb-1">Location</div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">{displayEntry.location}</div>
-            </div>
-          </div>
-        ) : null;
-
-      case "website":
-        return displayEntry.website ? (
-          <div key="website" className="flex items-start">
-            <Globe className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-            <div className="overflow-hidden">
-              <div className="text-sm font-medium mb-1">Website</div>
-              <a
-                href={
-                  displayEntry.website.startsWith("http")
-                    ? displayEntry.website
-                    : `https://${displayEntry.website}`
-                }
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline text-sm truncate block"
-              >
-                {displayEntry.website.replace(/^https?:\/\//, "")}
-              </a>
-            </div>
-          </div>
-        ) : null;
-
-      case "contactEmail":
-        return displayEntry.contactEmail ? (
-          <div key="contactEmail" className="flex items-start">
-            <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-            <div className="overflow-hidden">
-              <div className="text-sm font-medium mb-1">Email</div>
-              <a
-                href={`mailto:${displayEntry.contactEmail}`}
-                className="text-primary hover:underline text-sm truncate block"
-              >
-                {displayEntry.contactEmail}
-              </a>
-            </div>
-          </div>
-        ) : null;
-
-      case "contactPhone":
-        return displayEntry.contactPhone ? (
-          <div key="contactPhone" className="flex items-start">
-            <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
-            <div>
-              <div className="text-sm font-medium mb-1">Phone</div>
-              <div className="text-sm text-gray-600 dark:text-gray-300">{displayEntry.contactPhone}</div>
-            </div>
-          </div>
-        ) : null;
-
-      case "tags":
-        return displayEntry.tags ? (
-          <div key="tags">
-            <Separator className="my-4" />
-            <div>
-              <div className="flex items-center text-sm font-medium mb-3">
-                <Tag className="h-4 w-4 text-muted-foreground mr-2" /> Tags
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {displayEntry.tags.split(",").map((tag, i) => (
-                  <Badge
-                    key={i}
-                    variant="secondary"
-                    className="font-normal bg-gray-200 dark:bg-gray-700"
-                  >
-                    {tag.trim()}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : null;
-
-      default:
-        return null;
-    }
-  };
-
+  // ── Shared content renderers ───────────────────────────────────────────────
   const headerProps = getSectionProps("header");
   const sidebarProps = getSectionProps("sidebar");
   const entryNumericId = isNumeric ? numericId : (displayEntry as any)?.id;
 
-  // ── Content renderers for each section (used in both modes) ───────────────
-  const renderHeader = (props: SectionProps = headerProps) => (
-    <div
-      className="p-8 md:p-10 border-b"
-      style={{
-        backgroundColor: props.backgroundColor || undefined,
-        fontFamily: props.fontFamily ? getFontFamily(props.fontFamily) : undefined,
-      }}
-    >
+  const renderSidebarField = (fieldId: string) => {
+    const e = displayEntry as any;
+    switch (fieldId) {
+      case "eventType": return e.eventType ? (
+        <div key="eventType" className="flex items-start">
+          <Layers className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
+          <div><div className="text-sm font-medium mb-1">Event Type</div><div className="text-sm text-gray-600 dark:text-gray-300">{e.eventType}</div></div>
+        </div>
+      ) : null;
+      case "startDate": return (e.startDate || e.endDate) ? (
+        <div key="startDate" className="flex items-start">
+          <CalendarDays className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
+          <div><div className="text-sm font-medium mb-1">Dates</div><div className="text-sm text-gray-600 dark:text-gray-300">{e.startDate}{e.endDate && e.endDate !== e.startDate ? ` – ${e.endDate}` : ""}</div></div>
+        </div>
+      ) : null;
+      case "venue": return e.venue ? (
+        <div key="venue" className="flex items-start">
+          <Building2 className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
+          <div><div className="text-sm font-medium mb-1">Venue</div><div className="text-sm text-gray-600 dark:text-gray-300">{e.venue}</div></div>
+        </div>
+      ) : null;
+      case "location": return displayEntry.location ? (
+        <div key="location" className="flex items-start">
+          <MapPin className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
+          <div><div className="text-sm font-medium mb-1">Location</div><div className="text-sm text-gray-600 dark:text-gray-300">{displayEntry.location}</div></div>
+        </div>
+      ) : null;
+      case "website": return displayEntry.website ? (
+        <div key="website" className="flex items-start">
+          <Globe className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
+          <div className="overflow-hidden">
+            <div className="text-sm font-medium mb-1">Website</div>
+            <a href={displayEntry.website.startsWith("http") ? displayEntry.website : `https://${displayEntry.website}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm truncate block">
+              {displayEntry.website.replace(/^https?:\/\//, "")}
+            </a>
+          </div>
+        </div>
+      ) : null;
+      case "contactEmail": return displayEntry.contactEmail ? (
+        <div key="contactEmail" className="flex items-start">
+          <Mail className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
+          <div className="overflow-hidden">
+            <div className="text-sm font-medium mb-1">Email</div>
+            <a href={`mailto:${displayEntry.contactEmail}`} className="text-primary hover:underline text-sm truncate block">{displayEntry.contactEmail}</a>
+          </div>
+        </div>
+      ) : null;
+      case "contactPhone": return displayEntry.contactPhone ? (
+        <div key="contactPhone" className="flex items-start">
+          <Phone className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
+          <div><div className="text-sm font-medium mb-1">Phone</div><div className="text-sm text-gray-600 dark:text-gray-300">{displayEntry.contactPhone}</div></div>
+        </div>
+      ) : null;
+      case "tags": return displayEntry.tags ? (
+        <div key="tags">
+          <Separator className="my-4" />
+          <div>
+            <div className="flex items-center text-sm font-medium mb-3"><Tag className="h-4 w-4 text-muted-foreground mr-2" /> Tags</div>
+            <div className="flex flex-wrap gap-2">
+              {displayEntry.tags.split(",").map((tag, i) => (
+                <Badge key={i} variant="secondary" className="font-normal bg-gray-200 dark:bg-gray-700">{tag.trim()}</Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null;
+      default: return null;
+    }
+  };
+
+  // Individual section content renderers
+  const renderHeaderContent = (props: SectionProps = headerProps) => (
+    <div className="p-8 md:p-10" style={{ backgroundColor: props.backgroundColor || undefined, fontFamily: props.fontFamily ? getFontFamily(props.fontFamily) : undefined }}>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         {displayEntry.category && (
           <Link href={`/browse/${encodeURIComponent(displayEntry.category)}`}>
-            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-sm py-1 px-3">
-              {displayEntry.category}
-            </Badge>
+            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-sm py-1 px-3">{displayEntry.category}</Badge>
           </Link>
         )}
         {isDemo && <Badge variant="outline">Demo Entry</Badge>}
-        <span className="text-sm text-muted-foreground">
-          Last updated {format(new Date(displayEntry.updatedAt || new Date()), "MMMM d, yyyy")}
-        </span>
+        <span className="text-sm text-muted-foreground">Last updated {format(new Date(displayEntry.updatedAt || new Date()), "MMMM d, yyyy")}</span>
       </div>
-      <h1
-        className="font-bold tracking-tight mb-4"
-        style={{
-          color: props.headingColor || undefined,
-          fontSize: props.headingFontSize || "clamp(1.75rem, 4vw, 2.25rem)",
-        }}
-      >
+      <h1 className="font-bold tracking-tight mb-4" style={{ color: props.headingColor || undefined, fontSize: props.headingFontSize || "clamp(1.75rem, 4vw, 2.25rem)" }}>
         {displayEntry.title}
       </h1>
       {displayEntry.summary && (
-        <p
-          className="max-w-3xl"
-          style={{
-            color: props.textColor || undefined,
-            fontSize: props.bodyFontSize || "1.125rem",
-          }}
-        >
+        <p className="max-w-3xl" style={{ color: props.textColor || undefined, fontSize: props.bodyFontSize || "1.125rem" }}>
           {displayEntry.summary}
         </p>
       )}
     </div>
   );
 
-  const renderDescription = () => (
+  const renderDescriptionContent = () => (
     <div className="p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
-      {displayEntry.description ? (
-        <div className="whitespace-pre-wrap">{displayEntry.description}</div>
-      ) : (
-        <p className="text-muted-foreground italic">No detailed description provided.</p>
+      {displayEntry.description
+        ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
+        : <p className="text-muted-foreground italic">No detailed description provided.</p>}
+      {(displayEntry as any).moreDetails && (
+        <>
+          <Separator className="my-8" />
+          <h3 className="text-xl font-bold">Additional Information</h3>
+          <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
+        </>
       )}
+      {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
+        if (!value) return null;
+        const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        return (
+          <div key={key}>
+            <Separator className="my-8" />
+            <h3 className="text-xl font-bold mb-3">{label}</h3>
+            <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{String(value)}</div>
+          </div>
+        );
+      })}
     </div>
   );
 
-  const renderMoreDetails = () =>
-    (displayEntry as any).moreDetails ? (
-      <div className="p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
-        <h3 className="text-xl font-bold">Additional Information</h3>
-        <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
-      </div>
-    ) : (
-      <div className="p-6 text-sm text-muted-foreground italic">
-        No additional information provided.
-      </div>
-    );
-
-  const renderSidebar = (props: SectionProps = sidebarProps) => (
-    <div
-      className="p-8"
-      style={{
-        backgroundColor: props.backgroundColor || undefined,
-        fontFamily: props.fontFamily ? getFontFamily(props.fontFamily) : undefined,
-      }}
-    >
-      <h3
-        className="font-semibold text-lg mb-6"
-        style={{ color: props.headingColor || undefined }}
-      >
+  const renderSidebarContent = (props: SectionProps = sidebarProps) => (
+    <div className="p-8" style={{ backgroundColor: props.backgroundColor || undefined, fontFamily: props.fontFamily ? getFontFamily(props.fontFamily) : undefined }}>
+      <h3 className="font-semibold text-lg mb-6" style={{ color: props.headingColor || undefined }}>
         {getEntrySection("sidebar")?.props?.sidebarTitle || "Contact & Details"}
       </h3>
       <div className="space-y-5">
@@ -529,135 +436,132 @@ export default function EntryPage() {
     </div>
   );
 
-  const renderRelated = () =>
-    !isDemo && relatedData && relatedData.entries.filter((e) => e.id !== entryNumericId).length > 0 ? (
+  const renderRelatedContent = () => {
+    const relatedEntries = relatedData?.entries.filter((e) => e.id !== entryNumericId) ?? [];
+    return relatedEntries.length > 0 && !isDemo ? (
       <div className="p-8 md:p-10">
         <h2 className="text-2xl font-bold tracking-tight mb-6">
           {getEntrySection("related")?.heading || `Similar in ${displayEntry.category}`}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {relatedData.entries
-            .filter((e) => e.id !== entryNumericId)
-            .slice(0, 3)
-            .map((related) => (
-              <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
-                <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+          {relatedEntries.slice(0, 3).map((related) => (
+            <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+              <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
+                <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
+                <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
+              </Card>
+            </Link>
+          ))}
         </div>
       </div>
     ) : (
-      <div className="p-6 text-sm text-muted-foreground italic">
-        No related entries found.
-      </div>
+      <div className="p-6 text-sm text-muted-foreground italic">No related entries to display.</div>
     );
-
-  const renderSectionContent = (sectionId: string) => {
-    switch (sectionId) {
-      case "header":      return renderHeader();
-      case "description": return renderDescription();
-      case "moreDetails": return renderMoreDetails();
-      case "sidebar":     return renderSidebar();
-      case "related":     return renderRelated();
-      default:            return null;
-    }
   };
 
-  // ── EDIT MODE ──────────────────────────────────────────────────────────────
+  // ── EDIT MODE — two-column layout preserved ────────────────────────────────
   if (editMode) {
+    const hSec   = findEditSection("header");
+    const dSec   = findEditSection("description");
+    const sSec   = findEditSection("sidebar");
+    const rSec   = findEditSection("related");
+
+    // Which side is description vs sidebar? Determine by their order in editSections.
+    const dIdx = editSections.findIndex((s) => s.id === "description");
+    const sIdx = editSections.findIndex((s) => s.id === "sidebar");
+    const descOnLeft = dIdx <= sIdx;
+
+    const activeDef = ENTRY_BLOCK_DEFS.find((d) => d.type === activeId);
+    const activeLabel = activeDef?.label ?? activeId ?? "";
+
     return (
       <div style={{ fontFamily: entryFont }}>
         <FontLoader fontKey={ts.entry.font} />
 
-        {/* Sticky edit bar */}
+        {/* ── Sticky edit bar ── */}
         <div className="sticky top-0 z-50 flex items-center gap-3 px-4 h-14 bg-blue-600 text-white shadow-lg">
           <LayoutTemplate className="h-4 w-4 flex-shrink-0" />
           <span className="font-semibold text-sm">Editing Entry Template</span>
           <span className="text-blue-200 text-xs hidden sm:block">
-            — drag sections to reorder · toggle eye to show/hide
+            — drag any section to swap positions · eye icon to show/hide
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-white hover:bg-blue-500 border border-blue-400"
-              onClick={exitEditMode}
-              disabled={saving}
-            >
+            <Button size="sm" variant="ghost" className="text-white hover:bg-blue-500 border border-blue-400" onClick={exitEditMode} disabled={saving}>
               <X className="h-4 w-4 mr-1.5" /> Cancel
             </Button>
-            <Button
-              size="sm"
-              className="bg-white text-blue-600 hover:bg-blue-50 font-semibold"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1.5" />
-              )}
+            <Button size="sm" className="bg-white text-blue-600 hover:bg-blue-50 font-semibold" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
               Save Template
             </Button>
           </div>
         </div>
 
-        {/* DnD canvas */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
-          {/* Back link (non-interactive in edit mode) */}
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center text-sm font-medium text-muted-foreground opacity-50 select-none">
-              <ChevronLeft className="mr-1 h-4 w-4" /> Back to Directory
-            </span>
-            <span className="text-xs text-blue-500 font-medium bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
-              Template editing mode — changes apply to all entries
-            </span>
-          </div>
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
+            {/* Breadcrumb (non-interactive in edit mode) */}
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center text-sm text-muted-foreground opacity-50 select-none">
+                <ChevronLeft className="mr-1 h-4 w-4" /> Back to Directory
+              </span>
+              <span className="text-xs text-blue-600 font-medium bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+                Template edit mode — drag sections to rearrange · changes apply to all entries
+              </span>
+            </div>
 
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext
-              items={editSections.map((s) => s.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="space-y-4">
-                {editSections.map((section) => (
-                  <SortableEntrySection
-                    key={section.id}
-                    section={section}
-                    onToggle={() => toggleSection(section.id)}
+            {/* ── Main card ── */}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-sm space-y-0">
+
+              {/* Header — full width */}
+              <EditSectionWrapper section={hSec} onToggle={() => toggleSection("header")} isActive={activeId === "header"}>
+                {renderHeaderContent()}
+              </EditSectionWrapper>
+
+              {/* Two-column row: description ↔ sidebar (order respects drag swaps) */}
+              <div className="flex flex-col md:flex-row border-t border-gray-100 dark:border-gray-800">
+                {/* Left column */}
+                <div className="flex-1 md:border-r border-gray-100 dark:border-gray-800">
+                  <EditSectionWrapper
+                    section={descOnLeft ? dSec : sSec}
+                    onToggle={() => toggleSection(descOnLeft ? "description" : "sidebar")}
+                    isActive={activeId === (descOnLeft ? "description" : "sidebar")}
                   >
-                    {renderSectionContent(section.id)}
-                  </SortableEntrySection>
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+                    {descOnLeft ? renderDescriptionContent() : renderSidebarContent()}
+                  </EditSectionWrapper>
+                </div>
 
-          <div className="flex justify-end gap-2 pt-2 pb-8">
-            <Button variant="outline" onClick={exitEditMode} disabled={saving}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <CheckCircle2 className="h-4 w-4 mr-1.5" />
-              )}
-              Save Template
-            </Button>
+                {/* Right column */}
+                <div className="w-full md:w-80">
+                  <EditSectionWrapper
+                    section={descOnLeft ? sSec : dSec}
+                    onToggle={() => toggleSection(descOnLeft ? "sidebar" : "description")}
+                    isActive={activeId === (descOnLeft ? "sidebar" : "description")}
+                  >
+                    {descOnLeft ? renderSidebarContent() : renderDescriptionContent()}
+                  </EditSectionWrapper>
+                </div>
+              </div>
+            </div>
+
+            {/* Related — full width, outside card */}
+            <EditSectionWrapper section={rSec} onToggle={() => toggleSection("related")} isActive={activeId === "related"}>
+              {renderRelatedContent()}
+            </EditSectionWrapper>
+
+            {/* Bottom action row */}
+            <div className="flex justify-end gap-2 pt-2 pb-8">
+              <Button variant="outline" onClick={exitEditMode} disabled={saving}>Cancel</Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-1.5" />}
+                Save Template
+              </Button>
+            </div>
           </div>
-        </div>
+
+          {/* Drag overlay — ghost shown while dragging */}
+          <DragOverlay dropAnimation={null}>
+            {activeId ? <SectionGhost label={activeLabel} /> : null}
+          </DragOverlay>
+        </DndContext>
       </div>
     );
   }
@@ -670,59 +574,37 @@ export default function EntryPage() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
         {/* Top row: back link + admin Edit button */}
         <div className="flex items-center justify-between">
-          <Link
-            href="/browse"
-            className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            Back to Directory
+          <Link href="/browse" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft className="mr-1 h-4 w-4" /> Back to Directory
           </Link>
-
           {isAdmin && (
-            <Button
-              size="sm"
-              variant="outline"
+            <Button size="sm" variant="outline"
               className="border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/30"
-              onClick={enterEditMode}
-            >
-              <Pencil className="h-3.5 w-3.5 mr-1.5" />
-              Edit Layout
+              onClick={enterEditMode}>
+              <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit Layout
             </Button>
           )}
         </div>
 
-        {/* Main card — sections rendered in saved order */}
+        {/* Main card */}
         <div className="bg-white dark:bg-gray-900 border rounded-xl overflow-hidden shadow-sm">
-          {ts.entry.sections.map((section) => {
-            if (!section.enabled) return null;
-            switch (section.id) {
-              case "header":
-                return <div key="header">{renderHeader()}</div>;
-              case "description":
-              case "moreDetails":
-                return null; // handled together below
-              case "sidebar":
-                return null; // handled together with description below
-              case "related":
-                return null; // rendered outside the card
-              default:
-                return null;
-            }
-          })}
+          {/* Header */}
+          {getSectionEnabled("header") && (
+            <div className="border-b" style={{ backgroundColor: headerProps.backgroundColor || undefined, fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined }}>
+              {renderHeaderContent(headerProps)}
+            </div>
+          )}
 
-          {/* Content + Sidebar (always flex-row as per design) */}
+          {/* Content + Sidebar */}
           {(getSectionEnabled("description") || getSectionEnabled("moreDetails") || getSectionEnabled("sidebar")) && (
             <div className="flex flex-col md:flex-row">
               {(getSectionEnabled("description") || getSectionEnabled("moreDetails")) && (
                 <div className="flex-1 p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
                   {getSectionEnabled("description") && (
-                    displayEntry.description ? (
-                      <div className="whitespace-pre-wrap">{displayEntry.description}</div>
-                    ) : (
-                      <p className="text-muted-foreground italic">No detailed description provided.</p>
-                    )
+                    displayEntry.description
+                      ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
+                      : <p className="text-muted-foreground italic">No detailed description provided.</p>
                   )}
-
                   {getSectionEnabled("moreDetails") && (displayEntry as any).moreDetails && (
                     <>
                       <Separator className="my-8" />
@@ -730,40 +612,23 @@ export default function EntryPage() {
                       <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
                     </>
                   )}
-
-                  {/* Custom field sections */}
                   {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
                     if (!value) return null;
-                    const label = key
-                      .replace(/[-_]/g, " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase());
+                    const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                     return (
                       <div key={key}>
                         <Separator className="my-8" />
                         <h3 className="text-xl font-bold mb-3">{label}</h3>
-                        <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-                          {String(value)}
-                        </div>
+                        <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{String(value)}</div>
                       </div>
                     );
                   })}
                 </div>
               )}
-
               {getSectionEnabled("sidebar") && (
-                <div
-                  className="w-full md:w-80 border-t md:border-t-0 md:border-l p-8"
-                  style={{
-                    backgroundColor: sidebarProps.backgroundColor || undefined,
-                    fontFamily: sidebarProps.fontFamily
-                      ? getFontFamily(sidebarProps.fontFamily)
-                      : undefined,
-                  }}
-                >
-                  <h3
-                    className="font-semibold text-lg mb-6"
-                    style={{ color: sidebarProps.headingColor || undefined }}
-                  >
+                <div className="w-full md:w-80 border-t md:border-t-0 md:border-l p-8"
+                  style={{ backgroundColor: sidebarProps.backgroundColor || undefined, fontFamily: sidebarProps.fontFamily ? getFontFamily(sidebarProps.fontFamily) : undefined }}>
+                  <h3 className="font-semibold text-lg mb-6" style={{ color: sidebarProps.headingColor || undefined }}>
                     {getEntrySection("sidebar")?.props?.sidebarTitle || "Contact & Details"}
                   </h3>
                   <div className="space-y-5">
@@ -776,30 +641,21 @@ export default function EntryPage() {
         </div>
 
         {/* Related Entries */}
-        {getSectionEnabled("related") &&
-          !isDemo &&
-          relatedData &&
+        {getSectionEnabled("related") && !isDemo && relatedData &&
           relatedData.entries.filter((e) => e.id !== entryNumericId).length > 0 && (
             <div className="pt-8">
               <h2 className="text-2xl font-bold tracking-tight mb-6">
                 {getEntrySection("related")?.heading || `Similar in ${displayEntry.category}`}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {relatedData.entries
-                  .filter((e) => e.id !== entryNumericId)
-                  .slice(0, 3)
-                  .map((related) => (
-                    <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
-                      <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
+                {relatedData.entries.filter((e) => e.id !== entryNumericId).slice(0, 3).map((related) => (
+                  <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+                    <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
+                      <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
+                      <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
+                    </Card>
+                  </Link>
+                ))}
               </div>
             </div>
           )}

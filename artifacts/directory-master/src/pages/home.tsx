@@ -155,14 +155,20 @@ function EditSectionDialog({
 }) {
   const type = section.type ?? section.id;
   const [heading, setHeading] = useState(section.heading ?? "");
-  const [bodyText, setBodyText] = useState(section.props?.bodyText ?? "");
+  // Initialise from richBodyText (strip tags) if it exists, otherwise plain bodyText
+  const [bodyText, setBodyText] = useState(() => {
+    const rich = section.props?.richBodyText;
+    if (rich) return rich.replace(/<[^>]*>/g, "").trim();
+    return section.props?.bodyText ?? "";
+  });
   const [imageUrl, setImageUrl] = useState(section.props?.imageUrl ?? "");
   const [imageCaption, setImageCaption] = useState(section.props?.imageCaption ?? "");
 
   const handleSave = () => {
     const updatedProps = {
       ...section.props,
-      ...(type === "custom-text" ? { bodyText } : {}),
+      // For custom-text: set plain bodyText and wipe richBodyText so it doesn't override
+      ...(type === "custom-text" ? { bodyText, richBodyText: undefined } : {}),
       ...(type === "custom-image" ? { imageUrl, imageCaption } : {}),
     };
     onSave({ ...section, heading, props: updatedProps });

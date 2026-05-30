@@ -4,6 +4,37 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.5.0] — 2026-05-30
+
+Custom field display controls in the Entry Template Editor, image rendering for API-style image URLs, and CSV import mapping override.
+
+---
+
+### New Features
+
+#### Per-Custom-Field Display Controls in Entry Template Editor
+- In the "Editing Entry Template" mode (accessed via **Edit Layout** on any entry page), the Description section now renders each custom field as an individually controllable row.
+- Each row includes:
+  - **Drag handle** — drag up or down to reorder how custom fields appear on all entry pages.
+  - **Eye icon** — toggle the field's label/heading on or off (blue = label visible, grey = hidden).
+  - **Image icon** (FileImage) — force the field value to be rendered as an `<img>` element instead of plain text (amber = image mode enabled).
+- Settings are saved to `templateSettings.entry.customFieldDisplay` via **Save Template** and apply globally to all entry pages.
+- New fields not yet in the stored settings default to `showTitle: true, displayAsImage: false` and appear automatically when the template editor is opened.
+
+#### Improved Image URL Auto-Detection
+- Custom field values that are image URLs are now automatically rendered as `<img>` tags on entry pages.
+- Detection now covers both dot-extension URLs (`.jpg`, `.png`, `.svg`, etc.) **and** API path-segment URLs such as `https://api.dicebear.com/7.x/bottts/svg?seed=…` where the format appears as a path segment without a leading dot.
+- Keyword detection also matches hostnames/paths containing `avatar`, `photo`, `image`, `img`, `picture`, `thumbnail`, `icon`, or `logo`.
+- The explicit **Image** toggle in the Entry Template Editor overrides auto-detection, allowing any field to be forced into image mode.
+- Images hide gracefully via `onError` if the URL fails to load.
+
+#### CSV Import — Override "Skip" Mappings
+- When Gemini (or the heuristic analyzer) maps a CSV column to **Skip (don't import)**, admins can now toggle it ON manually.
+- Toggling a skipped row ON automatically assigns it to a new `custom_<field_slug>` target (e.g. `avatar_url` → `custom_avatar_url`) and adds it to the available fields list with an amber **Custom Section** badge.
+- The dropdown immediately becomes editable so the admin can rename or remap the field before importing.
+
+---
+
 ## [2.4.0] — 2026-05-05
 
 Inline Homepage Template Editor for admins.

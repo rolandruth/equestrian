@@ -100,6 +100,7 @@ export function getBlockDefs(pageType: string): BlockDefinition[] {
 export interface HomepageTemplate {
   font: string;
   heroImageUrl: string;
+  heroBgColor: string;
   sections: SectionConfig[];
 }
 
@@ -178,7 +179,7 @@ export const ENTRY_SIDEBAR_FIELDS: Array<{ id: string; label: string }> = [
 ];
 
 export const DEFAULT_TEMPLATE_SETTINGS: TemplateSettings = {
-  homepage: { font: "inter", heroImageUrl: "", sections: DEFAULT_HOMEPAGE_SECTIONS },
+  homepage: { font: "inter", heroImageUrl: "", heroBgColor: "", sections: DEFAULT_HOMEPAGE_SECTIONS },
   browse:   { font: "inter", heroImageUrl: "", cardFields: ["category", "location", "startDate", "tags"], cardImageFields: [], sections: DEFAULT_BROWSE_SECTIONS },
   entry:    { font: "inter", sidebarFields: ["eventType", "startDate", "venue", "location", "website", "contactEmail", "contactPhone", "tags"], sections: DEFAULT_ENTRY_SECTIONS },
 };

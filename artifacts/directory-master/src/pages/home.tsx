@@ -522,11 +522,12 @@ export default function HomePage() {
     const type = section.type ?? section.id;
 
     if (type === "hero") {
-      const hasBg = !!p.backgroundImage;
+      const heroImageUrl = ts.homepage.heroImageUrl || p.backgroundImage;
+      const hasBg = !!heroImageUrl;
       const paddingClass = p.padding === "sm" ? "py-12 lg:py-16" : p.padding === "lg" ? "py-28 lg:py-40" : "py-20 lg:py-32";
       const bgStyle: React.CSSProperties = hasBg
-        ? { backgroundImage: `url(${p.backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" }
-        : { backgroundColor: p.backgroundColor || themeColor };
+        ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+        : { backgroundColor: ts.homepage.heroBgColor || p.backgroundColor || themeColor };
 
       return (
         <section

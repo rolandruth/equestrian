@@ -296,16 +296,47 @@ export function TemplateEditor({ value, onChange }: TemplateEditorProps) {
       {/* HOMEPAGE TAB */}
       <TabsContent value="homepage" className="space-y-6 mt-0">
         <FontPicker value={ts.homepage.font} onChange={font => updateHomepage({ font })} />
-        <div>
-          <Label className="text-sm font-medium mb-1 block">Hero Background Image URL</Label>
-          <p className="text-xs text-muted-foreground mb-2">
-            Full-width banner behind the hero headline. Leave blank for a solid background.
-          </p>
-          <Input
-            placeholder="https://example.com/hero-banner.jpg"
-            value={ts.homepage.heroImageUrl}
-            onChange={e => updateHomepage({ heroImageUrl: e.target.value })}
-          />
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm font-medium mb-1 block">Hero Background Image URL</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Full-width banner behind the hero headline. Leave blank to use a solid color.
+            </p>
+            <Input
+              placeholder="https://example.com/hero-banner.jpg"
+              value={ts.homepage.heroImageUrl}
+              onChange={e => updateHomepage({ heroImageUrl: e.target.value })}
+            />
+          </div>
+          <div>
+            <Label className="text-sm font-medium mb-1 block">Hero Background Color</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Solid color shown when no image is set. Leave blank to use the Primary Theme Color.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                className="w-10 h-10 p-1 rounded border border-input cursor-pointer bg-transparent"
+                value={ts.homepage.heroBgColor || "#2563eb"}
+                onChange={e => updateHomepage({ heroBgColor: e.target.value })}
+              />
+              <Input
+                className="w-36 font-mono"
+                placeholder="#2563eb"
+                value={ts.homepage.heroBgColor}
+                onChange={e => updateHomepage({ heroBgColor: e.target.value })}
+              />
+              {ts.homepage.heroBgColor && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  onClick={() => updateHomepage({ heroBgColor: "" })}
+                >
+                  Reset to theme
+                </button>
+              )}
+            </div>
+          </div>
         </div>
         <SectionList
           sections={ts.homepage.sections}

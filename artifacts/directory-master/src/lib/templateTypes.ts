@@ -110,10 +110,18 @@ export interface BrowseTemplate {
   sections: SectionConfig[];
 }
 
+// Per-custom-field display settings stored in the entry template
+export interface CustomFieldDisplay {
+  key: string;
+  showTitle: boolean;    // whether to render the field's h3 label
+  displayAsImage: boolean; // force-render the value as an <img>
+}
+
 export interface EntryTemplate {
   font: string;
   sidebarFields: string[];
   sections: SectionConfig[];
+  customFieldDisplay?: CustomFieldDisplay[];
 }
 
 export interface TemplateSettings {
@@ -197,6 +205,7 @@ export function mergeTemplateSettings(stored: Partial<TemplateSettings> | null |
       ...stored.entry,
       sections: mergeSections(stored.entry?.sections, DEFAULT_ENTRY_SECTIONS),
       sidebarFields: stored.entry?.sidebarFields ?? DEFAULT_TEMPLATE_SETTINGS.entry.sidebarFields,
+      customFieldDisplay: stored.entry?.customFieldDisplay ?? undefined,
     },
   };
 }

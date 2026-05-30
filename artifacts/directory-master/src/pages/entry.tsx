@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   MapPin, Globe, Mail, Phone, ChevronLeft, Tag, Loader2,
   Building2, CalendarDays, Layers, Pencil, GripVertical,
-  EyeOff, Eye, Save, X, LayoutTemplate, CheckCircle2,
+  EyeOff, Eye, Save, X, LayoutTemplate, CheckCircle2, FileImage,
 } from "lucide-react";
 import { format } from "date-fns";
 import { FontLoader } from "@/components/template/FontLoader";
@@ -25,7 +25,7 @@ import {
   mergeTemplateSettings, getFontFamily, ENTRY_SIDEBAR_FIELDS,
   ENTRY_BLOCK_DEFS,
 } from "@/lib/templateTypes";
-import type { SectionConfig, SectionProps } from "@/lib/templateTypes";
+import type { SectionConfig, SectionProps, CustomFieldDisplay } from "@/lib/templateTypes";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -180,6 +180,99 @@ function SectionGhost({ label }: { label: string }) {
   );
 }
 
+// ─── Image URL detection ──────────────────────────────────────────────────────
+// Handles both dot-extension URLs (.jpg, .svg) and path-segment URLs (/svg, /png)
+// which are common with API-based image services like DiceBear.
+function isImageUrl(val: string): boolean {
+  try {
+    const u = new URL(val);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+    return /[./](jpg|jpeg|png|gif|webp|svg|avif|ico)(\?|#|$)/i.test(u.pathname)
+      || /avatar|photo|image|img|picture|thumbnail|icon|logo/i.test(u.hostname + u.pathname);
+  } catch { return false; }
+}
+
+// Returns the effective ordered list of custom field display configs for a given entry,
+// merging stored template settings with any fields present in the entry but not yet configured.
+function getEffectiveCustomFieldDisplay(
+  stored: CustomFieldDisplay[] | undefined,
+  customFields: Record<string, unknown>,
+): CustomFieldDisplay[] {
+  const cfds = stored ?? [];
+  const entryKeys = Object.keys(customFields);
+  const storedKeys = new Set(cfds.map((c) => c.key));
+  const missing: CustomFieldDisplay[] = entryKeys
+    .filter((k) => !storedKeys.has(k))
+    .map((k) => ({ key: k, showTitle: true, displayAsImage: false }));
+  return [...cfds.filter((c) => entryKeys.includes(c.key)), ...missing];
+}
+
+// ─── Sortable row for individual custom fields in edit mode ───────────────────
+function SortableCustomField({
+  config,
+  value,
+  onToggleTitle,
+  onToggleImage,
+}: {
+  config: CustomFieldDisplay;
+  value: string;
+  onToggleTitle: () => void;
+  onToggleImage: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: `cf-${config.key}` });
+
+  const label = config.key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const preview = value.length > 48 ? value.slice(0, 48) + "…" : value;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.35 : 1 }}
+      className="flex items-center gap-2 group bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2.5"
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing p-1 rounded text-blue-400 opacity-50 group-hover:opacity-100 transition-opacity touch-none flex-shrink-0"
+        title="Drag to reorder"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">{label}</p>
+        <p className="text-xs text-muted-foreground truncate leading-snug">{preview}</p>
+      </div>
+      <div className="flex items-center gap-0.5 ml-1 flex-shrink-0">
+        {/* Show / hide field label */}
+        <button
+          onClick={onToggleTitle}
+          title={config.showTitle ? "Hide field label" : "Show field label"}
+          className={`p-1.5 rounded transition-colors ${
+            config.showTitle
+              ? "text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+              : "text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+        >
+          {config.showTitle ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+        </button>
+        {/* Force display as image */}
+        <button
+          onClick={onToggleImage}
+          title={config.displayAsImage ? "Show as plain text" : "Display as image"}
+          className={`p-1.5 rounded transition-colors ${
+            config.displayAsImage
+              ? "text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              : "text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+        >
+          <FileImage className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 async function fetchEntryBySlug(slug: string) {
   const res = await fetch(`/api/public/entries/${encodeURIComponent(slug)}`);
@@ -232,6 +325,7 @@ export default function EntryPage() {
   const [editMode, setEditMode] = useState(false);
   const [editSections, setEditSections] = useState<SectionConfig[]>([]);
   const [editSidebarFields, setEditSidebarFields] = useState<string[]>([]);
+  const [editCustomFieldDisplay, setEditCustomFieldDisplay] = useState<CustomFieldDisplay[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const updateSettings = useUpdateSettings();
@@ -243,8 +337,15 @@ export default function EntryPage() {
   const enterEditMode = useCallback(() => {
     setEditSections(ts.entry.sections.map((s) => ({ ...s })));
     setEditSidebarFields([...ts.entry.sidebarFields]);
+    // Seed custom field display from stored settings + any new fields in this entry.
+    // Use `entry` directly here (defined above the callback) rather than `displayEntry`
+    // which is assigned later in the component body.
+    const entryCustomFields = (entry as any)?.customFields ?? {};
+    setEditCustomFieldDisplay(
+      getEffectiveCustomFieldDisplay(ts.entry.customFieldDisplay, entryCustomFields)
+    );
     setEditMode(true);
-  }, [ts.entry.sections, ts.entry.sidebarFields]);
+  }, [ts.entry.sections, ts.entry.sidebarFields, ts.entry.customFieldDisplay, entry]);
 
   const exitEditMode = () => { setEditMode(false); setActiveId(null); };
 
@@ -254,6 +355,7 @@ export default function EntryPage() {
 
   // Unified drag end — routes by ID prefix:
   //   "sf-*"  → sidebar field vertical sort (arrayMove)
+  //   "cf-*"  → custom field vertical sort (arrayMove)
   //   others  → section swap (swap two sections)
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
@@ -271,7 +373,16 @@ export default function EntryPage() {
         if (oldIdx === -1 || newIdx === -1) return prev;
         return arrayMove(prev, oldIdx, newIdx);
       });
-    } else if (!activeStr.startsWith("sf-") && !overStr.startsWith("sf-")) {
+    } else if (activeStr.startsWith("cf-") && overStr.startsWith("cf-")) {
+      // Custom field sort
+      setEditCustomFieldDisplay((prev) => {
+        const oldIdx = prev.findIndex((c) => `cf-${c.key}` === activeStr);
+        const newIdx = prev.findIndex((c) => `cf-${c.key}` === overStr);
+        if (oldIdx === -1 || newIdx === -1) return prev;
+        return arrayMove(prev, oldIdx, newIdx);
+      });
+    } else if (!activeStr.startsWith("sf-") && !overStr.startsWith("sf-")
+             && !activeStr.startsWith("cf-") && !overStr.startsWith("cf-")) {
       // Section swap
       setEditSections((prev) => {
         const next = [...prev];
@@ -299,7 +410,15 @@ export default function EntryPage() {
     try {
       const stored = (settings as any)?.templateSettings ?? {};
       const merged = mergeTemplateSettings(stored);
-      const updated = { ...merged, entry: { ...merged.entry, sections: editSections, sidebarFields: editSidebarFields } };
+      const updated = {
+        ...merged,
+        entry: {
+          ...merged.entry,
+          sections: editSections,
+          sidebarFields: editSidebarFields,
+          customFieldDisplay: editCustomFieldDisplay,
+        },
+      };
       await updateSettings.mutateAsync({ data: { templateSettings: updated } as any });
       qc.invalidateQueries({ queryKey: getGetPublicSettingsQueryKey() });
       qc.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
@@ -462,44 +581,102 @@ export default function EntryPage() {
     </div>
   );
 
-  const renderDescriptionContent = () => (
-    <div className="p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
-      {displayEntry.description
-        ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
-        : <p className="text-muted-foreground italic">No detailed description provided.</p>}
-      {(displayEntry as any).moreDetails && (
-        <>
-          <Separator className="my-8" />
-          <h3 className="text-xl font-bold">Additional Information</h3>
-          <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
-        </>
-      )}
-      {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
-        if (!value) return null;
-        const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-        const strVal = String(value);
-        const isImgUrl = (() => {
-          try {
-            const u = new URL(strVal);
-            if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-            return /\.(jpg|jpeg|png|gif|webp|svg|avif|ico)(\?|#|$)/i.test(u.pathname)
-              || /avatar|photo|image|img|picture|thumbnail|icon|logo/i.test(u.hostname + u.pathname);
-          } catch { return false; }
-        })();
-        return (
-          <div key={key}>
+  const renderDescriptionContent = () => {
+    const customFields = (displayEntry as any)?.customFields ?? {};
+    const cfds = getEffectiveCustomFieldDisplay(ts.entry.customFieldDisplay, customFields);
+    return (
+      <div className="p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
+        {displayEntry.description
+          ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
+          : <p className="text-muted-foreground italic">No detailed description provided.</p>}
+        {(displayEntry as any).moreDetails && (
+          <>
             <Separator className="my-8" />
-            <h3 className="text-xl font-bold mb-3">{label}</h3>
-            {isImgUrl ? (
-              <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
-            ) : (
-              <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>
-            )}
+            <h3 className="text-xl font-bold">Additional Information</h3>
+            <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
+          </>
+        )}
+        {cfds.map(({ key, showTitle, displayAsImage }) => {
+          const value = customFields[key];
+          if (!value) return null;
+          const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+          const strVal = String(value);
+          const showAsImage = displayAsImage || isImageUrl(strVal);
+          return (
+            <div key={key}>
+              <Separator className="my-8" />
+              {showTitle && <h3 className="text-xl font-bold mb-3">{label}</h3>}
+              {showAsImage ? (
+                <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              ) : (
+                <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── Edit-mode description: custom fields are individually sortable with per-field controls
+  const renderEditModeDescriptionContent = () => {
+    const customFields = (displayEntry as any)?.customFields ?? {};
+    const hasCustomFields = Object.keys(customFields).length > 0;
+    return (
+      <div className="p-6 prose prose-gray dark:prose-invert max-w-none">
+        {/* Description text preview (read-only) */}
+        <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-dashed border-gray-300 dark:border-gray-600 not-prose">
+          <p className="text-xs font-medium text-blue-500 mb-1.5">Description text (read-only preview)</p>
+          <p className="text-sm text-muted-foreground line-clamp-3">
+            {displayEntry.description || <em>No description</em>}
+          </p>
+        </div>
+
+        {/* Sortable custom fields */}
+        {hasCustomFields && (
+          <div className="not-prose">
+            <p className="text-xs text-blue-500 flex items-center gap-1.5 mb-3">
+              <GripVertical className="h-3 w-3" />
+              Drag to reorder · <Eye className="h-3 w-3 inline" /> show/hide label · <FileImage className="h-3 w-3 inline" /> display as image
+            </p>
+            <SortableContext
+              items={editCustomFieldDisplay.map((c) => `cf-${c.key}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-2">
+                {editCustomFieldDisplay.map((config) => {
+                  const val = customFields[config.key];
+                  if (!val) return null;
+                  return (
+                    <SortableCustomField
+                      key={config.key}
+                      config={config}
+                      value={String(val)}
+                      onToggleTitle={() =>
+                        setEditCustomFieldDisplay((prev) =>
+                          prev.map((c) => c.key === config.key ? { ...c, showTitle: !c.showTitle } : c)
+                        )
+                      }
+                      onToggleImage={() =>
+                        setEditCustomFieldDisplay((prev) =>
+                          prev.map((c) => c.key === config.key ? { ...c, displayAsImage: !c.displayAsImage } : c)
+                        )
+                      }
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
           </div>
-        );
-      })}
-    </div>
-  );
+        )}
+        {!hasCustomFields && (
+          <p className="text-xs text-muted-foreground italic not-prose">
+            No custom fields in this entry. Import data with custom columns to configure them here.
+          </p>
+        )}
+      </div>
+    );
+  };
 
   const renderSidebarContent = (props: SectionProps = sidebarProps) => (
     <div className="p-8" style={{ backgroundColor: props.backgroundColor || undefined, fontFamily: props.fontFamily ? getFontFamily(props.fontFamily) : undefined }}>
@@ -623,7 +800,7 @@ export default function EntryPage() {
                 section={hSec}
                 onToggle={() => toggleSection("header")}
                 isActive={activeId === "header"}
-                disableDropZone={activeId?.startsWith("sf-")}
+                disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
               >
                 {renderHeaderContent()}
               </EditSectionWrapper>
@@ -636,9 +813,9 @@ export default function EntryPage() {
                     section={descOnLeft ? dSec : sSec}
                     onToggle={() => toggleSection(descOnLeft ? "description" : "sidebar")}
                     isActive={activeId === (descOnLeft ? "description" : "sidebar")}
-                    disableDropZone={activeId?.startsWith("sf-")}
+                    disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
                   >
-                    {descOnLeft ? renderDescriptionContent() : renderEditModeSidebarContent()}
+                    {descOnLeft ? renderEditModeDescriptionContent() : renderEditModeSidebarContent()}
                   </EditSectionWrapper>
                 </div>
 
@@ -648,9 +825,9 @@ export default function EntryPage() {
                     section={descOnLeft ? sSec : dSec}
                     onToggle={() => toggleSection(descOnLeft ? "sidebar" : "description")}
                     isActive={activeId === (descOnLeft ? "sidebar" : "description")}
-                    disableDropZone={activeId?.startsWith("sf-")}
+                    disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
                   >
-                    {descOnLeft ? renderEditModeSidebarContent() : renderDescriptionContent()}
+                    {descOnLeft ? renderEditModeSidebarContent() : renderEditModeDescriptionContent()}
                   </EditSectionWrapper>
                 </div>
               </div>
@@ -661,7 +838,7 @@ export default function EntryPage() {
               section={rSec}
               onToggle={() => toggleSection("related")}
               isActive={activeId === "related"}
-              disableDropZone={activeId?.startsWith("sf-")}
+              disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
             >
               {renderRelatedContent()}
             </EditSectionWrapper>
@@ -678,7 +855,16 @@ export default function EntryPage() {
 
           {/* Drag overlay — ghost shown while dragging */}
           <DragOverlay dropAnimation={null}>
-            {activeId ? <SectionGhost label={activeLabel} /> : null}
+            {activeId ? (
+              activeId.startsWith("cf-") ? (
+                <div className="rounded-lg border-2 border-amber-400 bg-amber-50 dark:bg-amber-950/50 shadow-xl opacity-90 pointer-events-none px-4 py-2.5 text-sm font-medium text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                  <GripVertical className="h-4 w-4" />
+                  {activeId.replace("cf-", "").replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                </div>
+              ) : (
+                <SectionGhost label={activeLabel} />
+              )
+            ) : null}
           </DragOverlay>
         </DndContext>
       </div>
@@ -729,23 +915,20 @@ export default function EntryPage() {
                   <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
                 </>
               )}
-              {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
+              {getEffectiveCustomFieldDisplay(
+                ts.entry.customFieldDisplay,
+                (displayEntry as any)?.customFields ?? {}
+              ).map(({ key, showTitle, displayAsImage }) => {
+                const value = (displayEntry as any)?.customFields?.[key];
                 if (!value) return null;
                 const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                 const strVal = String(value);
-                const isImgUrl = (() => {
-                  try {
-                    const u = new URL(strVal);
-                    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
-                    return /\.(jpg|jpeg|png|gif|webp|svg|avif|ico)(\?|#|$)/i.test(u.pathname)
-                      || /avatar|photo|image|img|picture|thumbnail|icon|logo/i.test(u.hostname + u.pathname);
-                  } catch { return false; }
-                })();
+                const showAsImage = displayAsImage || isImageUrl(strVal);
                 return (
                   <div key={key}>
                     <Separator className="my-8" />
-                    <h3 className="text-xl font-bold mb-3">{label}</h3>
-                    {isImgUrl ? (
+                    {showTitle && <h3 className="text-xl font-bold mb-3">{label}</h3>}
+                    {showAsImage ? (
                       <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                     ) : (
                       <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>

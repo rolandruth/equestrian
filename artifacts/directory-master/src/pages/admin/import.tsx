@@ -214,6 +214,24 @@ export default function AdminImportPage() {
     );
   };
 
+  // When an admin toggles ON a field that was set to "skip", auto-assign it to a
+  // custom field so the dropdown is immediately usable and the toggle stays on.
+  const enableSkippedMapping = (csvColumn: string) => {
+    const slug = csvColumn.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    const customKey = `custom_${slug}`;
+    const customLabel = csvColumn.replace(/[_-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+    setAvailableFields(prev =>
+      prev.some(f => f.value === customKey)
+        ? prev
+        : [...prev, { value: customKey, label: customLabel, description: `Custom field: ${csvColumn}`, isCustom: true }]
+    );
+    setMappings(prev =>
+      prev.map(m =>
+        m.csvColumn === csvColumn ? { ...m, approved: true, targetField: customKey } : m
+      )
+    );
+  };
+
   const handleAiMap = async () => {
     const content = csvContent.trim();
     if (!content) return;
@@ -514,8 +532,13 @@ export default function AdminImportPage() {
                           <Switch
                             checked={m.approved && m.targetField !== "skip"}
                             onCheckedChange={(checked) => {
-                              updateMapping(m.csvColumn, "approved", checked);
-                              if (!checked) updateMapping(m.csvColumn, "targetField", "skip");
+                              if (checked && m.targetField === "skip") {
+                                // Enable a previously-skipped field: auto-assign to a custom field
+                                enableSkippedMapping(m.csvColumn);
+                              } else {
+                                updateMapping(m.csvColumn, "approved", checked);
+                                if (!checked) updateMapping(m.csvColumn, "targetField", "skip");
+                              }
                             }}
                           />
                         </td>

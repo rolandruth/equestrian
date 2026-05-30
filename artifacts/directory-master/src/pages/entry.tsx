@@ -477,11 +477,24 @@ export default function EntryPage() {
       {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
         if (!value) return null;
         const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        const strVal = String(value);
+        const isImgUrl = (() => {
+          try {
+            const u = new URL(strVal);
+            if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+            return /\.(jpg|jpeg|png|gif|webp|svg|avif|ico)(\?|#|$)/i.test(u.pathname)
+              || /avatar|photo|image|img|picture|thumbnail|icon|logo/i.test(u.hostname + u.pathname);
+          } catch { return false; }
+        })();
         return (
           <div key={key}>
             <Separator className="my-8" />
             <h3 className="text-xl font-bold mb-3">{label}</h3>
-            <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{String(value)}</div>
+            {isImgUrl ? (
+              <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            ) : (
+              <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>
+            )}
           </div>
         );
       })}
@@ -719,11 +732,24 @@ export default function EntryPage() {
               {Object.entries((displayEntry as any)?.customFields ?? {}).map(([key, value]) => {
                 if (!value) return null;
                 const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                const strVal = String(value);
+                const isImgUrl = (() => {
+                  try {
+                    const u = new URL(strVal);
+                    if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+                    return /\.(jpg|jpeg|png|gif|webp|svg|avif|ico)(\?|#|$)/i.test(u.pathname)
+                      || /avatar|photo|image|img|picture|thumbnail|icon|logo/i.test(u.hostname + u.pathname);
+                  } catch { return false; }
+                })();
                 return (
                   <div key={key}>
                     <Separator className="my-8" />
                     <h3 className="text-xl font-bold mb-3">{label}</h3>
-                    <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{String(value)}</div>
+                    {isImgUrl ? (
+                      <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                    ) : (
+                      <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>
+                    )}
                   </div>
                 );
               })}

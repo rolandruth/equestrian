@@ -52,6 +52,68 @@ export default function BrowsePage() {
   const cardFields = ts.browse.cardFields;
   const showField = (id: string) => cardFields.includes(id);
 
+  const renderCardField = (entry: any, fid: string) => {
+    switch (fid) {
+      case "location":
+        return entry.location ? (
+          <div key="location" className="flex items-center text-sm text-muted-foreground">
+            <MapPin className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.location}</span>
+          </div>
+        ) : null;
+      case "venue":
+        return entry.venue ? (
+          <div key="venue" className="flex items-center text-sm text-muted-foreground">
+            <Building2 className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.venue}</span>
+          </div>
+        ) : null;
+      case "startDate":
+        return entry.startDate ? (
+          <div key="startDate" className="flex items-center text-sm text-muted-foreground">
+            <CalendarDays className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+            <span>
+              {entry.startDate}
+              {showField("endDate") && entry.endDate && entry.endDate !== entry.startDate
+                ? ` – ${entry.endDate}` : ""}
+            </span>
+          </div>
+        ) : null;
+      case "endDate":
+        return (!showField("startDate") && entry.endDate) ? (
+          <div key="endDate" className="flex items-center text-sm text-muted-foreground">
+            <CalendarDays className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+            <span>{entry.endDate}</span>
+          </div>
+        ) : null;
+      case "eventType":
+        return entry.eventType ? (
+          <div key="eventType" className="flex items-center text-sm text-muted-foreground">
+            <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-medium">{entry.eventType}</span>
+          </div>
+        ) : null;
+      case "website":
+        return entry.website ? (
+          <div key="website" className="flex items-center text-sm text-muted-foreground">
+            <Globe className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+            <span className="line-clamp-1 text-primary">{entry.website.replace(/^https?:\/\//, "")}</span>
+          </div>
+        ) : null;
+      case "tags":
+        return entry.tags ? (
+          <div key="tags" className="flex items-center gap-1 flex-wrap pt-1">
+            <Tag className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            {entry.tags.split(",").slice(0, 3).map((tag: string, i: number) => (
+              <span key={i} className="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                {tag.trim()}
+              </span>
+            ))}
+          </div>
+        ) : null;
+      default: return null;
+    }
+  };
+
   useEffect(() => {
     const q = new URLSearchParams(window.location.search).get("search") || "";
     if (q !== search) {
@@ -89,55 +151,12 @@ export default function BrowsePage() {
 
   const isDemo = !isLoading && entriesData && entriesData.entries.length === 0 && !search && !categoryParam;
 
-  const renderCardFields = (entry: any, isDemo = false) => (
+  const renderCardFields = (entry: any) => (
     <CardContent className="flex-grow space-y-2">
       {entry.summary && (
         <p className="text-muted-foreground line-clamp-3 text-sm">{entry.summary}</p>
       )}
-      {showField("location") && entry.location && (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <MapPin className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
-          <span className="line-clamp-1">{entry.location}</span>
-        </div>
-      )}
-      {showField("venue") && entry.venue && (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Building2 className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
-          <span className="line-clamp-1">{entry.venue}</span>
-        </div>
-      )}
-      {showField("startDate") && entry.startDate && (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <CalendarDays className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
-          <span>
-            {entry.startDate}
-            {showField("endDate") && entry.endDate && entry.endDate !== entry.startDate
-              ? ` – ${entry.endDate}`
-              : ""}
-          </span>
-        </div>
-      )}
-      {showField("eventType") && entry.eventType && (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-medium">{entry.eventType}</span>
-        </div>
-      )}
-      {showField("website") && entry.website && (
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Globe className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
-          <span className="line-clamp-1 text-primary">{entry.website.replace(/^https?:\/\//, "")}</span>
-        </div>
-      )}
-      {showField("tags") && entry.tags && (
-        <div className="flex items-center gap-1 flex-wrap pt-1">
-          <Tag className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-          {entry.tags.split(",").slice(0, 3).map((tag: string, i: number) => (
-            <span key={i} className="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-muted-foreground">
-              {tag.trim()}
-            </span>
-          ))}
-        </div>
-      )}
+      {cardFields.filter(id => id !== "category").map(fid => renderCardField(entry, fid))}
     </CardContent>
   );
 
@@ -154,7 +173,7 @@ export default function BrowsePage() {
         </div>
         <CardTitle className="line-clamp-2 text-xl">{entry.title}</CardTitle>
       </CardHeader>
-      {renderCardFields(entry, isDemo)}
+      {renderCardFields(entry)}
       <CardFooter className="pt-4 border-t">
         <Link href={`/entry/${(entry as any).slug || entry.id}`} className="w-full">
           <Button variant="ghost" className="w-full group">

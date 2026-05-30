@@ -3,6 +3,7 @@ import { useParams, useLocation } from "wouter";
 import {
   useGetSettings,
   useUpdateSettings,
+  useListPublicEntries,
   getGetPublicSettingsQueryKey,
   getGetSettingsQueryKey,
 } from "@workspace/api-client-react";
@@ -22,7 +23,7 @@ import {
   FileText, Info, PanelRight, Link2, Heading1, AlignLeft, AlignCenter,
   AlignRight, Plus, X, Layers, CheckCircle2, RefreshCw,
   Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Settings2,
-  Sparkles, RotateCcw,
+  Sparkles, RotateCcw, MapPin, Globe, CalendarDays, Building2, Tag,
 } from "lucide-react";
 import {
   DndContext, closestCenter, DragEndEvent, useSensor, useSensors, PointerSensor,
@@ -40,7 +41,7 @@ import Underline from "@tiptap/extension-underline";
 import {
   type SectionConfig, type SectionProps, type BlockDefinition, type TemplateSettings,
   mergeTemplateSettings, getBlockType, getBlockDefs, FONTS, getFontFamily,
-  DEFAULT_HOMEPAGE_SECTIONS,
+  DEFAULT_HOMEPAGE_SECTIONS, BROWSE_CARD_FIELDS,
 } from "@/lib/templateTypes";
 
 // ─── Block type icon map ─────────────────────────────────────────────────
@@ -202,6 +203,181 @@ function WysiwygEditor({ content, onChange }: { content: string; onChange: (html
           [&_.ProseMirror_p.is-editor-empty:first-child::before]:pointer-events-none
         `}
       />
+    </div>
+  );
+}
+
+// ─── Card Fields Editor (for Browse Page "Entry Cards Grid" section) ─────
+
+function getCardFieldValue(entry: any, fieldId: string): string | null {
+  switch (fieldId) {
+    case "category":  return entry.category ?? null;
+    case "location":  return entry.location ?? null;
+    case "venue":     return entry.venue ?? null;
+    case "startDate": return entry.startDate ? String(entry.startDate) : null;
+    case "endDate":   return entry.endDate ? String(entry.endDate) : null;
+    case "eventType": return entry.eventType ?? null;
+    case "website":   return entry.website ? String(entry.website).replace(/^https?:\/\//, "") : null;
+    case "tags":      return entry.tags ? String(entry.tags).split(",").slice(0, 3).map((t: string) => t.trim()).join(", ") : null;
+    default:          return null;
+  }
+}
+
+function CardFieldRowIcon({ id }: { id: string }) {
+  switch (id) {
+    case "location":  return <MapPin className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
+    case "venue":     return <Building2 className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
+    case "startDate":
+    case "endDate":   return <CalendarDays className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
+    case "website":   return <Globe className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
+    case "tags":      return <Tag className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
+    default:          return null;
+  }
+}
+
+function SortableCardFieldRow({
+  id, label, enabled, atMax, onToggle,
+}: { id: string; label: string; enabled: boolean; atMax: boolean; onToggle: () => void }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg border transition-colors ${
+        enabled
+          ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/40"
+          : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 opacity-60"
+      }`}
+    >
+      <div
+        {...attributes} {...listeners}
+        className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-gray-600 hover:text-gray-400 flex-shrink-0 touch-none"
+      >
+        <GripVertical className="h-3.5 w-3.5" />
+      </div>
+      <span className={`flex-1 text-xs font-medium ${enabled ? "text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400"}`}>
+        {label}
+      </span>
+      <Switch
+        checked={enabled}
+        onCheckedChange={onToggle}
+        disabled={atMax}
+        className="data-[state=checked]:bg-blue-500 flex-shrink-0 h-4 w-7 [&>span]:h-3 [&>span]:w-3"
+      />
+    </div>
+  );
+}
+
+function CardFieldsEditor({
+  cardFields,
+  onChange,
+}: { cardFields: string[]; onChange: (fields: string[]) => void }) {
+  const { data: entriesData } = useListPublicEntries({ limit: 1, page: 1 });
+  const previewEntry = entriesData?.entries?.[0];
+
+  const allFieldIds = BROWSE_CARD_FIELDS.map(f => f.id);
+  const enabledIds = cardFields.filter(id => allFieldIds.includes(id));
+  const disabledIds = allFieldIds.filter(id => !enabledIds.includes(id));
+  const orderedIds = [...enabledIds, ...disabledIds];
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = orderedIds.indexOf(String(active.id));
+    const newIdx = orderedIds.indexOf(String(over.id));
+    const newOrder = arrayMove(orderedIds, oldIdx, newIdx);
+    onChange(newOrder.filter(id => enabledIds.includes(id)));
+  };
+
+  const toggleField = (id: string) => {
+    if (enabledIds.includes(id)) {
+      onChange(enabledIds.filter(f => f !== id));
+    } else {
+      if (enabledIds.length >= 4) return;
+      onChange([...enabledIds, id]);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Live entry card preview */}
+      {previewEntry ? (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700">
+            <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Card Preview · {previewEntry.title}</span>
+          </div>
+          <div className="p-3 space-y-1.5 bg-white dark:bg-gray-900">
+            {enabledIds.includes("category") && (previewEntry as any).category && (
+              <span className="inline-block text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                {(previewEntry as any).category}
+              </span>
+            )}
+            <p className="text-sm font-semibold text-gray-800 dark:text-white line-clamp-1">{previewEntry.title}</p>
+            {(previewEntry as any).summary && (
+              <p className="text-xs text-gray-400 line-clamp-2">{(previewEntry as any).summary}</p>
+            )}
+            <div className="space-y-1 pt-0.5">
+              {enabledIds.filter(id => id !== "category").map(fid => {
+                const val = getCardFieldValue(previewEntry, fid);
+                if (!val) return null;
+                return (
+                  <div key={fid} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    <CardFieldRowIcon id={fid} />
+                    <span className="line-clamp-1">{val}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="pt-1.5 border-t border-gray-100 dark:border-gray-800">
+              <span className="text-xs text-blue-500 font-medium">View Details →</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 text-center text-xs text-gray-400">
+          Add entries to see a live card preview
+        </div>
+      )}
+
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Visible Fields</p>
+        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+          enabledIds.length >= 4
+            ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+        }`}>
+          {enabledIds.length} / 4
+        </span>
+      </div>
+      <p className="text-xs text-gray-400 -mt-2 leading-relaxed">
+        Toggle to show/hide · Drag to reorder · Up to 4 fields appear on every entry card across Browse and Homepage.
+      </p>
+
+      {/* Sortable field rows */}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+          <div className="space-y-1.5">
+            {orderedIds.map(fid => {
+              const fieldDef = BROWSE_CARD_FIELDS.find(f => f.id === fid)!;
+              const isEnabled = enabledIds.includes(fid);
+              const atMax = enabledIds.length >= 4 && !isEnabled;
+              return (
+                <SortableCardFieldRow
+                  key={fid}
+                  id={fid}
+                  label={fieldDef.label}
+                  enabled={isEnabled}
+                  atMax={atMax}
+                  onToggle={() => toggleField(fid)}
+                />
+              );
+            })}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
@@ -580,10 +756,12 @@ function BlockLibraryPanel({ pageType, existingIds, onAdd }: {
 }
 
 // ─── Properties panel ────────────────────────────────────────────────────
-function PropertiesPanel({ block, onChange, onPropsChange }: {
+function PropertiesPanel({ block, onChange, onPropsChange, cardFields, onCardFieldsChange }: {
   block: SectionConfig | null;
   onChange: (patch: Partial<SectionConfig>) => void;
   onPropsChange: (patch: Partial<SectionProps>) => void;
+  cardFields?: string[];
+  onCardFieldsChange?: (fields: string[]) => void;
 }) {
   if (!block) {
     return (
@@ -856,13 +1034,28 @@ function PropertiesPanel({ block, onChange, onPropsChange }: {
           </>
         )}
 
-        {/* ── INFO for layout-only sections ── */}
-        {["filters", "grid", "description", "moreDetails"].includes(type) && (
+        {/* ── GRID: card fields editor ── */}
+        {type === "grid" && cardFields !== undefined && onCardFieldsChange && (
+          <>
+            <Separator />
+            <CardFieldsEditor cardFields={cardFields} onChange={onCardFieldsChange} />
+          </>
+        )}
+        {type === "grid" && cardFields === undefined && (
           <>
             <Separator />
             <p className="text-xs text-gray-400 leading-relaxed">
-              This section's appearance is controlled by your directory data and card field settings. 
-              Use the Page Templates tab in Settings to configure which fields are shown.
+              Open this section in the Browse Page Builder to configure which fields appear on entry cards.
+            </p>
+          </>
+        )}
+
+        {/* ── INFO for other layout-only sections ── */}
+        {["filters", "description", "moreDetails"].includes(type) && (
+          <>
+            <Separator />
+            <p className="text-xs text-gray-400 leading-relaxed">
+              This section's appearance is controlled by your directory data and entry template settings.
             </p>
           </>
         )}
@@ -996,6 +1189,18 @@ export default function BuilderPage() {
     updateBlocks(blocks.filter(b => b.id !== id));
     if (selectedId === id) setSelectedId(null);
   };
+
+  const updateCardFields = useCallback((fields: string[]) => {
+    if (!latestTsRef.current) return;
+    const newTs = {
+      ...latestTsRef.current,
+      browse: { ...latestTsRef.current.browse, cardFields: fields },
+    } as TemplateSettings;
+    latestTsRef.current = newTs;
+    setTs(newTs);
+    isDirtyRef.current = true;
+    scheduleAutoSave();
+  }, [scheduleAutoSave]);
 
   const handleAiEnhance = async () => {
     if (aiEnhancing) return;
@@ -1172,6 +1377,8 @@ export default function BuilderPage() {
           block={selectedBlock}
           onChange={patch => selectedId && updateBlock(selectedId, patch)}
           onPropsChange={patch => selectedId && updateBlockProps(selectedId, patch)}
+          cardFields={pageType === "browse" ? ts.browse.cardFields : undefined}
+          onCardFieldsChange={pageType === "browse" ? updateCardFields : undefined}
         />
       </div>
     </div>

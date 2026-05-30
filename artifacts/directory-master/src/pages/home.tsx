@@ -23,7 +23,7 @@ import {
 import {
   MapPin, ArrowRight, Search, GripVertical, Eye, EyeOff, Pencil, Trash2,
   Plus, CheckCircle2, Loader2, LayoutTemplate, AlignLeft, Image as ImageIcon,
-  Grid3X3, Star, Clock,
+  Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag,
 } from "lucide-react";
 import { FontLoader } from "@/components/template/FontLoader";
 import {
@@ -287,6 +287,8 @@ export default function HomePage() {
   const themeColor = (settings as any)?.themeColor || "#2563eb";
   const hpFont = getFontFamily(ts.homepage.font);
   const isDemo = !recentLoading && recent && recent.length === 0;
+  const cardFields = ts.browse.cardFields;
+  const showField = (id: string) => cardFields.includes(id);
   const enabledSections = ts.homepage.sections.filter(s => s.enabled);
 
   // ── Edit mode state ──────────────────────────────────────────────────────────
@@ -363,12 +365,74 @@ export default function HomePage() {
     }
   };
 
-  // ── Entry card renderer ───────────────────────────────────────────────────────
+  // ── Entry card renderer (respects cardFields order from template settings) ────
+  const renderCardField = (entry: any, fid: string) => {
+    switch (fid) {
+      case "location":
+        return entry.location ? (
+          <div key="location" className="flex items-center text-sm text-muted-foreground">
+            <MapPin className="mr-1 h-4 w-4 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.location}</span>
+          </div>
+        ) : null;
+      case "venue":
+        return entry.venue ? (
+          <div key="venue" className="flex items-center text-sm text-muted-foreground">
+            <Building2 className="mr-1 h-4 w-4 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.venue}</span>
+          </div>
+        ) : null;
+      case "startDate":
+        return entry.startDate ? (
+          <div key="startDate" className="flex items-center text-sm text-muted-foreground">
+            <CalendarDays className="mr-1 h-4 w-4 flex-shrink-0" />
+            <span>
+              {String(entry.startDate)}
+              {showField("endDate") && entry.endDate && entry.endDate !== entry.startDate
+                ? ` – ${String(entry.endDate)}` : ""}
+            </span>
+          </div>
+        ) : null;
+      case "endDate":
+        return (!showField("startDate") && entry.endDate) ? (
+          <div key="endDate" className="flex items-center text-sm text-muted-foreground">
+            <CalendarDays className="mr-1 h-4 w-4 flex-shrink-0" />
+            <span>{String(entry.endDate)}</span>
+          </div>
+        ) : null;
+      case "eventType":
+        return entry.eventType ? (
+          <div key="eventType" className="flex items-center text-sm text-muted-foreground">
+            <span className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-medium">{entry.eventType}</span>
+          </div>
+        ) : null;
+      case "website":
+        return entry.website ? (
+          <div key="website" className="flex items-center text-sm text-muted-foreground">
+            <Globe className="mr-1 h-4 w-4 flex-shrink-0" />
+            <span className="line-clamp-1 text-primary">{String(entry.website).replace(/^https?:\/\//, "")}</span>
+          </div>
+        ) : null;
+      case "tags":
+        return entry.tags ? (
+          <div key="tags" className="flex items-center gap-1 flex-wrap pt-1">
+            <Tag className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+            {String(entry.tags).split(",").slice(0, 3).map((tag: string, i: number) => (
+              <span key={i} className="text-xs bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded text-muted-foreground">
+                {tag.trim()}
+              </span>
+            ))}
+          </div>
+        ) : null;
+      default: return null;
+    }
+  };
+
   const renderEntryCard = (entry: any, demo = false) => (
     <Card key={entry.id} className="h-full flex flex-col hover:border-primary/50 transition-colors">
       <CardHeader>
         <div className="flex justify-between items-start mb-2">
-          {entry.category && (
+          {showField("category") && entry.category && (
             <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
               {entry.category}
             </Badge>
@@ -377,16 +441,11 @@ export default function HomePage() {
         </div>
         <CardTitle className="line-clamp-2 text-xl">{entry.title}</CardTitle>
       </CardHeader>
-      <CardContent className="flex-grow">
+      <CardContent className="flex-grow space-y-2">
         {entry.summary && (
           <p className="text-muted-foreground line-clamp-3 text-sm">{entry.summary}</p>
         )}
-        {entry.location && (
-          <div className="flex items-center text-sm text-muted-foreground mt-4">
-            <MapPin className="mr-1 h-4 w-4" />
-            <span className="line-clamp-1">{entry.location}</span>
-          </div>
-        )}
+        {cardFields.filter(id => id !== "category").map(fid => renderCardField(entry, fid))}
       </CardContent>
       <CardFooter className="pt-4 border-t">
         <Link href={`/entry/${(entry as any).slug || entry.id}`} className="w-full">

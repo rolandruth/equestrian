@@ -288,7 +288,9 @@ export default function HomePage() {
   const hpFont = getFontFamily(ts.homepage.font);
   const isDemo = !recentLoading && recent && recent.length === 0;
   const cardFields = ts.browse.cardFields;
+  const cardImageFields = ts.browse.cardImageFields;
   const showField = (id: string) => cardFields.includes(id);
+  const isImageField = (id: string) => cardImageFields.includes(id);
   const enabledSections = ts.homepage.sections.filter(s => s.enabled);
 
   // ── Edit mode state ──────────────────────────────────────────────────────────
@@ -367,6 +369,28 @@ export default function HomePage() {
 
   // ── Entry card renderer (respects cardFields order from template settings) ────
   const renderCardField = (entry: any, fid: string) => {
+    // Image display mode — render value as <img> instead of text
+    if (isImageField(fid)) {
+      const val = (() => {
+        if (fid.startsWith("custom:")) {
+          const k = fid.slice(7);
+          const cf = entry?.customFields;
+          return cf && typeof cf === "object" ? cf[k] : null;
+        }
+        return (entry as any)[fid] ?? null;
+      })();
+      if (!val) return null;
+      return (
+        <div key={fid} className="pt-1">
+          <img
+            src={String(val)}
+            alt=""
+            className="h-12 w-12 rounded-full object-cover border border-gray-100 dark:border-gray-700"
+            onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+        </div>
+      );
+    }
     switch (fid) {
       case "location":
         return entry.location ? (

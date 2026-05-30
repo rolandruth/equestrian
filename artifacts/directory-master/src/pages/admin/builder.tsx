@@ -253,8 +253,11 @@ function CardFieldRowIcon({ id }: { id: string }) {
 }
 
 function SortableCardFieldRow({
-  id, label, enabled, atMax, onToggle,
-}: { id: string; label: string; enabled: boolean; atMax: boolean; onToggle: () => void }) {
+  id, label, enabled, atMax, onToggle, isImageField, onToggleImage,
+}: {
+  id: string; label: string; enabled: boolean; atMax: boolean;
+  onToggle: () => void; isImageField: boolean; onToggleImage: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div
@@ -275,6 +278,21 @@ function SortableCardFieldRow({
       <span className={`flex-1 text-xs font-medium ${enabled ? "text-blue-700 dark:text-blue-300" : "text-gray-500 dark:text-gray-400"}`}>
         {label}
       </span>
+      {/* Image toggle — only visible when field is enabled */}
+      {enabled && (
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onToggleImage(); }}
+          title={isImageField ? "Showing as image — click to show as text" : "Click to display value as an image"}
+          className={`flex-shrink-0 p-1 rounded transition-colors ${
+            isImageField
+              ? "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/40 dark:text-emerald-400"
+              : "text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+          }`}
+        >
+          <Image className="h-3 w-3" />
+        </button>
+      )}
       <Switch
         checked={enabled}
         onCheckedChange={onToggle}
@@ -331,9 +349,13 @@ function buildAvailableFields(entries: any[]): Array<{ id: string; label: string
 }
 
 function CardFieldsEditor({
-  cardFields,
-  onChange,
-}: { cardFields: string[]; onChange: (fields: string[]) => void }) {
+  cardFields, onChange, cardImageFields, onImageFieldsChange,
+}: {
+  cardFields: string[];
+  onChange: (fields: string[]) => void;
+  cardImageFields: string[];
+  onImageFieldsChange: (fields: string[]) => void;
+}) {
   const { data: entriesData } = useListPublicEntries({ limit: 50, page: 1 });
   const entries = (entriesData?.entries ?? []) as any[];
   const previewEntry = entries[0];
@@ -391,6 +413,17 @@ function CardFieldsEditor({
               {enabledIds.filter(id => id !== "category").map(fid => {
                 const val = getCardFieldValue(previewEntry, fid);
                 if (!val) return null;
+                if (cardImageFields.includes(fid)) {
+                  return (
+                    <img
+                      key={fid}
+                      src={val}
+                      alt=""
+                      className="h-10 w-10 rounded object-cover border border-gray-100 dark:border-gray-700"
+                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                    />
+                  );
+                }
                 return (
                   <div key={fid} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
                     <CardFieldRowIcon id={fid} />
@@ -426,10 +459,11 @@ function CardFieldsEditor({
         </span>
       </div>
       <p className="text-xs text-gray-400 -mt-2 leading-relaxed">
-        Toggle to show/hide · Drag to reorder · Up to 4 fields appear on every entry card across Browse and Homepage.
+        Toggle to show/hide · Drag to reorder · Up to 4 fields.
+        Click the <Image className="inline h-3 w-3 mx-0.5 relative -top-px" /> icon on any enabled field to display its value as an image instead of text.
         {!isLoading && entries.length > 0 && (
           <span className="block mt-0.5 text-gray-300 dark:text-gray-600">
-            Showing fields detected from your {entries.length >= 50 ? "50+" : entries.length} {entries.length === 1 ? "entry" : "entries"}.
+            Fields detected from your {entries.length >= 50 ? "50+" : entries.length} {entries.length === 1 ? "entry" : "entries"}.
           </span>
         )}
       </p>
@@ -449,15 +483,23 @@ function CardFieldsEditor({
                 if (!fieldDef) return null;
                 const isEnabled = enabledIds.includes(fid);
                 const atMax = enabledIds.length >= 4 && !isEnabled;
-                const isCustom = fid.startsWith("custom:");
+                const isImg = cardImageFields.includes(fid);
                 return (
                   <SortableCardFieldRow
                     key={fid}
                     id={fid}
-                    label={isCustom ? `${fieldDef.label}` : fieldDef.label}
+                    label={fieldDef.label}
                     enabled={isEnabled}
                     atMax={atMax}
                     onToggle={() => toggleField(fid)}
+                    isImageField={isImg}
+                    onToggleImage={() => {
+                      if (isImg) {
+                        onImageFieldsChange(cardImageFields.filter(f => f !== fid));
+                      } else {
+                        onImageFieldsChange([...cardImageFields, fid]);
+                      }
+                    }}
                   />
                 );
               })}
@@ -843,12 +885,14 @@ function BlockLibraryPanel({ pageType, existingIds, onAdd }: {
 }
 
 // ─── Properties panel ────────────────────────────────────────────────────
-function PropertiesPanel({ block, onChange, onPropsChange, cardFields, onCardFieldsChange }: {
+function PropertiesPanel({ block, onChange, onPropsChange, cardFields, onCardFieldsChange, cardImageFields, onCardImageFieldsChange }: {
   block: SectionConfig | null;
   onChange: (patch: Partial<SectionConfig>) => void;
   onPropsChange: (patch: Partial<SectionProps>) => void;
   cardFields?: string[];
   onCardFieldsChange?: (fields: string[]) => void;
+  cardImageFields?: string[];
+  onCardImageFieldsChange?: (fields: string[]) => void;
 }) {
   if (!block) {
     return (
@@ -1125,7 +1169,12 @@ function PropertiesPanel({ block, onChange, onPropsChange, cardFields, onCardFie
         {type === "grid" && cardFields !== undefined && onCardFieldsChange && (
           <>
             <Separator />
-            <CardFieldsEditor cardFields={cardFields} onChange={onCardFieldsChange} />
+            <CardFieldsEditor
+              cardFields={cardFields}
+              onChange={onCardFieldsChange}
+              cardImageFields={cardImageFields ?? []}
+              onImageFieldsChange={onCardImageFieldsChange ?? (() => {})}
+            />
           </>
         )}
         {type === "grid" && cardFields === undefined && (
@@ -1282,6 +1331,18 @@ export default function BuilderPage() {
     const newTs = {
       ...latestTsRef.current,
       browse: { ...latestTsRef.current.browse, cardFields: fields },
+    } as TemplateSettings;
+    latestTsRef.current = newTs;
+    setTs(newTs);
+    isDirtyRef.current = true;
+    scheduleAutoSave();
+  }, [scheduleAutoSave]);
+
+  const updateCardImageFields = useCallback((fields: string[]) => {
+    if (!latestTsRef.current) return;
+    const newTs = {
+      ...latestTsRef.current,
+      browse: { ...latestTsRef.current.browse, cardImageFields: fields },
     } as TemplateSettings;
     latestTsRef.current = newTs;
     setTs(newTs);
@@ -1466,6 +1527,8 @@ export default function BuilderPage() {
           onPropsChange={patch => selectedId && updateBlockProps(selectedId, patch)}
           cardFields={pageType === "browse" ? ts.browse.cardFields : undefined}
           onCardFieldsChange={pageType === "browse" ? updateCardFields : undefined}
+          cardImageFields={pageType === "browse" ? ts.browse.cardImageFields : undefined}
+          onCardImageFieldsChange={pageType === "browse" ? updateCardImageFields : undefined}
         />
       </div>
     </div>

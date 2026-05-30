@@ -107,6 +107,7 @@ export interface BrowseTemplate {
   font: string;
   heroImageUrl: string;
   cardFields: string[];
+  cardImageFields: string[];
   sections: SectionConfig[];
 }
 
@@ -178,7 +179,7 @@ export const ENTRY_SIDEBAR_FIELDS: Array<{ id: string; label: string }> = [
 
 export const DEFAULT_TEMPLATE_SETTINGS: TemplateSettings = {
   homepage: { font: "inter", heroImageUrl: "", sections: DEFAULT_HOMEPAGE_SECTIONS },
-  browse:   { font: "inter", heroImageUrl: "", cardFields: ["category", "location", "startDate", "tags"], sections: DEFAULT_BROWSE_SECTIONS },
+  browse:   { font: "inter", heroImageUrl: "", cardFields: ["category", "location", "startDate", "tags"], cardImageFields: [], sections: DEFAULT_BROWSE_SECTIONS },
   entry:    { font: "inter", sidebarFields: ["eventType", "startDate", "venue", "location", "website", "contactEmail", "contactPhone", "tags"], sections: DEFAULT_ENTRY_SECTIONS },
 };
 
@@ -202,6 +203,7 @@ export function mergeTemplateSettings(stored: Partial<TemplateSettings> | null |
       ...stored.browse,
       sections: mergeSections(stored.browse?.sections, DEFAULT_BROWSE_SECTIONS),
       cardFields: stored.browse?.cardFields ?? DEFAULT_TEMPLATE_SETTINGS.browse.cardFields,
+      cardImageFields: stored.browse?.cardImageFields ?? DEFAULT_TEMPLATE_SETTINGS.browse.cardImageFields,
     },
     entry: {
       ...DEFAULT_TEMPLATE_SETTINGS.entry,

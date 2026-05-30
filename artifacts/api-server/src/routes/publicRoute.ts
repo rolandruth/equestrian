@@ -121,7 +121,7 @@ router.get("/stats", async (req, res) => {
 router.get("/featured", async (req, res) => {
   try {
     const rows = await db.select().from(entries)
-      .where(eq(entries.published, true))
+      .where(and(eq(entries.published, true), eq(entries.featured, true)))
       .orderBy(desc(entries.createdAt))
       .limit(6);
     res.json(rows.map(formatEntry));

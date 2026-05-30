@@ -115,6 +115,7 @@ export interface CustomFieldDisplay {
   key: string;
   showTitle: boolean;    // whether to render the field's h3 label
   displayAsImage: boolean; // force-render the value as an <img>
+  section?: "header" | "description" | "sidebar"; // which entry section to appear in (default: "description")
 }
 
 export interface EntryTemplate {

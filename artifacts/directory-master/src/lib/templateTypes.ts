@@ -113,8 +113,10 @@ export interface BrowseTemplate {
 // Per-custom-field display settings stored in the entry template
 export interface CustomFieldDisplay {
   key: string;
-  showTitle: boolean;    // whether to render the field's h3 label
-  displayAsImage: boolean; // force-render the value as an <img>
+  showTitle: boolean;       // whether to render the field's h3 label
+  displayAsImage: boolean;  // force-render the value as an <img>
+  displayAsButton?: boolean; // render the value as a CTA button/link (mutually exclusive with displayAsImage)
+  buttonText?: string;       // custom label for the CTA button (falls back to field label)
   section?: "header" | "description" | "sidebar"; // which entry section to appear in (default: "description")
 }
 

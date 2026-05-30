@@ -17,7 +17,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   MapPin, Globe, Mail, Phone, ChevronLeft, Tag, Loader2,
   Building2, CalendarDays, Layers, Pencil, GripVertical,
-  EyeOff, Eye, Save, X, LayoutTemplate, CheckCircle2, FileImage,
+  EyeOff, Eye, Save, X, LayoutTemplate, CheckCircle2, FileImage, ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import { FontLoader } from "@/components/template/FontLoader";
@@ -203,7 +203,7 @@ function getEffectiveCustomFieldDisplay(
   const storedKeys = new Set(cfds.map((c) => c.key));
   const missing: CustomFieldDisplay[] = entryKeys
     .filter((k) => !storedKeys.has(k))
-    .map((k) => ({ key: k, showTitle: true, displayAsImage: false, section: "description" as const }));
+    .map((k) => ({ key: k, showTitle: true, displayAsImage: false, displayAsButton: false, section: "description" as const }));
   return [...cfds.filter((c) => entryKeys.includes(c.key)), ...missing];
 }
 
@@ -228,12 +228,16 @@ function SortableCustomField({
   value,
   onToggleTitle,
   onToggleImage,
+  onToggleButton,
+  onChangeButtonText,
   onChangeSection,
 }: {
   config: CustomFieldDisplay;
   value: string;
   onToggleTitle: () => void;
   onToggleImage: () => void;
+  onToggleButton: () => void;
+  onChangeButtonText: (text: string) => void;
   onChangeSection: (s: "header" | "description" | "sidebar") => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -288,8 +292,33 @@ function SortableCustomField({
           >
             <FileImage className="h-3.5 w-3.5" />
           </button>
+          {/* Force display as CTA button */}
+          <button
+            onClick={onToggleButton}
+            title={config.displayAsButton ? "Show as plain text" : "Display as call-to-action button"}
+            className={`p-1.5 rounded transition-colors ${
+              config.displayAsButton
+                ? "text-green-600 hover:bg-green-50 dark:hover:bg-green-950/30"
+                : "text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
+
+      {/* CTA button text input — shown when displayAsButton is on */}
+      {config.displayAsButton && (
+        <div className="mt-1.5 pl-7 pr-1">
+          <input
+            type="text"
+            value={config.buttonText ?? ""}
+            onChange={(e) => onChangeButtonText(e.target.value)}
+            placeholder={`Button label (default: "${label}")`}
+            className="w-full text-xs px-2 py-1 rounded border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/20 text-gray-800 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-green-400"
+          />
+        </div>
+      )}
 
       {/* Bottom row: section assignment pills */}
       <div className="flex items-center gap-1 mt-1.5 pl-7">
@@ -445,6 +474,22 @@ export default function EntryPage() {
   const handleChangeSection = (key: string, section: "header" | "description" | "sidebar") => {
     setEditCustomFieldDisplay((prev) =>
       prev.map((c) => (c.key === key ? { ...c, section } : c))
+    );
+  };
+
+  const handleToggleButton = (key: string) => {
+    setEditCustomFieldDisplay((prev) =>
+      prev.map((c) =>
+        c.key === key
+          ? { ...c, displayAsButton: !c.displayAsButton, displayAsImage: false }
+          : c
+      )
+    );
+  };
+
+  const handleChangeButtonText = (key: string, text: string) => {
+    setEditCustomFieldDisplay((prev) =>
+      prev.map((c) => (c.key === key ? { ...c, buttonText: text } : c))
     );
   };
 
@@ -642,18 +687,25 @@ export default function EntryPage() {
             <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
           </>
         )}
-        {cfds.map(({ key, showTitle, displayAsImage }) => {
+        {cfds.map(({ key, showTitle, displayAsImage, displayAsButton, buttonText }) => {
           const value = customFields[key];
           if (!value) return null;
           const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
           const strVal = String(value);
           const showAsImage = displayAsImage || isImageUrl(strVal);
+          const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
           return (
             <div key={key}>
               <Separator className="my-8" />
               {showTitle && <h3 className="text-xl font-bold mb-3">{label}</h3>}
               {showAsImage ? (
                 <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              ) : displayAsButton ? (
+                <a href={href} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+                  <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                  {buttonText || label}
+                </a>
               ) : (
                 <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>
               )}
@@ -689,9 +741,11 @@ export default function EntryPage() {
               }
               onToggleImage={() =>
                 setEditCustomFieldDisplay((prev) =>
-                  prev.map((c) => c.key === config.key ? { ...c, displayAsImage: !c.displayAsImage } : c)
+                  prev.map((c) => c.key === config.key ? { ...c, displayAsImage: !c.displayAsImage, displayAsButton: false } : c)
                 )
               }
+              onToggleButton={() => handleToggleButton(config.key)}
+              onChangeButtonText={(text) => handleChangeButtonText(config.key, text)}
               onChangeSection={(s) => handleChangeSection(config.key, s)}
             />
           ))}
@@ -722,7 +776,7 @@ export default function EntryPage() {
           <div className="not-prose">
             <p className="text-xs text-blue-500 flex items-center gap-1.5 mb-3">
               <GripVertical className="h-3 w-3" />
-              Drag to reorder · <Eye className="h-3 w-3 inline" /> label · <FileImage className="h-3 w-3 inline" /> image · use <span className="font-semibold">Section</span> pills to move a field
+              Drag to reorder · <Eye className="h-3 w-3 inline" /> label · <FileImage className="h-3 w-3 inline" /> image · <ExternalLink className="h-3 w-3 inline" /> CTA button · use <span className="font-semibold">Section</span> pills to move a field
             </p>
             {descFields.length > 0 ? (
               renderEditModeCustomFields("description")
@@ -1001,19 +1055,26 @@ export default function EntryPage() {
             (displayEntry as any)?.customFields ?? {}
           );
 
-          // Helper: render a custom field value inline
-          const renderCf = ({ key, showTitle, displayAsImage }: { key: string; showTitle: boolean; displayAsImage: boolean }) => {
+          // Helper: render a custom field value inline (description body / header contexts)
+          const renderCf = ({ key, showTitle, displayAsImage, displayAsButton, buttonText }: CustomFieldDisplay) => {
             const value = (displayEntry as any)?.customFields?.[key];
             if (!value) return null;
             const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
             const strVal = String(value);
             const showAsImage = displayAsImage || isImageUrl(strVal);
+            const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
             return (
               <div key={key}>
                 <Separator className="my-8" />
                 {showTitle && <h3 className="text-xl font-bold mb-3">{label}</h3>}
                 {showAsImage ? (
                   <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                ) : displayAsButton ? (
+                  <a href={href} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                    {buttonText || label}
+                  </a>
                 ) : (
                   <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>
                 )}
@@ -1051,18 +1112,25 @@ export default function EntryPage() {
               <div className="space-y-5">
                 {sidebarFields.map((fieldId) => renderSidebarField(fieldId)).filter(Boolean)}
                 {/* Custom fields assigned to the sidebar section */}
-                {cfForSection(allCfds, "sidebar").map(({ key, showTitle, displayAsImage }) => {
+                {cfForSection(allCfds, "sidebar").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText }) => {
                   const value = (displayEntry as any)?.customFields?.[key];
                   if (!value) return null;
                   const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                   const strVal = String(value);
                   const showAsImage = displayAsImage || isImageUrl(strVal);
+                  const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
                   return (
                     <div key={key} className="flex items-start">
                       <div className="flex-1 min-w-0">
                         {showTitle && <div className="text-sm font-medium mb-1">{label}</div>}
                         {showAsImage ? (
                           <img src={strVal} alt={label} className="max-w-full rounded border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        ) : displayAsButton ? (
+                          <a href={href} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm w-full justify-center">
+                            <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                            {buttonText || label}
+                          </a>
                         ) : (
                           <div className="text-sm text-gray-600 dark:text-gray-300">{strVal}</div>
                         )}
@@ -1081,17 +1149,24 @@ export default function EntryPage() {
                 <div className="border-b" style={{ backgroundColor: headerProps.backgroundColor || undefined, fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined }}>
                   {renderHeaderContent(headerProps)}
                   {/* Custom fields assigned to the Title & Summary section */}
-                  {cfForSection(allCfds, "header").map(({ key, showTitle, displayAsImage }) => {
+                  {cfForSection(allCfds, "header").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText }) => {
                     const value = (displayEntry as any)?.customFields?.[key];
                     if (!value) return null;
                     const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                     const strVal = String(value);
                     const showAsImage = displayAsImage || isImageUrl(strVal);
+                    const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
                     return (
                       <div key={key} className="px-8 md:px-10 pb-6">
                         {showTitle && <div className="text-sm font-medium text-muted-foreground mb-1">{label}</div>}
                         {showAsImage ? (
                           <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        ) : displayAsButton ? (
+                          <a href={href} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+                            <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                            {buttonText || label}
+                          </a>
                         ) : (
                           <div className="text-sm text-gray-700 dark:text-gray-300">{strVal}</div>
                         )}

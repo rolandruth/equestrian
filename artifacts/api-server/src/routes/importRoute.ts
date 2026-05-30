@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { importJobs, entries, categories } from "@workspace/db";
 import { requireEditor } from "../middlewares/auth.js";
-import { ai } from "@workspace/integrations-gemini-ai";
+import { getGeminiClient } from "../lib/gemini.js";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
@@ -156,7 +156,8 @@ async function enrichBatch(batch: Array<{ index: number; data: Record<string, st
 Entries:
 ${needsEnrich.map(b => `[${b.index}] Title: ${b.data.title || "Unknown"} | Category: ${b.data.category || ""} | Description: ${(b.data.description || "").slice(0, 300)} | Location: ${b.data.location || ""} | EventType: ${b.data.eventType || ""}`).join("\n")}`;
 
-  const response = await ai.models.generateContent({
+  const aiClient = await getGeminiClient();
+  const response = await aiClient.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: { maxOutputTokens: 16384 },
@@ -389,7 +390,8 @@ Respond with ONLY this JSON (no markdown fences, no explanation):
   ]
 }`;
 
-    const response = await ai.models.generateContent({
+    const aiClient = await getGeminiClient();
+    const response = await aiClient.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { maxOutputTokens: 8192 },

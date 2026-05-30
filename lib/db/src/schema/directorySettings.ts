@@ -20,6 +20,7 @@ export const directorySettings = pgTable("directory_settings", {
   bodyScripts: text("body_scripts"),
   calloutSections: text("callout_sections"),
   templateSettings: jsonb("template_settings"),
+  geminiApiKey: text("gemini_api_key"),
   installed: boolean("installed").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

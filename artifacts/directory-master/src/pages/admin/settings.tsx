@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X } from "lucide-react";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
 import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
 
@@ -69,6 +69,139 @@ const BUILDER_PAGES = [
     badgeColor: "bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300",
   },
 ];
+
+function GeminiApiKeyCard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: settings, isLoading } = useGetSettings();
+  const updateMutation = useUpdateSettings();
+
+  const [editing, setEditing] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const keySet: boolean = (settings as any)?.geminiApiKeySet ?? false;
+  const keyHint: string | null = (settings as any)?.geminiApiKeyHint ?? null;
+
+  const handleSaveKey = async () => {
+    if (!keyInput.trim()) return;
+    setSaving(true);
+    try {
+      await updateMutation.mutateAsync({ data: { geminiApiKey: keyInput.trim() } as any });
+      queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      toast({ title: "Gemini API key saved" });
+      setKeyInput("");
+      setEditing(false);
+    } catch (e: any) {
+      toast({ title: "Failed to save key", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteKey = async () => {
+    setDeleting(true);
+    try {
+      await updateMutation.mutateAsync({ data: { geminiApiKey: null } as any });
+      queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      toast({ title: "Gemini API key removed — using built-in key" });
+    } catch (e: any) {
+      toast({ title: "Failed to remove key", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <KeyRound className="h-5 w-5 text-primary" />
+          Gemini API Key
+        </CardTitle>
+        <CardDescription>
+          Optionally supply your own Google Gemini API key. When set it will be used for CSV import and SEO generation instead of the built-in key. The key is stored securely and never exposed to visitors or editors.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!editing ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              {keySet && keyHint ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono bg-muted px-3 py-1.5 rounded-md border">
+                    {keyHint}
+                  </span>
+                  <span className="text-xs text-muted-foreground">Custom key active</span>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Not configured — using the built-in Replit integration key.
+                </p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { setKeyInput(""); setEditing(true); }}
+              className="gap-1.5"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {keySet ? "Replace" : "Add Key"}
+            </Button>
+            {keySet && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDeleteKey}
+                disabled={deleting}
+                className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Remove
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <Input
+                type="password"
+                placeholder="Paste your Gemini API key here..."
+                value={keyInput}
+                onChange={e => setKeyInput(e.target.value)}
+                className="font-mono text-sm flex-1"
+                autoFocus
+              />
+              <Button
+                onClick={handleSaveKey}
+                disabled={saving || !keyInput.trim()}
+                className="gap-1.5 shrink-0"
+              >
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                Save
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setEditing(false); setKeyInput(""); }}
+                className="gap-1.5 shrink-0"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              The key is stored encrypted on the server and never sent back to your browser in full.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function AdminSettingsPage() {
   const { toast } = useToast();
@@ -587,6 +720,8 @@ export default function AdminSettingsPage() {
           </div>
         </form>
       </Form>
+
+      <GeminiApiKeyCard />
     </div>
   );
 }

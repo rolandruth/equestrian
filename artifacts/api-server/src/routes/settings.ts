@@ -27,6 +27,11 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     templateSettings: s.templateSettings ?? null,
     installed: s.installed,
     updatedAt: s.updatedAt.toISOString(),
+    // Never expose the raw key — return only whether it is set and a masked hint
+    geminiApiKeySet: !!s.geminiApiKey,
+    geminiApiKeyHint: s.geminiApiKey
+      ? `${"•".repeat(Math.max(0, s.geminiApiKey.length - 4))}${s.geminiApiKey.slice(-4)}`
+      : null,
   };
 }
 
@@ -63,6 +68,10 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.bodyScripts !== undefined)             dbUpdates.bodyScripts = req.body.bodyScripts;
     if (req.body.calloutSections !== undefined)         dbUpdates.calloutSections = req.body.calloutSections;
     if (req.body.templateSettings !== undefined)    dbUpdates.templateSettings = req.body.templateSettings;
+    // geminiApiKey: null/empty clears the key; non-empty string stores it
+    if (req.body.geminiApiKey !== undefined) {
+      dbUpdates.geminiApiKey = req.body.geminiApiKey || null;
+    }
 
     const [updated] = await db.update(directorySettings).set(dbUpdates).where(eq(directorySettings.id, existing.id)).returning();
     res.json(formatSettings(updated));

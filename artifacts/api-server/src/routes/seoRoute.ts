@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { entries } from "@workspace/db";
 import { requireAdmin } from "../middlewares/auth.js";
-import { ai } from "@workspace/integrations-gemini-ai";
+import { getGeminiClient } from "../lib/gemini.js";
 import { eq, isNull, or, count } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
@@ -64,7 +64,8 @@ Return ONLY valid JSON, no markdown fences:
 Entries:
 ${batch.map(e => `[${e.id}] Title: "${e.title}" | Category: ${e.category || "General"} | Summary: ${(e.summary || "").slice(0, 200)} | Description: ${(e.description || "").slice(0, 300)}`).join("\n")}`;
 
-  const response = await ai.models.generateContent({
+  const aiClient = await getGeminiClient();
+  const response = await aiClient.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     config: { maxOutputTokens: 16384 },

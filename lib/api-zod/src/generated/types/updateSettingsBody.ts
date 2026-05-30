@@ -19,4 +19,6 @@ export interface UpdateSettingsBody {
   themeColor?: string | null;
   /** @nullable */
   calloutSections?: string | null;
+  /** @nullable */
+  geminiApiKey?: string | null;
 }

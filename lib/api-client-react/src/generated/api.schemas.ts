@@ -253,6 +253,9 @@ export interface DirectorySettings {
   calloutSections?: string | null;
   installed: boolean;
   updatedAt: string;
+  geminiApiKeySet?: boolean;
+  /** @nullable */
+  geminiApiKeyHint?: string | null;
 }
 
 export interface UpdateSettingsBody {
@@ -268,6 +271,8 @@ export interface UpdateSettingsBody {
   themeColor?: string | null;
   /** @nullable */
   calloutSections?: string | null;
+  /** @nullable */
+  geminiApiKey?: string | null;
 }
 
 export interface ImportAnalyzeBody {

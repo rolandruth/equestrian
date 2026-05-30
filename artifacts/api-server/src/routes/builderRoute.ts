@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAdmin } from "../middlewares/auth.js";
-import { ai } from "@workspace/integrations-gemini-ai";
+import { getGeminiClient } from "../lib/gemini.js";
 import { db } from "@workspace/db";
 import { categories as categoriesTable } from "@workspace/db";
 
@@ -109,7 +109,8 @@ RULES:
 
 Respond with ONLY the valid JSON array of SectionConfig objects.`;
 
-    const response = await ai.models.generateContent({
+    const aiClient = await getGeminiClient();
+    const response = await aiClient.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: { maxOutputTokens: 8192 },

@@ -357,6 +357,8 @@ export const GetSettingsResponse = zod.object({
   calloutSections: zod.string().nullish(),
   installed: zod.boolean(),
   updatedAt: zod.string(),
+  geminiApiKeySet: zod.boolean().optional(),
+  geminiApiKeyHint: zod.string().nullish(),
 });
 
 /**
@@ -369,6 +371,7 @@ export const UpdateSettingsBody = zod.object({
   homepageDescription: zod.string().nullish(),
   themeColor: zod.string().nullish(),
   calloutSections: zod.string().nullish(),
+  geminiApiKey: zod.string().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -381,6 +384,8 @@ export const UpdateSettingsResponse = zod.object({
   calloutSections: zod.string().nullish(),
   installed: zod.boolean(),
   updatedAt: zod.string(),
+  geminiApiKeySet: zod.boolean().optional(),
+  geminiApiKeyHint: zod.string().nullish(),
 });
 
 /**
@@ -667,4 +672,6 @@ export const GetPublicSettingsResponse = zod.object({
   calloutSections: zod.string().nullish(),
   installed: zod.boolean(),
   updatedAt: zod.string(),
+  geminiApiKeySet: zod.boolean().optional(),
+  geminiApiKeyHint: zod.string().nullish(),
 });

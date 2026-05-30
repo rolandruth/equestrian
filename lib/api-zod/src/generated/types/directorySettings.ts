@@ -21,4 +21,7 @@ export interface DirectorySettings {
   calloutSections?: string | null;
   installed: boolean;
   updatedAt: string;
+  geminiApiKeySet?: boolean;
+  /** @nullable */
+  geminiApiKeyHint?: string | null;
 }

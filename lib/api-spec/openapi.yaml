@@ -982,6 +982,10 @@ components:
           type: boolean
         updatedAt:
           type: string
+        geminiApiKeySet:
+          type: boolean
+        geminiApiKeyHint:
+          type: ["string", "null"]
       required: [id, siteTitle, installed, updatedAt]
 
     UpdateSettingsBody:
@@ -998,6 +1002,8 @@ components:
         themeColor:
           type: ["string", "null"]
         calloutSections:
+          type: ["string", "null"]
+        geminiApiKey:
           type: ["string", "null"]
 
     ImportAnalyzeBody:

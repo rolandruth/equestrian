@@ -4,6 +4,45 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.6.0] — 2026-05-30
+
+Custom field section assignment and CTA button mode in the Entry Template Editor, plus a featured entries endpoint fix.
+
+---
+
+### New Features
+
+#### Cross-Section Custom Field Assignment (Entry Template Editor)
+- Each custom field row in the Entry Template Editor now has a **Section** pill row with three options: **Title**, **Body**, and **Sidebar**.
+- Clicking a pill instantly moves that field to the selected section — the field card disappears from its current panel and re-appears in the target section's panel.
+- **Title** → field renders in the header area (below the entry title and summary).
+- **Body** → field renders in the description column (default behaviour, unchanged).
+- **Sidebar** → field appends to the bottom of the Contact & Details sidebar panel.
+- Section assignments are stored per-field in `templateSettings.entry.customFieldDisplay[].section` and apply globally to all entry pages on save.
+- New fields not yet in the stored settings default to `section: "description"`.
+- Edit mode correctly filters each panel to only show fields assigned to that section; drag-to-reorder works within each section independently.
+
+#### CTA Button Mode for Custom Fields (Entry Template Editor)
+- Each custom field row now has a third toggle icon: a **green external-link arrow** (ExternalLink), joining the existing eye (label) and image (FileImage) icons.
+- Clicking the green icon enables **CTA button mode** for that field:
+  - A green-bordered text input drops down below the card: `Button label (default: "Field Name")`
+  - The admin types any label — e.g. *"View Profile"*, *"Book Now"*, *"Visit Website"*
+  - Leaving the input blank defaults to the field's key name (e.g. "Website")
+- In the public view, the field renders as a styled primary-color button: `[ ↗ Button Label ]` — an `<a>` tag with `target="_blank" rel="noopener noreferrer"` pointing to the field's value as the URL.
+- Button styling adapts to the section it is in: full-width with larger padding in Body/Header contexts; compact width-full in the Sidebar context.
+- **Mutually exclusive with image mode**: enabling CTA button automatically disables the image toggle, and vice versa.
+- The button text and mode are stored as `displayAsButton: boolean` and `buttonText?: string` on each `CustomFieldDisplay` entry in `templateSettings`.
+
+---
+
+### Bug Fixes
+
+#### Featured Entries Endpoint
+- `GET /api/public/featured` previously returned all published entries instead of only those with `featured = true`.
+- Fixed by adding `eq(entries.featured, true)` to the query filter, so only starred entries appear in the Featured section on the homepage.
+
+---
+
 ## [2.5.0] — 2026-05-30
 
 Custom field display controls in the Entry Template Editor, image rendering for API-style image URLs, and CSV import mapping override.

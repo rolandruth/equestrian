@@ -1,6 +1,6 @@
 # Workspace
 
-**Current version: 2.5.0** — See `CHANGELOG.md` for the full release history and developer notes.
+**Current version: 2.6.0** — See `CHANGELOG.md` for the full release history and developer notes.
 
 ## Overview
 

@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, ArrowRight, Loader2, FilterX, CalendarDays, Building2, Globe, Tag } from "lucide-react";
+import { Search, MapPin, ArrowRight, Loader2, FilterX, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info } from "lucide-react";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { FontLoader } from "@/components/template/FontLoader";
 import { mergeTemplateSettings, getFontFamily } from "@/lib/templateTypes";
@@ -110,7 +110,35 @@ export default function BrowsePage() {
             ))}
           </div>
         ) : null;
-      default: return null;
+      case "contactEmail":
+        return entry.contactEmail ? (
+          <div key="contactEmail" className="flex items-center text-sm text-muted-foreground">
+            <Mail className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.contactEmail}</span>
+          </div>
+        ) : null;
+      case "contactPhone":
+        return entry.contactPhone ? (
+          <div key="contactPhone" className="flex items-center text-sm text-muted-foreground">
+            <Phone className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.contactPhone}</span>
+          </div>
+        ) : null;
+      default: {
+        if (fid.startsWith("custom:")) {
+          const k = fid.slice(7);
+          const cf = entry?.customFields;
+          const val = cf && typeof cf === "object" ? cf[k] : null;
+          if (!val) return null;
+          return (
+            <div key={fid} className="flex items-center text-sm text-muted-foreground">
+              <Sparkles className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
+              <span className="line-clamp-1">{String(val)}</span>
+            </div>
+          );
+        }
+        return null;
+      }
     }
   };
 

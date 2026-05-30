@@ -23,7 +23,7 @@ import {
 import {
   MapPin, ArrowRight, Search, GripVertical, Eye, EyeOff, Pencil, Trash2,
   Plus, CheckCircle2, Loader2, LayoutTemplate, AlignLeft, Image as ImageIcon,
-  Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag,
+  Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info,
 } from "lucide-react";
 import { FontLoader } from "@/components/template/FontLoader";
 import {
@@ -424,7 +424,35 @@ export default function HomePage() {
             ))}
           </div>
         ) : null;
-      default: return null;
+      case "contactEmail":
+        return entry.contactEmail ? (
+          <div key="contactEmail" className="flex items-center text-sm text-muted-foreground">
+            <Mail className="mr-1 h-4 w-4 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.contactEmail}</span>
+          </div>
+        ) : null;
+      case "contactPhone":
+        return entry.contactPhone ? (
+          <div key="contactPhone" className="flex items-center text-sm text-muted-foreground">
+            <Phone className="mr-1 h-4 w-4 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.contactPhone}</span>
+          </div>
+        ) : null;
+      default: {
+        if (fid.startsWith("custom:")) {
+          const k = fid.slice(7);
+          const cf = entry?.customFields;
+          const val = cf && typeof cf === "object" ? cf[k] : null;
+          if (!val) return null;
+          return (
+            <div key={fid} className="flex items-center text-sm text-muted-foreground">
+              <Sparkles className="mr-1 h-4 w-4 flex-shrink-0" />
+              <span className="line-clamp-1">{String(val)}</span>
+            </div>
+          );
+        }
+        return null;
+      }
     }
   };
 

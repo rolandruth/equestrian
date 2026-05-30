@@ -23,7 +23,7 @@ import {
   FileText, Info, PanelRight, Link2, Heading1, AlignLeft, AlignCenter,
   AlignRight, Plus, X, Layers, CheckCircle2, RefreshCw,
   Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Settings2,
-  Sparkles, RotateCcw, MapPin, Globe, CalendarDays, Building2, Tag,
+  Sparkles, RotateCcw, MapPin, Globe, CalendarDays, Building2, Tag, Mail, Phone,
 } from "lucide-react";
 import {
   DndContext, closestCenter, DragEndEvent, useSensor, useSensors, PointerSensor,
@@ -210,6 +210,14 @@ function WysiwygEditor({ content, onChange }: { content: string; onChange: (html
 // ─── Card Fields Editor (for Browse Page "Entry Cards Grid" section) ─────
 
 function getCardFieldValue(entry: any, fieldId: string): string | null {
+  if (fieldId.startsWith("custom:")) {
+    const k = fieldId.slice(7);
+    const cf = entry?.customFields;
+    if (cf && typeof cf === "object" && cf[k] != null && cf[k] !== "") {
+      return String(cf[k]).substring(0, 120);
+    }
+    return null;
+  }
   switch (fieldId) {
     case "category":  return entry.category ?? null;
     case "location":  return entry.location ?? null;
@@ -219,11 +227,18 @@ function getCardFieldValue(entry: any, fieldId: string): string | null {
     case "eventType": return entry.eventType ?? null;
     case "website":   return entry.website ? String(entry.website).replace(/^https?:\/\//, "") : null;
     case "tags":      return entry.tags ? String(entry.tags).split(",").slice(0, 3).map((t: string) => t.trim()).join(", ") : null;
+    case "contactEmail": return entry.contactEmail ?? null;
+    case "contactPhone": return entry.contactPhone ?? null;
     default:          return null;
   }
 }
 
+function prettifyKey(key: string): string {
+  return key.replace(/[_\-]/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function CardFieldRowIcon({ id }: { id: string }) {
+  if (id.startsWith("custom:")) return <Sparkles className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
   switch (id) {
     case "location":  return <MapPin className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
     case "venue":     return <Building2 className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
@@ -231,7 +246,9 @@ function CardFieldRowIcon({ id }: { id: string }) {
     case "endDate":   return <CalendarDays className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
     case "website":   return <Globe className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
     case "tags":      return <Tag className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
-    default:          return null;
+    case "contactEmail": return <Mail className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
+    case "contactPhone": return <Phone className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
+    default:          return <Info className="h-3 w-3 flex-shrink-0 text-muted-foreground" />;
   }
 }
 
@@ -268,16 +285,66 @@ function SortableCardFieldRow({
   );
 }
 
+// Standard card-compatible fields in preferred display order
+const STANDARD_CARD_FIELDS: Array<{ id: string; label: string }> = [
+  { id: "category",     label: "Category Badge" },
+  { id: "location",     label: "Location" },
+  { id: "startDate",    label: "Start Date" },
+  { id: "endDate",      label: "End Date" },
+  { id: "venue",        label: "Venue" },
+  { id: "eventType",    label: "Event Type" },
+  { id: "tags",         label: "Tags" },
+  { id: "website",      label: "Website" },
+  { id: "contactEmail", label: "Email" },
+  { id: "contactPhone", label: "Phone" },
+];
+
+function buildAvailableFields(entries: any[]): Array<{ id: string; label: string }> {
+  if (entries.length === 0) return STANDARD_CARD_FIELDS;
+
+  const fields: Array<{ id: string; label: string }> = [];
+
+  // Standard fields — only include if any entry has a value
+  for (const f of STANDARD_CARD_FIELDS) {
+    const hasData = entries.some(e => {
+      const v = getCardFieldValue(e, f.id);
+      return v !== null && v !== "";
+    });
+    if (hasData) fields.push(f);
+  }
+
+  // Custom fields — collect all non-empty keys from customFields JSONB
+  const seen = new Set<string>();
+  for (const e of entries) {
+    const cf = e?.customFields;
+    if (cf && typeof cf === "object" && !Array.isArray(cf)) {
+      for (const k of Object.keys(cf)) {
+        if (!seen.has(k) && cf[k] != null && cf[k] !== "") {
+          seen.add(k);
+          fields.push({ id: `custom:${k}`, label: prettifyKey(k) });
+        }
+      }
+    }
+  }
+
+  return fields;
+}
+
 function CardFieldsEditor({
   cardFields,
   onChange,
 }: { cardFields: string[]; onChange: (fields: string[]) => void }) {
-  const { data: entriesData } = useListPublicEntries({ limit: 1, page: 1 });
-  const previewEntry = entriesData?.entries?.[0];
+  const { data: entriesData } = useListPublicEntries({ limit: 50, page: 1 });
+  const entries = (entriesData?.entries ?? []) as any[];
+  const previewEntry = entries[0];
 
-  const allFieldIds = BROWSE_CARD_FIELDS.map(f => f.id);
-  const enabledIds = cardFields.filter(id => allFieldIds.includes(id));
-  const disabledIds = allFieldIds.filter(id => !enabledIds.includes(id));
+  // Dynamically derived list of available fields based on real entry data
+  const availableFields = buildAvailableFields(entries);
+  const availableIds = availableFields.map(f => f.id);
+
+  // Enabled IDs that are valid (may include previously saved IDs not yet discovered)
+  const enabledIds = cardFields.filter(id => availableIds.includes(id));
+  const disabledIds = availableIds.filter(id => !enabledIds.includes(id));
   const orderedIds = [...enabledIds, ...disabledIds];
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
@@ -300,6 +367,8 @@ function CardFieldsEditor({
     }
   };
 
+  const isLoading = !entriesData;
+
   return (
     <div className="space-y-4">
       {/* Live entry card preview */}
@@ -309,14 +378,14 @@ function CardFieldsEditor({
             <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">Card Preview · {previewEntry.title}</span>
           </div>
           <div className="p-3 space-y-1.5 bg-white dark:bg-gray-900">
-            {enabledIds.includes("category") && (previewEntry as any).category && (
+            {enabledIds.includes("category") && previewEntry.category && (
               <span className="inline-block text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                {(previewEntry as any).category}
+                {previewEntry.category}
               </span>
             )}
             <p className="text-sm font-semibold text-gray-800 dark:text-white line-clamp-1">{previewEntry.title}</p>
-            {(previewEntry as any).summary && (
-              <p className="text-xs text-gray-400 line-clamp-2">{(previewEntry as any).summary}</p>
+            {previewEntry.summary && (
+              <p className="text-xs text-gray-400 line-clamp-2">{previewEntry.summary}</p>
             )}
             <div className="space-y-1 pt-0.5">
               {enabledIds.filter(id => id !== "category").map(fid => {
@@ -334,6 +403,10 @@ function CardFieldsEditor({
               <span className="text-xs text-blue-500 font-medium">View Details →</span>
             </div>
           </div>
+        </div>
+      ) : isLoading ? (
+        <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 text-center text-xs text-gray-400">
+          Loading entry preview…
         </div>
       ) : (
         <div className="rounded-lg border border-dashed border-gray-200 dark:border-gray-700 p-4 text-center text-xs text-gray-400">
@@ -354,30 +427,44 @@ function CardFieldsEditor({
       </div>
       <p className="text-xs text-gray-400 -mt-2 leading-relaxed">
         Toggle to show/hide · Drag to reorder · Up to 4 fields appear on every entry card across Browse and Homepage.
+        {!isLoading && entries.length > 0 && (
+          <span className="block mt-0.5 text-gray-300 dark:text-gray-600">
+            Showing fields detected from your {entries.length >= 50 ? "50+" : entries.length} {entries.length === 1 ? "entry" : "entries"}.
+          </span>
+        )}
       </p>
 
       {/* Sortable field rows */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-1.5">
-            {orderedIds.map(fid => {
-              const fieldDef = BROWSE_CARD_FIELDS.find(f => f.id === fid)!;
-              const isEnabled = enabledIds.includes(fid);
-              const atMax = enabledIds.length >= 4 && !isEnabled;
-              return (
-                <SortableCardFieldRow
-                  key={fid}
-                  id={fid}
-                  label={fieldDef.label}
-                  enabled={isEnabled}
-                  atMax={atMax}
-                  onToggle={() => toggleField(fid)}
-                />
-              );
-            })}
-          </div>
-        </SortableContext>
-      </DndContext>
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-xs text-gray-400 py-2">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Detecting fields from your entries…
+        </div>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={orderedIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-1.5">
+              {orderedIds.map(fid => {
+                const fieldDef = availableFields.find(f => f.id === fid)!;
+                if (!fieldDef) return null;
+                const isEnabled = enabledIds.includes(fid);
+                const atMax = enabledIds.length >= 4 && !isEnabled;
+                const isCustom = fid.startsWith("custom:");
+                return (
+                  <SortableCardFieldRow
+                    key={fid}
+                    id={fid}
+                    label={isCustom ? `${fieldDef.label}` : fieldDef.label}
+                    enabled={isEnabled}
+                    atMax={atMax}
+                    onToggle={() => toggleField(fid)}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
+      )}
     </div>
   );
 }

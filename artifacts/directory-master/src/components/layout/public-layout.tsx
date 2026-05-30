@@ -4,6 +4,7 @@ import { Search, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ScriptInjector } from "./ScriptInjector";
+import { ThemeColorInjector } from "@/components/template/ThemeColorInjector";
 import { useAuth } from "@/hooks/use-auth";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -52,6 +53,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+      <ThemeColorInjector themeColor={(settings as any)?.themeColor} />
       <ScriptInjector
         headScripts={(settings as any)?.headScripts}
         bodyScripts={(settings as any)?.bodyScripts}

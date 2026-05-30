@@ -526,7 +526,7 @@ export default function HomePage() {
       const paddingClass = p.padding === "sm" ? "py-12 lg:py-16" : p.padding === "lg" ? "py-28 lg:py-40" : "py-20 lg:py-32";
       const bgStyle: React.CSSProperties = hasBg
         ? { backgroundImage: `url(${p.backgroundImage})`, backgroundSize: "cover", backgroundPosition: "center" }
-        : { backgroundColor: p.backgroundColor || undefined };
+        : { backgroundColor: p.backgroundColor || themeColor };
 
       return (
         <section

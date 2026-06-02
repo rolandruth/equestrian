@@ -67,7 +67,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center">
               <Link href="/" className="flex-shrink-0 flex items-center gap-2">
                 {settings?.logoUrl ? (
-                  <img src={settings.logoUrl} alt={settings.siteTitle} className="h-8 w-auto" />
+                  <img src={settings.logoUrl} alt={settings.siteTitle} className="max-h-[60px] max-w-[170px] w-auto h-auto object-contain" />
                 ) : (
                   <span className="font-bold text-xl text-gray-900 dark:text-white" style={textStyle}>
                     {settings?.siteTitle || "Directory"}

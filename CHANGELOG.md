@@ -4,6 +4,43 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.7.0] — 2026-06-02
+
+Dynamic theme color propagation, hero background and text color controls, and logo display improvements.
+
+---
+
+### New Features
+
+#### Primary Theme Color — Full Frontend Propagation
+- Created `ThemeColorInjector` component (`src/components/template/ThemeColorInjector.tsx`) mounted inside `PublicLayout`.
+- Reads `themeColor` (hex) from public settings, converts it to HSL format, and injects `--primary`, `--primary-foreground`, and `--ring` as CSS custom properties on `document.documentElement`.
+- Every Tailwind utility that references `--primary` now automatically reflects the admin's chosen color with no further changes needed: `bg-primary`, `text-primary`, `hover:bg-primary/90`, `border-primary/50`, `bg-primary/10`, `ring-primary`, etc.
+- CSS variables are restored to defaults on component unmount (safe for SPA navigation).
+- Admin saving a new Primary Color in Site Settings invalidates the public settings cache and updates all colors instantly without a page reload.
+
+#### Hero Background Color Picker (Page Templates → Homepage)
+- Added `heroBgColor` field to `HomepageTemplate` interface and `DEFAULT_TEMPLATE_SETTINGS`.
+- New **Hero Background Color** picker (color swatch + hex input + "Reset to theme" link) appears in the Settings → Page Templates → Homepage tab, directly below the existing Hero Background Image URL field.
+- Hero rendering priority: image URL (`ts.homepage.heroImageUrl` → `p.backgroundImage`) → solid color (`ts.homepage.heroBgColor` → `p.backgroundColor`) → Primary Theme Color fallback.
+- Also wired up the previously stored but unused `ts.homepage.heroImageUrl` field to the hero section — the background image URL set in Settings now correctly renders as the hero background.
+
+#### Hero Headline & Subtitle Color Pickers (Homepage Content)
+- Added `heroHeadlineColor` and `heroSubtitleColor` fields across the full stack: DB schema (`hero_headline_color`, `hero_subtitle_color` text columns), API PATCH handler, `formatSettings`, and public settings endpoint.
+- New color pickers (swatch + hex input + Reset link) appear in Site Settings → Homepage Content, directly below the Hero Headline and Hero Subtitle text fields.
+- Colors are applied in `home.tsx` with the priority chain: settings color → builder section color → automatic default (white on image backgrounds, dark on solid).
+- Ran `drizzle-kit push` to migrate the two new columns into the live database.
+
+---
+
+### Improvements
+
+#### Header Logo — Wider Display Area
+- Logo `<img>` in `PublicLayout` updated from a fixed `h-8` (32 px) to `max-h-[60px] max-w-[170px] w-auto h-auto object-contain`.
+- Rectangular and landscape logos now fill the available header space at up to 170 × 60 px while always preserving the original aspect ratio.
+
+---
+
 ## [2.6.0] — 2026-05-30
 
 Custom field section assignment and CTA button mode in the Entry Template Editor, plus a featured entries endpoint fix.

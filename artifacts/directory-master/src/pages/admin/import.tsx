@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2,
   CloudUpload, X, ArrowRight, ArrowLeft, Eye, Tag, FolderOpen, Info,
-  Sparkles, Wand2
+  Sparkles, Wand2, Pencil
 } from "lucide-react";
 
 type Step = "upload" | "map" | "progress";
@@ -86,6 +86,7 @@ export default function AdminImportPage() {
   const [availableFields, setAvailableFields] = useState<AvailableField[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [isAiMapping, setIsAiMapping] = useState(false);
+  const [editingLabel, setEditingLabel] = useState<{ csvColumn: string; value: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -239,6 +240,26 @@ export default function AdminImportPage() {
         m.csvColumn === csvColumn ? { ...m, approved: true, targetField: customKey } : m
       )
     );
+  };
+
+  const commitLabelEdit = (csvColumn: string, rawLabel: string) => {
+    const label = rawLabel.trim();
+    if (!label) { setEditingLabel(null); return; }
+    const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+    const customKey = `custom_${slug}`;
+    setAvailableFields(prev =>
+      prev.some(f => f.value === customKey)
+        ? prev.map(f => f.value === customKey ? { ...f, label, description: `Custom field: ${label}` } : f)
+        : [...prev, { value: customKey, label, description: `Custom field: ${label}`, isCustom: true }]
+    );
+    setMappings(prev =>
+      prev.map(m =>
+        m.csvColumn === csvColumn
+          ? { ...m, targetField: customKey, customLabel: label, approved: true }
+          : m
+      )
+    );
+    setEditingLabel(null);
   };
 
   const handleAiMap = async () => {
@@ -593,39 +614,70 @@ export default function AdminImportPage() {
                           </div>
                         </td>
 
-                        {/* Target field dropdown */}
+                        {/* Target field dropdown + inline label editor */}
                         <td className="px-4 py-3">
                           <div className="space-y-1">
-                            <Select
-                              value={m.targetField}
-                              onValueChange={(val) => {
-                                updateMapping(m.csvColumn, "targetField", val);
-                                updateMapping(m.csvColumn, "approved", val !== "skip");
-                                updateMapping(m.csvColumn, "isAiMapped", m.isAiMapped);
-                              }}
-                              disabled={!m.approved}
-                            >
-                              <SelectTrigger className={`h-8 text-xs w-[220px] ${
-                                isCategory ? "border-violet-300 dark:border-violet-700" :
-                                isTags ? "border-teal-300 dark:border-teal-700" :
-                                isCustom ? "border-amber-300 dark:border-amber-700" : ""
-                              }`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {availableFields.map(f => (
-                                  <SelectItem key={f.value} value={f.value}>
-                                    <div className="flex items-center gap-2">
-                                      {f.value === "category" && <FolderOpen className="h-3 w-3 text-violet-500 shrink-0" />}
-                                      {f.value === "tags" && <Tag className="h-3 w-3 text-teal-500 shrink-0" />}
-                                      {f.isCustom && <Wand2 className="h-3 w-3 text-amber-500 shrink-0" />}
-                                      <span className="font-medium">{f.label}</span>
-                                      {f.isCustom && <span className="text-xs text-amber-600 dark:text-amber-400 ml-1">custom</span>}
-                                    </div>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-1">
+                              {/* Pencil — opens inline custom-name editor */}
+                              <button
+                                type="button"
+                                disabled={!m.approved}
+                                title="Type a custom field name"
+                                onClick={() => setEditingLabel({
+                                  csvColumn: m.csvColumn,
+                                  value: isCustom ? customLabel : "",
+                                })}
+                                className="p-1 rounded text-muted-foreground hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+
+                              {editingLabel?.csvColumn === m.csvColumn ? (
+                                <input
+                                  autoFocus
+                                  className="h-8 text-xs px-2 border border-amber-400 rounded w-[200px] bg-background focus:outline-none focus:ring-1 focus:ring-amber-400"
+                                  placeholder="Custom field name…"
+                                  value={editingLabel.value}
+                                  onChange={e => setEditingLabel({ csvColumn: m.csvColumn, value: e.target.value })}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter") commitLabelEdit(m.csvColumn, editingLabel.value);
+                                    if (e.key === "Escape") setEditingLabel(null);
+                                  }}
+                                  onBlur={() => commitLabelEdit(m.csvColumn, editingLabel.value)}
+                                />
+                              ) : (
+                                <Select
+                                  value={m.targetField}
+                                  onValueChange={(val) => {
+                                    updateMapping(m.csvColumn, "targetField", val);
+                                    updateMapping(m.csvColumn, "approved", val !== "skip");
+                                    updateMapping(m.csvColumn, "isAiMapped", m.isAiMapped);
+                                  }}
+                                  disabled={!m.approved}
+                                >
+                                  <SelectTrigger className={`h-8 text-xs w-[200px] ${
+                                    isCategory ? "border-violet-300 dark:border-violet-700" :
+                                    isTags ? "border-teal-300 dark:border-teal-700" :
+                                    isCustom ? "border-amber-300 dark:border-amber-700" : ""
+                                  }`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {availableFields.map(f => (
+                                      <SelectItem key={f.value} value={f.value}>
+                                        <div className="flex items-center gap-2">
+                                          {f.value === "category" && <FolderOpen className="h-3 w-3 text-violet-500 shrink-0" />}
+                                          {f.value === "tags" && <Tag className="h-3 w-3 text-teal-500 shrink-0" />}
+                                          {f.isCustom && <Wand2 className="h-3 w-3 text-amber-500 shrink-0" />}
+                                          <span className="font-medium">{f.label}</span>
+                                          {f.isCustom && <span className="text-xs text-amber-600 dark:text-amber-400 ml-1">custom</span>}
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
                             {isCategory && (
                               <p className="text-xs text-violet-600 dark:text-violet-400 flex items-center gap-1">
                                 <Info className="h-3 w-3 shrink-0" />

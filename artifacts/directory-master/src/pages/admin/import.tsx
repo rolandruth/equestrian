@@ -209,9 +209,18 @@ export default function AdminImportPage() {
   };
 
   const updateMapping = (csvColumn: string, field: keyof ColumnMapping, value: any) => {
-    setMappings(prev =>
-      prev.map(m => m.csvColumn === csvColumn ? { ...m, [field]: value } : m)
-    );
+    setMappings(prev => {
+      let updated = prev.map(m => m.csvColumn === csvColumn ? { ...m, [field]: value } : m);
+      // Only one column can map to "category" at a time — clear any previous mapping.
+      if (field === "targetField" && value === "category") {
+        updated = updated.map(m =>
+          m.csvColumn !== csvColumn && m.targetField === "category"
+            ? { ...m, targetField: "skip", approved: false }
+            : m
+        );
+      }
+      return updated;
+    });
   };
 
   // When an admin toggles ON a field that was set to "skip", auto-assign it to a

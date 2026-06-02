@@ -168,6 +168,8 @@ router.get("/settings", async (req, res) => {
       logoUrl: settings.logoUrl,
       homepageHeadline: settings.homepageHeadline,
       homepageDescription: settings.homepageDescription,
+      heroHeadlineColor: settings.heroHeadlineColor,
+      heroSubtitleColor: settings.heroSubtitleColor,
       themeColor: settings.themeColor,
       navbarBgColor: settings.navbarBgColor,
       navbarTextColor: settings.navbarTextColor,

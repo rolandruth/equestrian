@@ -8,6 +8,8 @@ export const directorySettings = pgTable("directory_settings", {
   logoUrl: text("logo_url"),
   homepageHeadline: text("homepage_headline"),
   homepageDescription: text("homepage_description"),
+  heroHeadlineColor: text("hero_headline_color"),
+  heroSubtitleColor: text("hero_subtitle_color"),
   themeColor: text("theme_color"),
   navbarBgColor: text("navbar_bg_color"),
   navbarTextColor: text("navbar_text_color"),

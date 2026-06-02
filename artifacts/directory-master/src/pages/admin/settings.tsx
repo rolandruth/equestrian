@@ -25,6 +25,8 @@ const settingsSchema = z.object({
   logoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   homepageHeadline: z.string().optional().nullable(),
   homepageDescription: z.string().optional().nullable(),
+  heroHeadlineColor: z.string().optional().nullable(),
+  heroSubtitleColor: z.string().optional().nullable(),
   themeColor: z.string().optional().nullable(),
   navbarBgColor: z.string().optional().nullable(),
   navbarTextColor: z.string().optional().nullable(),
@@ -221,6 +223,8 @@ export default function AdminSettingsPage() {
       logoUrl: "",
       homepageHeadline: "",
       homepageDescription: "",
+      heroHeadlineColor: "",
+      heroSubtitleColor: "",
       themeColor: "",
       navbarBgColor: "",
       navbarTextColor: "",
@@ -242,6 +246,8 @@ export default function AdminSettingsPage() {
         logoUrl: settings.logoUrl || "",
         homepageHeadline: settings.homepageHeadline || "",
         homepageDescription: settings.homepageDescription || "",
+        heroHeadlineColor: (settings as any).heroHeadlineColor || "",
+        heroSubtitleColor: (settings as any).heroSubtitleColor || "",
         themeColor: settings.themeColor || "",
         navbarBgColor: (settings as any).navbarBgColor || "",
         navbarTextColor: (settings as any).navbarTextColor || "",
@@ -463,6 +469,33 @@ export default function AdminSettingsPage() {
               />
               <FormField
                 control={form.control}
+                name="heroHeadlineColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Headline Color</FormLabel>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="color"
+                        className="w-12 h-10 p-1 cursor-pointer border-0 shadow-none"
+                        value={field.value || '#ffffff'}
+                        onChange={field.onChange}
+                      />
+                      <FormControl>
+                        <Input className="w-36 font-mono" placeholder="#ffffff" {...field} value={field.value || ''} />
+                      </FormControl>
+                      {field.value && (
+                        <button type="button" className="text-xs text-muted-foreground hover:text-foreground underline" onClick={() => field.onChange("")}>
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <FormDescription>Leave blank to use the default (white on images, dark on solid).</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name="homepageDescription"
                 render={({ field }) => (
                   <FormItem>
@@ -470,6 +503,33 @@ export default function AdminSettingsPage() {
                     <FormControl>
                       <Textarea placeholder="A curated collection of tools..." rows={3} {...field} value={field.value || ''} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="heroSubtitleColor"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Subtitle Color</FormLabel>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="color"
+                        className="w-12 h-10 p-1 cursor-pointer border-0 shadow-none"
+                        value={field.value || '#e2e8f0'}
+                        onChange={field.onChange}
+                      />
+                      <FormControl>
+                        <Input className="w-36 font-mono" placeholder="#e2e8f0" {...field} value={field.value || ''} />
+                      </FormControl>
+                      {field.value && (
+                        <button type="button" className="text-xs text-muted-foreground hover:text-foreground underline" onClick={() => field.onChange("")}>
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    <FormDescription>Leave blank to use the default (light on images, dark on solid).</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

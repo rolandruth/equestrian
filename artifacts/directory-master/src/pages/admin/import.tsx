@@ -42,24 +42,42 @@ interface AvailableField {
   isCustom?: boolean;
 }
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
+// Full CSV parser — handles quoted fields that contain embedded newlines and commas.
+// Returns rows as arrays of field strings.
+function parseCSVRows(content: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = "";
   let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else inQuotes = !inQuotes;
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
+  const text = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { currentField += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        currentField += ch;
+      }
     } else {
-      current += char;
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        currentRow.push(currentField.trim());
+        currentField = "";
+      } else if (ch === '\n') {
+        currentRow.push(currentField.trim());
+        currentField = "";
+        if (currentRow.some(f => f !== "")) rows.push(currentRow);
+        currentRow = [];
+      } else {
+        currentField += ch;
+      }
     }
   }
-  result.push(current.trim());
-  return result;
+  currentRow.push(currentField.trim());
+  if (currentRow.some(f => f !== "")) rows.push(currentRow);
+  return rows;
 }
 
 function ConfidenceDot({ confidence }: { confidence: number }) {
@@ -169,13 +187,13 @@ export default function AdminImportPage() {
       toast({ title: "Please provide CSV content", variant: "destructive" });
       return;
     }
-    const lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
-    if (lines.length < 2) {
+    const allRows = parseCSVRows(content);
+    if (allRows.length < 2) {
       toast({ title: "CSV must have at least a header row and one data row", variant: "destructive" });
       return;
     }
-    const headers = parseCSVLine(lines[0]);
-    const sampleRows = lines.slice(1, 4).map(l => parseCSVLine(l));
+    const headers = allRows[0];
+    const sampleRows = allRows.slice(1, 4);
 
     try {
       const result = await analyzeMutation.mutateAsync({ data: { headers, sampleRows } });
@@ -265,11 +283,11 @@ export default function AdminImportPage() {
   const handleAiMap = async () => {
     const content = csvContent.trim();
     if (!content) return;
-    const lines = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(Boolean);
-    if (lines.length < 2) return;
+    const allRows = parseCSVRows(content);
+    if (allRows.length < 2) return;
 
-    const headers = parseCSVLine(lines[0]);
-    const sampleRows = lines.slice(1, 4).map(l => parseCSVLine(l));
+    const headers = allRows[0];
+    const sampleRows = allRows.slice(1, 4);
 
     setIsAiMapping(true);
     try {

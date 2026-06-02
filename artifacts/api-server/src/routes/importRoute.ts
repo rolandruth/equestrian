@@ -66,29 +66,57 @@ function suggestMapping(columnName: string): { target: string; confidence: numbe
   return { target: "moreDetails", confidence: 0.3 };
 }
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = [];
-  let current = "";
+// Full CSV parser that correctly handles quoted fields containing embedded newlines and commas.
+// Returns an array of rows, each row being an array of field strings.
+function parseCSV(content: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = "";
   let inQuotes = false;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
+  // Normalise line endings
+  const text = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          currentField += '"';   // escaped double-quote
+          i++;
+        } else {
+          inQuotes = false;       // closing quote
+        }
       } else {
-        inQuotes = !inQuotes;
+        currentField += ch;      // newlines inside quotes are kept as-is
       }
-    } else if (char === "," && !inQuotes) {
-      result.push(current.trim());
-      current = "";
     } else {
-      current += char;
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ',') {
+        currentRow.push(currentField.trim());
+        currentField = "";
+      } else if (ch === '\n') {
+        currentRow.push(currentField.trim());
+        currentField = "";
+        if (currentRow.length > 0 && currentRow.some(f => f !== "")) {
+          rows.push(currentRow);
+        }
+        currentRow = [];
+      } else {
+        currentField += ch;
+      }
     }
   }
-  result.push(current.trim());
-  return result;
+
+  // Flush last field / row
+  currentRow.push(currentField.trim());
+  if (currentRow.length > 0 && currentRow.some(f => f !== "")) {
+    rows.push(currentRow);
+  }
+
+  return rows;
 }
 
 function slugify(name: string): string {
@@ -180,13 +208,12 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
   try {
     logger.info({ jobId, csvBytes: csvContent.length, mappings: fieldMappings.length }, "processImport started");
 
-    const rawLines = csvContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim().split("\n");
-    const lines = rawLines.filter(l => l.trim());
-    if (lines.length < 2) throw new Error("CSV must have at least a header row and one data row.");
+    const allRows = parseCSV(csvContent);
+    if (allRows.length < 2) throw new Error("CSV must have at least a header row and one data row.");
 
-    const headers = parseCSVLine(lines[0]);
-    const dataLines = lines.slice(1);
-    const totalRows = dataLines.length;
+    const headers = allRows[0];
+    const dataRows = allRows.slice(1);
+    const totalRows = dataRows.length;
 
     const approvedMappings = fieldMappings.filter(m => m.approved && m.targetField !== "skip");
     const needsEnrichment = !approvedMappings.some(m => m.targetField === "summary") ||
@@ -204,8 +231,8 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
     // Step 1: Parse all rows using confirmed mappings
     const parsedEntries: Array<{ rowIndex: number; data: Record<string, string | null> }> = [];
 
-    for (let i = 0; i < dataLines.length; i++) {
-      const rowValues = parseCSVLine(dataLines[i]);
+    for (let i = 0; i < dataRows.length; i++) {
+      const rowValues = dataRows[i];
       const data = applyMappings(headers, rowValues, fieldMappings);
       if (data.title) {
         parsedEntries.push({ rowIndex: i, data });

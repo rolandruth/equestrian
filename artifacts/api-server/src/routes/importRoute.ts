@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { importJobs, entries, categories } from "@workspace/db";
 import { requireEditor } from "../middlewares/auth.js";
 import { getGeminiClient } from "../lib/gemini.js";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
 
@@ -140,7 +140,9 @@ function applyMappings(headers: string[], rowValues: string[], mappings: FieldMa
 }
 
 // Gemini enrichment: generate summary + tags for entries missing them
-const ENRICH_BATCH = 20;
+const ENRICH_BATCH = 50;      // entries per Gemini call
+const ENRICH_PARALLEL = 3;    // concurrent Gemini calls at a time
+const INSERT_CHUNK = 250;     // rows per bulk DB insert
 
 async function enrichBatch(batch: Array<{ index: number; data: Record<string, string | null> }>): Promise<Map<number, { summary: string; tags: string }>> {
   const needsEnrich = batch.filter(b => !b.data.summary || !b.data.tags);
@@ -213,59 +215,78 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
     logger.info({ jobId, parsedCount: parsedEntries.length, needsEnrichment }, "Rows parsed");
 
     // Step 2: Gemini enrichment for summary/tags if not mapped (optional)
+    // Runs ENRICH_PARALLEL concurrent Gemini calls, each covering ENRICH_BATCH entries.
     if (needsEnrichment && parsedEntries.length > 0) {
       const totalBatches = Math.ceil(parsedEntries.length / ENRICH_BATCH);
 
-      for (let b = 0; b < totalBatches; b++) {
-        const batchSlice = parsedEntries.slice(b * ENRICH_BATCH, (b + 1) * ENRICH_BATCH);
-        const batchItems = batchSlice.map((e, i) => ({ index: b * ENRICH_BATCH + i, data: e.data }));
+      for (let groupStart = 0; groupStart < totalBatches; groupStart += ENRICH_PARALLEL) {
+        const groupEnd = Math.min(groupStart + ENRICH_PARALLEL, totalBatches);
+        const groupBatches = Array.from({ length: groupEnd - groupStart }, (_, i) => groupStart + i);
 
-        const progress = 10 + Math.round((b / totalBatches) * 50);
+        const doneEntries = groupStart * ENRICH_BATCH;
+        const progress = 10 + Math.round((doneEntries / parsedEntries.length) * 50);
         await db.update(importJobs).set({
           progress,
-          message: `AI enriching batch ${b + 1} of ${totalBatches} (generating summaries & tags)...`,
+          message: `AI enriching entries ${Math.min(doneEntries + 1, parsedEntries.length)}–${Math.min(groupEnd * ENRICH_BATCH, parsedEntries.length)} of ${parsedEntries.length} (summaries & tags)...`,
           updatedAt: new Date(),
         }).where(eq(importJobs.jobId, jobId));
 
-        try {
-          const enriched = await enrichBatch(batchItems);
-          for (const [idx, enrichment] of enriched) {
-            const entry = parsedEntries[idx];
-            if (entry) {
-              if (!entry.data.summary && enrichment.summary) entry.data.summary = enrichment.summary;
-              if (!entry.data.tags && enrichment.tags) entry.data.tags = enrichment.tags;
+        const results = await Promise.allSettled(
+          groupBatches.map(async (b) => {
+            const batchSlice = parsedEntries.slice(b * ENRICH_BATCH, (b + 1) * ENRICH_BATCH);
+            const batchItems = batchSlice.map((e, i) => ({ index: b * ENRICH_BATCH + i, data: e.data }));
+            const enriched = await enrichBatch(batchItems);
+            return { b, enriched };
+          })
+        );
+
+        for (const result of results) {
+          if (result.status === "fulfilled") {
+            const { b, enriched } = result.value;
+            for (const [idx, enrichment] of enriched) {
+              const entry = parsedEntries[idx];
+              if (entry) {
+                if (!entry.data.summary && enrichment.summary) entry.data.summary = enrichment.summary;
+                if (!entry.data.tags && enrichment.tags) entry.data.tags = enrichment.tags;
+              }
             }
+            logger.info({ jobId, batch: b, enrichedCount: enriched.size }, "Enrichment batch done");
+          } else {
+            logger.warn({ jobId, groupStart, err: result.reason }, "Enrichment batch failed — continuing without summaries for this batch");
           }
-          logger.info({ jobId, batch: b, enrichedCount: enriched.size }, "Enrichment batch done");
-        } catch (err) {
-          logger.warn({ jobId, batch: b, err }, "Enrichment batch failed — continuing without summaries for this batch");
         }
       }
     }
 
-    // Step 3: Collect categories
-    const allCategories = new Set<string>();
-    for (const { data } of parsedEntries) {
-      if (data.category) allCategories.add(data.category.trim());
-    }
+    // Step 3: Bulk-upsert categories (single round-trip instead of N individual queries)
+    const allCategoryNames = [
+      ...new Set(parsedEntries.map(({ data }) => data.category?.trim()).filter(Boolean) as string[]),
+    ];
 
     await db.update(importJobs).set({
       progress: 65,
-      message: `Creating ${allCategories.size} categories...`,
+      message: `Creating ${allCategoryNames.length} categories...`,
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
 
     let categoriesCreated = 0;
-    for (const catName of allCategories) {
-      const slug = slugify(catName);
-      const existing = await db.select().from(categories).where(eq(categories.name, catName)).limit(1);
-      if (existing.length === 0) {
-        await db.insert(categories).values({ name: catName, slug }).onConflictDoNothing();
-        categoriesCreated++;
+    if (allCategoryNames.length > 0) {
+      const existingRows = await db
+        .select({ name: categories.name })
+        .from(categories)
+        .where(inArray(categories.name, allCategoryNames));
+      const existingSet = new Set(existingRows.map(r => r.name));
+      const newCats = allCategoryNames.filter(n => !existingSet.has(n));
+      if (newCats.length > 0) {
+        await db
+          .insert(categories)
+          .values(newCats.map(name => ({ name, slug: slugify(name) })))
+          .onConflictDoNothing();
+        categoriesCreated = newCats.length;
       }
     }
 
-    // Step 4: Insert entries
+    // Step 4: Bulk-insert entries in chunks of INSERT_CHUNK rows
     let entriesCreated = 0;
     const totalEntries = parsedEntries.length;
 
@@ -275,46 +296,47 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
 
-    for (const { data } of parsedEntries) {
-      const customFields: Record<string, string> = {};
-      // Any mapped "moreDetails" values accumulate; check for custom_ fields
-      const customKeys = Object.keys(data).filter(k => k.startsWith("custom_"));
-      for (const k of customKeys) {
-        if (data[k]) customFields[k.replace("custom_", "")] = data[k]!;
-        delete data[k];
-      }
+    for (let chunkStart = 0; chunkStart < parsedEntries.length; chunkStart += INSERT_CHUNK) {
+      const chunk = parsedEntries.slice(chunkStart, chunkStart + INSERT_CHUNK);
 
-      await db.insert(entries).values({
-        title: String(data.title || "Untitled").slice(0, 500),
-        category: data.category?.slice(0, 200) ?? null,
-        summary: data.summary?.slice(0, 1000) ?? null,
-        description: data.description ?? null,
-        contactEmail: data.contactEmail?.slice(0, 200) ?? null,
-        contactPhone: data.contactPhone?.slice(0, 50) ?? null,
-        website: data.website?.slice(0, 500) ?? null,
-        location: data.location?.slice(0, 200) ?? null,
-        venue: data.venue?.slice(0, 300) ?? null,
-        eventType: data.eventType?.slice(0, 100) ?? null,
-        startDate: data.startDate?.slice(0, 50) ?? null,
-        endDate: data.endDate?.slice(0, 50) ?? null,
-        tags: data.tags?.slice(0, 500) ?? null,
-        moreDetails: data.moreDetails ?? null,
-        customFields: Object.keys(customFields).length > 0 ? customFields : null,
-        sourceCsvRow: null,
-        published: true,
+      const rows = chunk.map(({ data }) => {
+        const customFields: Record<string, string> = {};
+        const customKeys = Object.keys(data).filter(k => k.startsWith("custom_"));
+        for (const k of customKeys) {
+          if (data[k]) customFields[k.replace("custom_", "")] = data[k]!;
+          delete data[k];
+        }
+        return {
+          title: String(data.title || "Untitled").slice(0, 500),
+          category: data.category?.slice(0, 200) ?? null,
+          summary: data.summary?.slice(0, 1000) ?? null,
+          description: data.description ?? null,
+          contactEmail: data.contactEmail?.slice(0, 200) ?? null,
+          contactPhone: data.contactPhone?.slice(0, 50) ?? null,
+          website: data.website?.slice(0, 500) ?? null,
+          location: data.location?.slice(0, 200) ?? null,
+          venue: data.venue?.slice(0, 300) ?? null,
+          eventType: data.eventType?.slice(0, 100) ?? null,
+          startDate: data.startDate?.slice(0, 50) ?? null,
+          endDate: data.endDate?.slice(0, 50) ?? null,
+          tags: data.tags?.slice(0, 500) ?? null,
+          moreDetails: data.moreDetails ?? null,
+          customFields: Object.keys(customFields).length > 0 ? customFields : null,
+          sourceCsvRow: null,
+          published: true,
+        };
       });
 
-      entriesCreated++;
+      await db.insert(entries).values(rows);
+      entriesCreated += chunk.length;
 
-      if (entriesCreated % 10 === 0 || entriesCreated === totalEntries) {
-        const insertProgress = 70 + Math.round((entriesCreated / totalEntries) * 30);
-        await db.update(importJobs).set({
-          processedRows: entriesCreated,
-          progress: insertProgress,
-          message: `Saving entries... (${entriesCreated}/${totalEntries})`,
-          updatedAt: new Date(),
-        }).where(eq(importJobs.jobId, jobId));
-      }
+      const insertProgress = 70 + Math.round((entriesCreated / totalEntries) * 30);
+      await db.update(importJobs).set({
+        processedRows: entriesCreated,
+        progress: insertProgress,
+        message: `Saving entries... (${entriesCreated}/${totalEntries})`,
+        updatedAt: new Date(),
+      }).where(eq(importJobs.jobId, jobId));
     }
 
     await db.update(importJobs).set({

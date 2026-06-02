@@ -4,6 +4,53 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.9.0] — 2026-06-02
+
+CSV import correctness release — multi-line quoted field parsing fixed end-to-end, inline column label editing, and duplicate-category prevention.
+
+---
+
+### Bug Fixes
+
+#### CSV Multi-Line Quoted Field Parsing (Backend)
+- **Root cause**: `importRoute.ts` split the raw CSV file on `\n` before parsing, so any quoted field containing an embedded newline (e.g. a two-line street address) broke row alignment: the second physical line was treated as a brand-new CSV row, shifting every subsequent column position by the number of fields before the newline.
+- For a CSV where column 4 is "State" and was mapped to Category, garbled rows produced values like `000,,,Unknown,Not used...` as the "category" — the entire CSV fragment that ended up in that column position.
+- **Fix**: replaced the line-splitting approach with a new `parseCSV(content: string): string[][]` function that walks the entire file character-by-character, tracking quote state. Newlines encountered inside a quoted field are kept as part of the field value; only unquoted newlines start a new row.
+- `processImport` now calls `parseCSV(csvContent)` → `allRows`, then `headers = allRows[0]` and `dataRows = allRows.slice(1)`. The inner loop iterates `dataRows` directly instead of calling `parseCSVLine` per line.
+
+#### CSV Multi-Line Quoted Field Parsing (Frontend Mapping UI)
+- The column mapping step extracted headers and sample values the same broken way: `content.split("\n")` → `parseCSVLine(lines[0])` / `lines.slice(1,4).map(parseCSVLine)`.
+- If a multi-line quoted field appeared in the first four rows, column headers and sample values shown in the UI were misaligned, causing the admin to map the wrong columns.
+- **Fix**: replaced `parseCSVLine` with a new `parseCSVRows(content: string): string[][]` function using the same character-by-character algorithm. Both `handleNext` (the "Analyze" button handler) and `handleAiMap` ("Map With Gemini") now call `parseCSVRows(content)` and destructure `allRows[0]` / `allRows.slice(1, 4)` directly — no intermediate line array.
+
+#### Duplicate Categories on Import
+- If two CSV columns were independently mapped to `category` (e.g. by first selecting one column then mapping another), both columns were processed as categories, resulting in import jobs producing duplicate or conflicting category assignments.
+- **Fix**: `updateMapping` in `import.tsx` now enforces a single-category constraint. When the admin selects `category` for a column, any other column that was previously mapped to `category` is automatically reset to `skip` before the new mapping is applied.
+
+---
+
+### New Features
+
+#### Inline Column Label Editing (Import Mapping Step)
+- Each row in the Column Mappings table now has a **pencil icon** (Edit2) to the right of the field dropdown.
+- Clicking the pencil replaces the dropdown with a plain text input pre-filled with the current custom label (or the column name if no custom label exists).
+- Pressing **Enter** or blurring the input commits the value: it is slugified (lowercase, spaces → hyphens) and written back as a `custom_<slug>` target with the typed string as the `customLabel`.
+- Pressing **Escape** cancels the edit and restores the dropdown without changing the mapping.
+- This allows admins to rename any auto-generated custom field key to something human-readable (e.g. `custom_field-1` → `custom_accepted-insurance`) without opening a separate dialog.
+- `editingLabel` state (`columnName | null`) and `editingLabelValue` string are tracked in component state; the pencil and input are conditionally rendered per row.
+
+---
+
+### Developer Notes for v2.9
+
+- **`parseCSV` vs `parseCSVLine`**: The key design difference is scope. `parseCSVLine` operated on a single already-split line and was inherently unable to handle embedded newlines. `parseCSV` / `parseCSVRows` treat the entire file as one token stream — the quote-tracking flag persists across physical line boundaries. Both implementations use the same state machine: `inQuotes` bool, character-by-character loop, `""` escape handling, comma delimiter, newline row separator.
+- **Why the garbling was hard to spot**: The misalignment only occurred on rows that had a multi-line quoted field. For a 2,900-row CSV with only a handful of multi-line addresses, the vast majority of rows imported correctly; only those rows produced garbage, and because the shifted columns happened to land on numeric/unknown values, the garbled strings were accepted as valid category names rather than triggering a parse error.
+- **Frontend `parseCSVRows` performance note**: The function is called only on user-initiated events (`handleNext`, `handleAiMap`) — not on every render or keystroke. For a ~700 KB CSV this is fine. The row-count display in the "Start Import (N rows)" button still uses a fast `split("\n").length` approximation since it only needs an estimate and runs on every render.
+- **Single-category constraint implementation**: `updateMapping` receives `(columnName, value)`. If `value === "category"`, the function first calls `setMappings(prev => prev.map(m => m.columnName !== columnName && m.targetField === "category" ? { ...m, targetField: "skip" } : m))` before applying the new mapping. This is a pure state transform with no extra API call.
+- **Pencil edit slug contract**: The slugifier used on the frontend label input mirrors the server-side slugifier: `value.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")`. The resulting target field is always stored as `custom_<slug>` to match how `processImport` writes custom fields to the `customFields` JSONB column.
+
+---
+
 ## [2.8.0] — 2026-06-02
 
 Large CSV import performance overhaul — 2,900-row imports now complete in ~7 minutes instead of ~45.

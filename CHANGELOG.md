@@ -4,6 +4,31 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [2.8.0] — 2026-06-02
+
+Large CSV import performance overhaul — 2,900-row imports now complete in ~7 minutes instead of ~45.
+
+---
+
+### Improvements
+
+#### CSV Import — Bulk DB Inserts
+- Replaced row-by-row `INSERT` statements with chunked bulk inserts of 250 rows per query.
+- Inserting 2,900 entries now takes ~5 seconds instead of several minutes.
+- Progress updates fire after each chunk rather than every 10 rows, giving smoother feedback.
+
+#### CSV Import — Parallel Gemini Enrichment
+- Gemini enrichment now runs 3 batches concurrently (`Promise.allSettled`) instead of sequentially.
+- Batch size increased from 20 entries per Gemini call to 50.
+- Combined effect: enrichment for 2,900 rows drops from ~41 minutes to ~6 minutes.
+- Individual batch failures still don't abort the import — failed batches are logged and the import continues without summaries for that slice.
+
+#### CSV Import — Bulk Category Upsert
+- Category creation replaced the old N-individual-SELECT + N-individual-INSERT loop with a single `SELECT` (using `inArray`) to find existing categories, followed by one bulk `INSERT ... ON CONFLICT DO NOTHING` for all new ones.
+- Eliminates hundreds of round-trips for imports with many distinct categories.
+
+---
+
 ## [2.7.0] — 2026-06-02
 
 Dynamic theme color propagation, hero background and text color controls, and logo display improvements.

@@ -691,6 +691,12 @@ export default function EntryPage() {
     );
   };
 
+  const handleChangeRelatedMaxItems = (n: number) => {
+    setEditSections((prev) =>
+      prev.map((s) => s.id === "related" ? { ...s, props: { ...s.props, maxItems: n } } : s)
+    );
+  };
+
   const handleToggleButton = (key: string) => {
     setEditCustomFieldDisplay((prev) =>
       prev.map((c) =>
@@ -1076,24 +1082,50 @@ export default function EntryPage() {
 
   const renderRelatedContent = () => {
     const relatedEntries = relatedData?.entries.filter((e) => e.id !== entryNumericId) ?? [];
-    return relatedEntries.length > 0 && !isDemo ? (
+    const editRelatedSec = findEditSection("related");
+    const maxItems = editRelatedSec?.props?.maxItems ?? 3;
+    const gridCols = maxItems === 1 ? "grid-cols-1" : maxItems === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3";
+    return (
       <div className="p-8 md:p-10">
-        <h2 className="text-2xl font-bold tracking-tight mb-6">
-          {getEntrySection("related")?.heading || `Similar in ${displayEntry.category}`}
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {relatedEntries.slice(0, 3).map((related) => (
-            <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
-              <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
-                <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
-              </Card>
-            </Link>
+        {/* Count picker — edit mode control */}
+        <div className="flex items-center gap-2 mb-5">
+          <span className="text-xs font-medium text-muted-foreground">Show:</span>
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => handleChangeRelatedMaxItems(n)}
+              className={`w-7 h-7 rounded text-xs font-semibold transition-colors border ${
+                maxItems === n
+                  ? "bg-blue-600 border-blue-600 text-white"
+                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600"
+              }`}
+            >
+              {n}
+            </button>
           ))}
+          <span className="text-xs text-muted-foreground ml-1">entries</span>
         </div>
+        {relatedEntries.length > 0 && !isDemo ? (
+          <>
+            <h2 className="text-2xl font-bold tracking-tight mb-6">
+              {editRelatedSec?.heading || `Similar in ${displayEntry.category}`}
+            </h2>
+            <div className={`grid ${gridCols} gap-6`}>
+              {relatedEntries.slice(0, maxItems).map((related) => (
+                <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+                  <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
+                    <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
+                    <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="text-sm text-muted-foreground italic">No related entries to display.</div>
+        )}
       </div>
-    ) : (
-      <div className="p-6 text-sm text-muted-foreground italic">No related entries to display.</div>
     );
   };
 
@@ -1430,24 +1462,29 @@ export default function EntryPage() {
         })()}
 
         {/* Related Entries */}
-        {getSectionEnabled("related") && !isDemo && relatedData &&
-          relatedData.entries.filter((e) => e.id !== entryNumericId).length > 0 && (
-            <div className="pt-8">
-              <h2 className="text-2xl font-bold tracking-tight mb-6">
-                {getEntrySection("related")?.heading || `Similar in ${displayEntry.category}`}
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {relatedData.entries.filter((e) => e.id !== entryNumericId).slice(0, 3).map((related) => (
-                  <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
-                    <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                      <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
-                      <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
-                    </Card>
-                  </Link>
-                ))}
+        {getSectionEnabled("related") && !isDemo && relatedData && (() => {
+            const relatedMax = getEntrySection("related")?.props?.maxItems ?? 3;
+            const filtered = relatedData.entries.filter((e) => e.id !== entryNumericId);
+            if (filtered.length === 0) return null;
+            const relatedGridCols = relatedMax === 1 ? "grid-cols-1" : relatedMax === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3";
+            return (
+              <div className="pt-8">
+                <h2 className="text-2xl font-bold tracking-tight mb-6">
+                  {getEntrySection("related")?.heading || `Similar in ${displayEntry.category}`}
+                </h2>
+                <div className={`grid ${relatedGridCols} gap-6`}>
+                  {filtered.slice(0, relatedMax).map((related) => (
+                    <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+                      <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
+                        <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
+                        <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
       </div>
     </div>
   );

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   MapPin, ArrowRight, Search, GripVertical, Eye, EyeOff, Pencil, Trash2,
-  Plus, CheckCircle2, Loader2, LayoutTemplate, AlignLeft, Image as ImageIcon,
+  Plus, CheckCircle2, Loader2, LayoutTemplate, AlignLeft, AlignCenter, AlignRight, Image as ImageIcon,
   Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info,
 } from "lucide-react";
 import { FontLoader } from "@/components/template/FontLoader";
@@ -167,6 +167,8 @@ function EditSectionDialog({
   const [bgColor, setBgColor] = useState(section.props?.backgroundColor ?? "");
   const [headingColor, setHeadingColor] = useState(section.props?.headingColor ?? "");
   const [textColor, setTextColor] = useState(section.props?.textColor ?? "");
+  // Text alignment
+  const [alignment, setAlignment] = useState<"left" | "center" | "right">(section.props?.textAlignment ?? "left");
 
   const handleSave = () => {
     const updatedProps = {
@@ -178,6 +180,7 @@ function EditSectionDialog({
         backgroundColor: bgColor || undefined,
         headingColor: headingColor || undefined,
         textColor: textColor || undefined,
+        textAlignment: alignment,
       } : {}),
       ...(type === "custom-image" ? { imageUrl, imageCaption } : {}),
     };
@@ -218,6 +221,29 @@ function EditSectionDialog({
                   rows={5}
                   placeholder="Enter body text..."
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Text Alignment</Label>
+                <div className="flex gap-1">
+                  {(["left", "center", "right"] as const).map((a) => {
+                    const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setAlignment(a)}
+                        className={`flex items-center justify-center w-9 h-9 rounded border transition-colors ${
+                          alignment === a
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        }`}
+                        title={a.charAt(0).toUpperCase() + a.slice(1)}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div className="border-t pt-4 space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colors</p>

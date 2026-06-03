@@ -212,14 +212,14 @@ function EditSectionDialog({
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <BlockIcon type={type} className="h-4 w-4 text-blue-500" />
             Edit {label}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 overflow-y-auto flex-1 pr-1">
           {type !== "hero" && (
             <div className="space-y-1.5">
               <Label>Section Heading</Label>

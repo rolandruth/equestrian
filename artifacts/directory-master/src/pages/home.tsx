@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   MapPin, ArrowRight, Search, GripVertical, Eye, EyeOff, Pencil, Trash2,
-  Plus, CheckCircle2, Loader2, LayoutTemplate, AlignLeft, AlignCenter, AlignRight, Image as ImageIcon,
+  Plus, CheckCircle2, Loader2, LayoutTemplate, AlignLeft, AlignCenter, AlignRight, Image as ImageIcon, MousePointerClick,
   Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info,
 } from "lucide-react";
 import { FontLoader } from "@/components/template/FontLoader";
@@ -52,6 +52,7 @@ function BlockIcon({ type, className = "h-4 w-4" }: { type: string; className?: 
     case "recent":       return <Clock className={className} />;
     case "custom-text":  return <AlignLeft className={className} />;
     case "custom-image": return <ImageIcon className={className} />;
+    case "custom-cta":   return <MousePointerClick className={className} />;
     default:             return <LayoutTemplate className={className} />;
   }
 }
@@ -76,7 +77,7 @@ function SortableHomeSectionWrapper({
 
   const blockDef = HOMEPAGE_BLOCK_DEFS.find(d => d.type === (section.type ?? section.id));
   const label = blockDef?.label ?? section.label;
-  const isSingleton = !["custom-text", "custom-image"].includes(section.type ?? section.id);
+  const isSingleton = !["custom-text", "custom-image", "custom-cta"].includes(section.type ?? section.id);
 
   return (
     <div
@@ -163,12 +164,19 @@ function EditSectionDialog({
   });
   const [imageUrl, setImageUrl] = useState(section.props?.imageUrl ?? "");
   const [imageCaption, setImageCaption] = useState(section.props?.imageCaption ?? "");
-  // Text block color controls
+  // Text block / CTA color controls
   const [bgColor, setBgColor] = useState(section.props?.backgroundColor ?? "");
   const [headingColor, setHeadingColor] = useState(section.props?.headingColor ?? "");
   const [textColor, setTextColor] = useState(section.props?.textColor ?? "");
   // Text alignment
   const [alignment, setAlignment] = useState<"left" | "center" | "right">(section.props?.textAlignment ?? "left");
+  // CTA-specific
+  const [ctaButtonText, setCtaButtonText] = useState(section.props?.buttonText ?? "");
+  const [ctaButtonUrl, setCtaButtonUrl] = useState(section.props?.buttonUrl ?? "");
+  const [ctaButtonTarget, setCtaButtonTarget] = useState<"_self" | "_blank">((section.props?.buttonTarget as "_self" | "_blank") ?? "_self");
+  const [ctaButtonColor, setCtaButtonColor] = useState(section.props?.buttonColor ?? "");
+  const [ctaButtonRadius, setCtaButtonRadius] = useState<"rounded" | "square">((section.props?.buttonRadius as "rounded" | "square") ?? "rounded");
+  const [ctaFontSize, setCtaFontSize] = useState(section.props?.bodyFontSize ?? "1rem");
 
   const handleSave = () => {
     const updatedProps = {
@@ -183,6 +191,17 @@ function EditSectionDialog({
         textAlignment: alignment,
       } : {}),
       ...(type === "custom-image" ? { imageUrl, imageCaption } : {}),
+      ...(type === "custom-cta" ? {
+        buttonText: ctaButtonText,
+        buttonUrl: ctaButtonUrl,
+        buttonTarget: ctaButtonTarget,
+        buttonColor: ctaButtonColor || undefined,
+        buttonRadius: ctaButtonRadius,
+        bodyFontSize: ctaFontSize,
+        backgroundColor: bgColor || undefined,
+        textColor: textColor || undefined,
+        textAlignment: alignment,
+      } : {}),
     };
     onSave({ ...section, heading, props: updatedProps });
     onClose();
@@ -351,6 +370,138 @@ function EditSectionDialog({
               </div>
             </>
           )}
+          {type === "custom-cta" && (
+            <>
+              {/* Button text */}
+              <div className="space-y-1.5">
+                <Label>Button Label</Label>
+                <Input value={ctaButtonText} onChange={e => setCtaButtonText(e.target.value)} placeholder="Get Started" />
+              </div>
+              {/* Link */}
+              <div className="space-y-1.5">
+                <Label>Button Link URL</Label>
+                <Input value={ctaButtonUrl} onChange={e => setCtaButtonUrl(e.target.value)} placeholder="https://..." />
+              </div>
+              {/* Open in */}
+              <div className="space-y-1.5">
+                <Label>Open Link In</Label>
+                <div className="flex gap-2">
+                  {(["_self", "_blank"] as const).map(t => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setCtaButtonTarget(t)}
+                      className={`flex-1 py-1.5 text-sm rounded border transition-colors ${
+                        ctaButtonTarget === t
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-border hover:bg-muted"
+                      }`}
+                    >
+                      {t === "_self" ? "Same Window" : "New Window"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Text alignment */}
+              <div className="space-y-1.5">
+                <Label>Text Alignment</Label>
+                <div className="flex gap-1">
+                  {(["left", "center", "right"] as const).map(a => {
+                    const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
+                    return (
+                      <button
+                        key={a}
+                        type="button"
+                        onClick={() => setAlignment(a)}
+                        className={`flex items-center justify-center w-9 h-9 rounded border transition-colors ${
+                          alignment === a
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:bg-muted"
+                        }`}
+                        title={a.charAt(0).toUpperCase() + a.slice(1)}
+                      >
+                        <Icon className="h-4 w-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Text size */}
+              <div className="space-y-1.5">
+                <Label>Button Text Size</Label>
+                <div className="flex gap-1">
+                  {([["0.875rem","S"],["1rem","M"],["1.125rem","L"],["1.25rem","XL"]] as const).map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setCtaFontSize(val)}
+                      className={`flex-1 py-1.5 text-sm rounded border transition-colors ${
+                        ctaFontSize === val
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-border hover:bg-muted"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Corner style */}
+              <div className="space-y-1.5">
+                <Label>Button Corners</Label>
+                <div className="flex gap-2">
+                  {(["rounded", "square"] as const).map(r => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setCtaButtonRadius(r)}
+                      className={`flex-1 py-1.5 text-sm border transition-colors ${
+                        r === "rounded" ? "rounded-full" : "rounded-none"
+                      } ${
+                        ctaButtonRadius === r
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-muted-foreground border-border hover:bg-muted"
+                      }`}
+                    >
+                      {r === "rounded" ? "Rounded" : "Square"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Colors */}
+              <div className="border-t pt-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colors</p>
+                {[
+                  { label: "Section Background", val: bgColor, set: setBgColor, placeholder: "#ffffff" },
+                  { label: "Button Color",        val: ctaButtonColor, set: setCtaButtonColor, placeholder: "#3b82f6" },
+                  { label: "Text Color",          val: textColor, set: setTextColor, placeholder: "#111827" },
+                ].map(({ label, val, set, placeholder }) => (
+                  <div key={label} className="space-y-1.5">
+                    <Label>{label}</Label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        className="w-10 h-9 rounded border cursor-pointer p-0.5"
+                        value={val || placeholder}
+                        onChange={e => set(e.target.value)}
+                      />
+                      <Input
+                        className="w-32 font-mono text-sm"
+                        placeholder={placeholder}
+                        value={val}
+                        onChange={e => set(e.target.value)}
+                      />
+                      {val && (
+                        <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => set("")}>
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           {type === "hero" && (
             <p className="text-sm text-muted-foreground">
               Hero headline and description are configured in{" "}
@@ -458,7 +609,7 @@ export default function HomePage() {
   };
 
   const handleAddSection = (def: BlockDefinition) => {
-    const isSingleton = !["custom-text", "custom-image"].includes(def.type);
+    const isSingleton = !["custom-text", "custom-image", "custom-cta"].includes(def.type);
     if (isSingleton && editSections.some(s => (s.type ?? s.id) === def.type)) return;
     const newSection: SectionConfig = {
       id: isSingleton ? def.type : `${def.type}-${Date.now()}`,
@@ -863,6 +1014,46 @@ export default function HomePage() {
           <img src={p.imageUrl} alt={p.imageCaption || section.heading || ""} className="w-full object-cover" />
           {p.imageCaption && (
             <p className="text-sm text-muted-foreground text-center px-4 py-2">{p.imageCaption}</p>
+          )}
+        </section>
+      );
+    }
+
+    if (type === "custom-cta") {
+      const radius = p.buttonRadius === "square" ? "rounded-none" : "rounded-full";
+      return (
+        <section
+          key={section.id}
+          className={`px-8 py-14 ${alignClass(p)}`}
+          style={{ backgroundColor: p.backgroundColor || undefined }}
+        >
+          {section.heading && (
+            <h2 className="font-bold mb-3" style={{ color: p.textColor || undefined, fontSize: "1.75rem" }}>
+              {section.heading}
+            </h2>
+          )}
+          {p.bodyText && (
+            <p className="mb-6 max-w-2xl mx-auto" style={{ color: p.textColor || undefined, fontSize: p.bodyFontSize || "1rem" }}>
+              {p.bodyText}
+            </p>
+          )}
+          {p.buttonText ? (
+            <a
+              href={p.buttonUrl || "#"}
+              target={p.buttonTarget || "_self"}
+              rel={p.buttonTarget === "_blank" ? "noopener noreferrer" : undefined}
+              className={`inline-block px-8 py-3 font-semibold text-white transition-opacity hover:opacity-90 ${radius}`}
+              style={{ backgroundColor: p.buttonColor || themeColor, fontSize: p.bodyFontSize || "1rem" }}
+            >
+              {p.buttonText}
+            </a>
+          ) : (
+            editMode && (
+              <div className="inline-flex items-center gap-2 px-8 py-3 rounded-full border-2 border-dashed border-gray-300 text-muted-foreground text-sm">
+                <MousePointerClick className="h-4 w-4" />
+                Click the pencil icon to configure your CTA button
+              </div>
+            )
           )}
         </section>
       );

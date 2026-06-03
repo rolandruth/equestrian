@@ -4,6 +4,35 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [3.0.0] — 2026-06-03
+
+Homepage inline editor — Call to Action block, plus Text Block color and alignment controls.
+
+---
+
+### New Features
+
+#### Call to Action (CTA) Block
+- Added a new **Call to Action** block type (`custom-cta`) to the homepage inline editor's "Add Section" panel.
+- Multiple CTA blocks can be added (not a singleton).
+- Edit dialog controls:
+  - **Button Label** — the button text
+  - **Button Link URL** — destination href
+  - **Open Link In** — Same Window (`_self`) or New Window (`_blank`); sets `rel="noopener noreferrer"` automatically for new-window links
+  - **Text Alignment** — Left / Center / Right icon toggle (applies to heading, body text, and button position)
+  - **Button Text Size** — S / M / L / XL selector (maps to `0.875rem` / `1rem` / `1.125rem` / `1.25rem`)
+  - **Button Corners** — Rounded (pill) or Square toggle
+  - **Colors** panel — Section Background, Button Color, Text Color, each with a native color picker + hex input + Reset link
+- Rendered block supports an optional heading (`section.heading`) and optional description (`bodyText`) above the button.
+- In edit mode, blocks with no button text yet show a dashed-border placeholder prompt instead of an invisible section.
+- Added `buttonTarget` and `buttonRadius` fields to `SectionProps` in `templateTypes.ts`.
+
+#### Text Block Enhancements
+- Color pickers (background, heading color, body text color) added to the Edit Text Block dialog.
+- Text alignment toggle (Left / Center / Right) added to the Edit Text Block dialog.
+
+---
+
 ## [2.9.0] — 2026-06-02
 
 CSV import correctness release — multi-line quoted field parsing fixed end-to-end, inline column label editing, and duplicate-category prevention.

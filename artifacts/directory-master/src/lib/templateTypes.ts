@@ -45,6 +45,8 @@ export interface SectionProps {
   headingColor?: string;
   bodyFontSize?: string;
   fontFamily?: string;
+  buttonTarget?: "_blank" | "_self";
+  buttonRadius?: "rounded" | "square";
 }
 
 export interface SectionConfig {
@@ -75,6 +77,7 @@ export const HOMEPAGE_BLOCK_DEFS: BlockDefinition[] = [
   { type: "recent",      label: "Recent Entries",   description: "Most recently added directory entries", defaultHeading: "Recently Added", defaultProps: { maxItems: 6, columns: 3 } },
   { type: "custom-text", label: "Text Block",       description: "Custom heading and body text paragraph", defaultProps: { textAlignment: "left", bodyText: "Add your custom content here." } },
   { type: "custom-image",label: "Image Block",      description: "Display a full-width image with optional caption", defaultProps: {} },
+  { type: "custom-cta",  label: "Call to Action",  description: "A prominent button with optional heading and description", defaultProps: { textAlignment: "center", buttonText: "Get Started", buttonRadius: "rounded", buttonTarget: "_self" } },
 ];
 
 export const BROWSE_BLOCK_DEFS: BlockDefinition[] = [

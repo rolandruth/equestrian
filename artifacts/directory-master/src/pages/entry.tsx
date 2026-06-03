@@ -13,11 +13,37 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   MapPin, Globe, Mail, Phone, ChevronLeft, Tag, Loader2,
   Building2, CalendarDays, Layers, Pencil, GripVertical,
   EyeOff, Eye, Save, X, LayoutTemplate, CheckCircle2, FileImage, ExternalLink,
+  // Icon picker — location
+  Map, Compass, Navigation, Home, Building, Warehouse, Store, Hotel, School, Landmark,
+  // Icon picker — contact
+  PhoneCall, MessageCircle, MessageSquare, AtSign, Link as LinkIcon, Send,
+  // Icon picker — business
+  Briefcase, DollarSign, CreditCard, Receipt, ShoppingCart, ShoppingBag, Package,
+  BarChart2, TrendingUp, Award, Trophy, Handshake, Coins, PiggyBank,
+  // Icon picker — time
+  Calendar, Clock, AlarmClock, Timer, Watch,
+  // Icon picker — people
+  User, Users, UserCheck, Heart, Star, ThumbsUp, Smile,
+  // Icon picker — documents
+  FileText, File, Clipboard, Info, BookOpen, Hash, ClipboardList, Newspaper,
+  // Icon picker — technology
+  Monitor, Laptop, Smartphone, Wifi, Cloud, Server, Code, Database, Cpu,
+  // Icon picker — nature
+  Leaf, Sun, Droplets, Recycle, Wind, Thermometer, Trees,
+  // Icon picker — transport
+  Car, Bus, Bike, Plane, Ship, Train,
+  // Icon picker — activities
+  Music, Camera, Video, Dumbbell, Utensils, Coffee, Scissors, Gamepad2,
+  // Icon picker — misc
+  Zap, Flame, Sparkles, AlertCircle, HelpCircle, Shield, Lock, Key, Flag, Bookmark, Settings,
+  CheckCircle, Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import { FontLoader } from "@/components/template/FontLoader";
@@ -38,6 +64,163 @@ import {
   verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+// ─── Icon picker — curated icon map & components ──────────────────────────────
+type IconComponent = React.ComponentType<{ className?: string }>;
+
+const ICON_MAP: Record<string, IconComponent> = {
+  // Location
+  MapPin, Map, Globe, Compass, Navigation, Home, Building, Building2,
+  Warehouse, Store, Hotel, School, Landmark,
+  // Contact
+  Mail, Phone, PhoneCall, MessageCircle, MessageSquare, AtSign, LinkIcon, Send,
+  // Business
+  Briefcase, DollarSign, CreditCard, Receipt, ShoppingCart, ShoppingBag,
+  Package, BarChart2, TrendingUp, Award, Trophy, Handshake, Coins, PiggyBank,
+  // Time
+  Calendar, Clock, CalendarDays, AlarmClock, Timer, Watch,
+  // People
+  User, Users, UserCheck, Heart, Star, ThumbsUp, Smile,
+  // Documents
+  FileText, File, Clipboard, Info, BookOpen, Hash, ClipboardList, Newspaper,
+  // Technology
+  Monitor, Laptop, Smartphone, Wifi, Cloud, Server, Code, Database, Cpu,
+  // Nature
+  Leaf, Sun, Droplets, Recycle, Wind, Thermometer, Trees,
+  // Transport
+  Car, Bus, Bike, Plane, Ship, Train,
+  // Activities
+  Music, Camera, Video, Dumbbell, Utensils, Coffee, Scissors, Gamepad2,
+  // Misc
+  Zap, Flame, Sparkles, CheckCircle, AlertCircle, HelpCircle,
+  Shield, Lock, Key, Flag, Bookmark, Settings,
+};
+
+const ICON_CATEGORIES: Array<{ label: string; keys: string[] }> = [
+  { label: "Location",   keys: ["MapPin","Map","Globe","Compass","Navigation","Home","Building","Building2","Warehouse","Store","Hotel","School","Landmark"] },
+  { label: "Contact",    keys: ["Mail","Phone","PhoneCall","MessageCircle","MessageSquare","AtSign","LinkIcon","Send"] },
+  { label: "Business",   keys: ["Briefcase","DollarSign","CreditCard","Receipt","ShoppingCart","ShoppingBag","Package","BarChart2","TrendingUp","Award","Trophy","Handshake","Coins","PiggyBank"] },
+  { label: "Time",       keys: ["Calendar","Clock","CalendarDays","AlarmClock","Timer","Watch"] },
+  { label: "People",     keys: ["User","Users","UserCheck","Heart","Star","ThumbsUp","Smile"] },
+  { label: "Documents",  keys: ["FileText","File","Clipboard","Info","BookOpen","Hash","ClipboardList","Newspaper"] },
+  { label: "Technology", keys: ["Monitor","Laptop","Smartphone","Wifi","Cloud","Server","Code","Database","Cpu"] },
+  { label: "Nature",     keys: ["Leaf","Sun","Droplets","Recycle","Wind","Thermometer","Trees"] },
+  { label: "Transport",  keys: ["Car","Bus","Bike","Plane","Ship","Train"] },
+  { label: "Activities", keys: ["Music","Camera","Video","Dumbbell","Utensils","Coffee","Scissors","Gamepad2"] },
+  { label: "Misc",       keys: ["Zap","Flame","Sparkles","CheckCircle","AlertCircle","HelpCircle","Shield","Lock","Key","Flag","Bookmark","Settings"] },
+];
+
+function DynIcon({ name, className = "h-4 w-4" }: { name?: string; className?: string }) {
+  if (!name) return null;
+  const Comp = ICON_MAP[name];
+  if (!Comp) return null;
+  return <Comp className={className} />;
+}
+
+function IconPickerModal({
+  open, onClose, selected, onSelect,
+}: {
+  open: boolean;
+  onClose: () => void;
+  selected?: string;
+  onSelect: (name: string | undefined) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  const visibleCategories = ICON_CATEGORIES
+    .filter(cat => activeCategory === "All" || cat.label === activeCategory)
+    .map(cat => ({
+      ...cat,
+      keys: cat.keys.filter(k => k.toLowerCase().includes(search.toLowerCase())),
+    }))
+    .filter(cat => cat.keys.length > 0);
+
+  return (
+    <Dialog open={open} onOpenChange={o => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-lg flex flex-col max-h-[85vh]">
+        <DialogHeader>
+          <DialogTitle>Pick an Icon</DialogTitle>
+        </DialogHeader>
+        <div className="relative flex-shrink-0">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            className="pl-8"
+            placeholder="Search icons…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <div className="flex flex-wrap gap-1 flex-shrink-0">
+          {["All", ...ICON_CATEGORIES.map(c => c.label)].map(cat => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setActiveCategory(cat)}
+              className={`text-xs px-2.5 py-0.5 rounded-full border transition-colors ${
+                activeCategory === cat
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+        <div className="overflow-y-auto flex-1 pr-1 space-y-4 min-h-0">
+          {visibleCategories.map(cat => (
+            <div key={cat.label}>
+              {activeCategory === "All" && (
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{cat.label}</p>
+              )}
+              <div className="grid grid-cols-8 gap-1">
+                {cat.keys.map(name => {
+                  const Comp = ICON_MAP[name];
+                  if (!Comp) return null;
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      title={name}
+                      onClick={() => { onSelect(name); onClose(); }}
+                      className={`flex flex-col items-center justify-center p-1.5 rounded-lg border transition-colors gap-0.5 ${
+                        selected === name
+                          ? "bg-blue-100 dark:bg-blue-900/40 border-blue-400 text-blue-600 dark:text-blue-300"
+                          : "border-transparent hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
+                      }`}
+                    >
+                      <Comp className="h-5 w-5" />
+                      <span className="text-[8px] leading-tight text-center truncate w-full">{name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {visibleCategories.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No icons match &ldquo;{search}&rdquo;</p>
+          )}
+        </div>
+        {selected && (
+          <div className="border-t pt-3 flex-shrink-0 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <DynIcon name={selected} className="h-4 w-4 text-blue-500" />
+              <span>{selected} selected</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { onSelect(undefined); onClose(); }}
+              className="text-xs text-red-500 hover:text-red-600 transition-colors"
+            >
+              Remove icon
+            </button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 // ─── Edit-mode overlay wrapper ────────────────────────────────────────────────
 // Wraps each section in edit mode with a "Drag to move" handle bar + drop target.
@@ -231,6 +414,7 @@ function SortableCustomField({
   onToggleButton,
   onChangeButtonText,
   onChangeSection,
+  onChangeIcon,
 }: {
   config: CustomFieldDisplay;
   value: string;
@@ -239,9 +423,11 @@ function SortableCustomField({
   onToggleButton: () => void;
   onChangeButtonText: (text: string) => void;
   onChangeSection: (s: "header" | "description" | "sidebar") => void;
+  onChangeIcon: (icon: string | undefined) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: `cf-${config.key}` });
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const label = config.key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   const preview = value.length > 48 ? value.slice(0, 48) + "…" : value;
@@ -304,8 +490,30 @@ function SortableCustomField({
           >
             <ExternalLink className="h-3.5 w-3.5" />
           </button>
+          {/* Icon picker */}
+          <button
+            onClick={() => setPickerOpen(true)}
+            title={config.icon ? `Icon: ${config.icon} — click to change` : "Add an icon"}
+            className={`p-1.5 rounded transition-colors ${
+              config.icon
+                ? "text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+                : "text-gray-300 dark:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800"
+            }`}
+          >
+            {config.icon
+              ? <DynIcon name={config.icon} className="h-3.5 w-3.5" />
+              : <Smile className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </div>
+      {pickerOpen && (
+        <IconPickerModal
+          open={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          selected={config.icon}
+          onSelect={onChangeIcon}
+        />
+      )}
 
       {/* CTA button text input — shown when displayAsButton is on */}
       {config.displayAsButton && (
@@ -474,6 +682,12 @@ export default function EntryPage() {
   const handleChangeSection = (key: string, section: "header" | "description" | "sidebar") => {
     setEditCustomFieldDisplay((prev) =>
       prev.map((c) => (c.key === key ? { ...c, section } : c))
+    );
+  };
+
+  const handleChangeIcon = (key: string, icon: string | undefined) => {
+    setEditCustomFieldDisplay((prev) =>
+      prev.map((c) => (c.key === key ? { ...c, icon } : c))
     );
   };
 
@@ -687,7 +901,7 @@ export default function EntryPage() {
             <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
           </>
         )}
-        {cfds.map(({ key, showTitle, displayAsImage, displayAsButton, buttonText }) => {
+        {cfds.map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
           const value = customFields[key];
           if (!value) return null;
           const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -697,7 +911,12 @@ export default function EntryPage() {
           return (
             <div key={key}>
               <Separator className="my-8" />
-              {showTitle && <h3 className="text-xl font-bold mb-3">{label}</h3>}
+              {showTitle && (
+                <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                  <DynIcon name={icon} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                  {label}
+                </h3>
+              )}
               {showAsImage ? (
                 <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
               ) : displayAsButton ? (
@@ -747,6 +966,7 @@ export default function EntryPage() {
               onToggleButton={() => handleToggleButton(config.key)}
               onChangeButtonText={(text) => handleChangeButtonText(config.key, text)}
               onChangeSection={(s) => handleChangeSection(config.key, s)}
+              onChangeIcon={(icon) => handleChangeIcon(config.key, icon)}
             />
           ))}
         </div>
@@ -1056,7 +1276,7 @@ export default function EntryPage() {
           );
 
           // Helper: render a custom field value inline (description body / header contexts)
-          const renderCf = ({ key, showTitle, displayAsImage, displayAsButton, buttonText }: CustomFieldDisplay) => {
+          const renderCf = ({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }: CustomFieldDisplay) => {
             const value = (displayEntry as any)?.customFields?.[key];
             if (!value) return null;
             const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -1066,7 +1286,12 @@ export default function EntryPage() {
             return (
               <div key={key}>
                 <Separator className="my-8" />
-                {showTitle && <h3 className="text-xl font-bold mb-3">{label}</h3>}
+                {showTitle && (
+                  <h3 className="text-xl font-bold mb-3 flex items-center gap-2">
+                    <DynIcon name={icon} className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    {label}
+                  </h3>
+                )}
                 {showAsImage ? (
                   <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                 ) : displayAsButton ? (
@@ -1110,7 +1335,7 @@ export default function EntryPage() {
               <div className="space-y-5">
                 {sidebarFields.map((fieldId) => renderSidebarField(fieldId)).filter(Boolean)}
                 {/* Custom fields assigned to the sidebar section */}
-                {cfForSection(allCfds, "sidebar").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText }) => {
+                {cfForSection(allCfds, "sidebar").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
                   const value = (displayEntry as any)?.customFields?.[key];
                   if (!value) return null;
                   const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -1120,7 +1345,12 @@ export default function EntryPage() {
                   return (
                     <div key={key} className="flex items-start">
                       <div className="flex-1 min-w-0">
-                        {showTitle && <div className="text-sm font-medium mb-1">{label}</div>}
+                        {showTitle && (
+                          <div className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                            <DynIcon name={icon} className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            {label}
+                          </div>
+                        )}
                         {showAsImage ? (
                           <img src={strVal} alt={label} className="max-w-full rounded border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                         ) : displayAsButton ? (
@@ -1147,7 +1377,7 @@ export default function EntryPage() {
                 <div className="border-b" style={{ backgroundColor: headerProps.backgroundColor || undefined, fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined }}>
                   {renderHeaderContent(headerProps)}
                   {/* Custom fields assigned to the Title & Summary section */}
-                  {cfForSection(allCfds, "header").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText }) => {
+                  {cfForSection(allCfds, "header").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
                     const value = (displayEntry as any)?.customFields?.[key];
                     if (!value) return null;
                     const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -1156,7 +1386,12 @@ export default function EntryPage() {
                     const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
                     return (
                       <div key={key} className="px-8 md:px-10 pb-6">
-                        {showTitle && <div className="text-sm font-medium text-muted-foreground mb-1">{label}</div>}
+                        {showTitle && (
+                          <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                            <DynIcon name={icon} className="h-3.5 w-3.5 flex-shrink-0" />
+                            {label}
+                          </div>
+                        )}
                         {showAsImage ? (
                           <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
                         ) : displayAsButton ? (

@@ -4,6 +4,28 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [3.1.0] — 2026-06-03
+
+Custom field icon picker for the Entry Template editor.
+
+---
+
+### New Features
+
+#### Per-Field Icon Picker (Entry Template Editor)
+- Each custom field row in the **Editing Entry Template** inline editor now has a fourth toolbar button (smiley face icon) for selecting a decorative icon.
+- Clicking the icon button opens a full **Icon Picker modal** with:
+  - **Search** — filters icons by name in real time
+  - **Category filter pills** — Location, Contact, Business, Time, People, Documents, Technology, Nature, Transport, Activities, Misc (or All)
+  - **8-column icon grid** — 98 curated Lucide icons shown with name labels; selected icon is highlighted in blue
+  - **Remove icon** link in the footer when an icon is already selected
+- When active (icon selected), the toolbar button turns purple and displays the chosen icon instead of the placeholder
+- All icons are sourced from the existing **Lucide React** library (no external dependencies); 98 icons across 11 categories
+- Selected icons are saved in `CustomFieldDisplay.icon` (new optional field in `templateTypes.ts`) and persisted with the entry template on "Apply Changes"
+- Icons render on the public entry page **next to the field label** in all three section contexts: Description body, Sidebar, and Title & Summary header
+
+---
+
 ## [3.0.0] — 2026-06-03
 
 Homepage inline editor — Call to Action block, plus Text Block color and alignment controls.

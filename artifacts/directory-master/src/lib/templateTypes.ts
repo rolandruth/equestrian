@@ -123,6 +123,7 @@ export interface CustomFieldDisplay {
   displayAsButton?: boolean; // render the value as a CTA button/link (mutually exclusive with displayAsImage)
   buttonText?: string;       // custom label for the CTA button (falls back to field label)
   section?: "header" | "description" | "sidebar"; // which entry section to appear in (default: "description")
+  icon?: string; // Lucide icon name to show next to the field label on the frontend
 }
 
 export interface EntryTemplate {

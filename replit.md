@@ -1,6 +1,6 @@
 # Workspace
 
-**Current version: 3.0.0** — See `CHANGELOG.md` for the full release history and developer notes.
+**Current version: 3.1.0** — See `CHANGELOG.md` for the full release history and developer notes.
 
 ## Overview
 

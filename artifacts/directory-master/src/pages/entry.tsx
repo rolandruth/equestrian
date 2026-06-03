@@ -677,9 +677,9 @@ export default function EntryPage() {
     const cfds = getEffectiveCustomFieldDisplay(ts.entry.customFieldDisplay, customFields);
     return (
       <div className="p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
-        {displayEntry.description
-          ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
-          : <p className="text-muted-foreground italic">No detailed description provided.</p>}
+        {displayEntry.description && (
+          <div className="whitespace-pre-wrap">{displayEntry.description}</div>
+        )}
         {(displayEntry as any).moreDetails && (
           <>
             <Separator className="my-8" />
@@ -1084,10 +1084,8 @@ export default function EntryPage() {
 
           const descCol = (
             <div className={`${savedDescOnLeft ? "flex-1" : "w-full md:w-80"} p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none`}>
-              {getSectionEnabled("description") && (
-                displayEntry.description
-                  ? <div className="whitespace-pre-wrap">{displayEntry.description}</div>
-                  : <p className="text-muted-foreground italic">No detailed description provided.</p>
+              {getSectionEnabled("description") && displayEntry.description && (
+                <div className="whitespace-pre-wrap">{displayEntry.description}</div>
               )}
               {getSectionEnabled("moreDetails") && (displayEntry as any).moreDetails && (
                 <>

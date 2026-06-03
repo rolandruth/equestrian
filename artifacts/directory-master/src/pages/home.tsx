@@ -163,12 +163,22 @@ function EditSectionDialog({
   });
   const [imageUrl, setImageUrl] = useState(section.props?.imageUrl ?? "");
   const [imageCaption, setImageCaption] = useState(section.props?.imageCaption ?? "");
+  // Text block color controls
+  const [bgColor, setBgColor] = useState(section.props?.backgroundColor ?? "");
+  const [headingColor, setHeadingColor] = useState(section.props?.headingColor ?? "");
+  const [textColor, setTextColor] = useState(section.props?.textColor ?? "");
 
   const handleSave = () => {
     const updatedProps = {
       ...section.props,
-      // For custom-text: set plain bodyText and wipe richBodyText so it doesn't override
-      ...(type === "custom-text" ? { bodyText, richBodyText: undefined } : {}),
+      // For custom-text: set plain bodyText, wipe richBodyText, and apply colors
+      ...(type === "custom-text" ? {
+        bodyText,
+        richBodyText: undefined,
+        backgroundColor: bgColor || undefined,
+        headingColor: headingColor || undefined,
+        textColor: textColor || undefined,
+      } : {}),
       ...(type === "custom-image" ? { imageUrl, imageCaption } : {}),
     };
     onSave({ ...section, heading, props: updatedProps });
@@ -199,15 +209,101 @@ function EditSectionDialog({
             </div>
           )}
           {type === "custom-text" && (
-            <div className="space-y-1.5">
-              <Label>Body Text</Label>
-              <Textarea
-                value={bodyText}
-                onChange={(e) => setBodyText(e.target.value)}
-                rows={5}
-                placeholder="Enter body text..."
-              />
-            </div>
+            <>
+              <div className="space-y-1.5">
+                <Label>Body Text</Label>
+                <Textarea
+                  value={bodyText}
+                  onChange={(e) => setBodyText(e.target.value)}
+                  rows={5}
+                  placeholder="Enter body text..."
+                />
+              </div>
+              <div className="border-t pt-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colors</p>
+                {/* Background color */}
+                <div className="space-y-1.5">
+                  <Label>Background Color</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="w-10 h-9 rounded border cursor-pointer p-0.5"
+                      value={bgColor || "#ffffff"}
+                      onChange={e => setBgColor(e.target.value)}
+                    />
+                    <Input
+                      className="w-32 font-mono text-sm"
+                      placeholder="#ffffff"
+                      value={bgColor}
+                      onChange={e => setBgColor(e.target.value)}
+                    />
+                    {bgColor && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setBgColor("")}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {/* Heading color */}
+                <div className="space-y-1.5">
+                  <Label>Section Heading Color</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="w-10 h-9 rounded border cursor-pointer p-0.5"
+                      value={headingColor || "#111827"}
+                      onChange={e => setHeadingColor(e.target.value)}
+                    />
+                    <Input
+                      className="w-32 font-mono text-sm"
+                      placeholder="#111827"
+                      value={headingColor}
+                      onChange={e => setHeadingColor(e.target.value)}
+                    />
+                    {headingColor && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setHeadingColor("")}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {/* Body text color */}
+                <div className="space-y-1.5">
+                  <Label>Body Text Color</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      className="w-10 h-9 rounded border cursor-pointer p-0.5"
+                      value={textColor || "#374151"}
+                      onChange={e => setTextColor(e.target.value)}
+                    />
+                    <Input
+                      className="w-32 font-mono text-sm"
+                      placeholder="#374151"
+                      value={textColor}
+                      onChange={e => setTextColor(e.target.value)}
+                    />
+                    {textColor && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => setTextColor("")}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
           )}
           {type === "custom-image" && (
             <>

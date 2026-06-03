@@ -5,6 +5,7 @@
  * Directory Master API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateEntryBodyCustomFields } from "./updateEntryBodyCustomFields";
 
 export interface UpdateEntryBody {
   /** @nullable */
@@ -35,6 +36,8 @@ export interface UpdateEntryBody {
   tags?: string | null;
   /** @nullable */
   moreDetails?: string | null;
+  /** @nullable */
+  customFields?: UpdateEntryBodyCustomFields;
   /** @nullable */
   published?: boolean | null;
 }

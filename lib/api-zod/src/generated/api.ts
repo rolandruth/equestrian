@@ -218,6 +218,7 @@ export const UpdateEntryBody = zod.object({
   endDate: zod.string().nullish(),
   tags: zod.string().nullish(),
   moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
   published: zod.boolean().nullish(),
 });
 

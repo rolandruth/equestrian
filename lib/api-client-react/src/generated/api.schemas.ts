@@ -171,6 +171,11 @@ export interface CreateEntryBody {
   published?: boolean | null;
 }
 
+/**
+ * @nullable
+ */
+export type UpdateEntryBodyCustomFields = { [key: string]: unknown } | null;
+
 export interface UpdateEntryBody {
   /** @nullable */
   title?: string | null;
@@ -200,6 +205,8 @@ export interface UpdateEntryBody {
   tags?: string | null;
   /** @nullable */
   moreDetails?: string | null;
+  /** @nullable */
+  customFields?: UpdateEntryBodyCustomFields;
   /** @nullable */
   published?: boolean | null;
 }

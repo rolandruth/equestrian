@@ -19,8 +19,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Save } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Settings2 } from "lucide-react";
 
 const entrySchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -38,6 +39,13 @@ const entrySchema = z.object({
 
 type EntryFormValues = z.infer<typeof entrySchema>;
 
+function prettifyKey(key: string): string {
+  return key
+    .replace(/^custom_/, "")
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+
 export default function AdminEntryFormPage() {
   const [, setLocation] = useLocation();
   const { id } = useParams();
@@ -46,6 +54,9 @@ export default function AdminEntryFormPage() {
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Custom fields are dynamic — managed outside react-hook-form
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
   const { data: categories } = useListCategories();
   
@@ -88,14 +99,30 @@ export default function AdminEntryFormPage() {
         moreDetails: entry.moreDetails || "",
         published: entry.published
       });
+
+      // Populate custom fields from JSONB
+      if (entry.customFields && typeof entry.customFields === "object") {
+        const cf: Record<string, string> = {};
+        for (const [k, v] of Object.entries(entry.customFields as Record<string, unknown>)) {
+          cf[k] = v == null ? "" : String(v);
+        }
+        setCustomFields(cf);
+      }
     }
   }, [entry, isEditing, form]);
 
   const onSubmit = async (data: EntryFormValues) => {
-    // Clean up empty strings to null for API
+    // Clean up empty strings to null for core fields
     const cleanData = Object.fromEntries(
       Object.entries(data).map(([k, v]) => [k, v === "" ? null : v])
     ) as any;
+
+    // Merge custom fields: keep keys, convert empty string → null
+    const cleanCustomFields: Record<string, string | null> = {};
+    for (const [k, v] of Object.entries(customFields)) {
+      cleanCustomFields[k] = v.trim() === "" ? null : v.trim();
+    }
+    cleanData.customFields = Object.keys(cleanCustomFields).length > 0 ? cleanCustomFields : null;
 
     try {
       if (isEditing) {
@@ -118,6 +145,7 @@ export default function AdminEntryFormPage() {
   }
 
   const isPending = createMutation.isPending || updateMutation.isPending;
+  const customFieldKeys = Object.keys(customFields);
 
   return (
     <div className="space-y-6 max-w-4xl pb-20">
@@ -134,6 +162,8 @@ export default function AdminEntryFormPage() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+
+          {/* Core fields */}
           <Card>
             <CardContent className="pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -219,6 +249,7 @@ export default function AdminEntryFormPage() {
             </CardContent>
           </Card>
 
+          {/* Contact & Links */}
           <Card>
             <CardContent className="pt-6 space-y-6">
               <h3 className="text-lg font-semibold">Contact & Links</h3>
@@ -285,7 +316,7 @@ export default function AdminEntryFormPage() {
                 name="moreDetails"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Additional JSON / Key-Value Details</FormLabel>
+                    <FormLabel>Additional Details</FormLabel>
                     <FormControl>
                       <Textarea placeholder="Any structured data extracted during import..." rows={4} className="font-mono text-sm" {...field} value={field.value || ''} />
                     </FormControl>
@@ -297,6 +328,48 @@ export default function AdminEntryFormPage() {
             </CardContent>
           </Card>
 
+          {/* Custom fields — populated from CSV import */}
+          {customFieldKeys.length > 0 && (
+            <Card>
+              <CardContent className="pt-6 space-y-6">
+                <div className="flex items-center gap-3">
+                  <Settings2 className="h-5 w-5 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold">Custom Fields</h3>
+                  <Badge variant="secondary">{customFieldKeys.length} field{customFieldKeys.length !== 1 ? "s" : ""} from import</Badge>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {customFieldKeys.map(key => {
+                    const value = customFields[key] ?? "";
+                    const isLong = value.length > 100;
+                    return (
+                      <div key={key} className={isLong ? "col-span-1 md:col-span-2" : ""}>
+                        <label className="text-sm font-medium leading-none mb-2 block">
+                          {prettifyKey(key)}
+                          <span className="ml-2 text-xs text-muted-foreground font-normal font-mono">({key})</span>
+                        </label>
+                        {isLong ? (
+                          <Textarea
+                            rows={3}
+                            value={value}
+                            onChange={e => setCustomFields(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="text-sm"
+                          />
+                        ) : (
+                          <Input
+                            value={value}
+                            onChange={e => setCustomFields(prev => ({ ...prev, [key]: e.target.value }))}
+                            className="text-sm"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Publish status */}
           <Card>
             <CardContent className="pt-6">
               <FormField

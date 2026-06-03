@@ -40,6 +40,7 @@ export * from "./successResponse";
 export * from "./togglePublishBody";
 export * from "./updateCategoryBody";
 export * from "./updateEntryBody";
+export * from "./updateEntryBodyCustomFields";
 export * from "./updateSettingsBody";
 export * from "./updateUserBody";
 export * from "./user";

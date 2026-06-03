@@ -759,7 +759,7 @@ export default function EntryPage() {
   const displayEntry = isDemo ? demoEntry : entry;
 
   const { data: relatedData } = useListPublicEntries(
-    { category: displayEntry?.category || undefined, limit: 4 },
+    { category: displayEntry?.category || undefined, limit: 7 },
     { query: { enabled: !!displayEntry?.category && !isDemo } }
   );
 

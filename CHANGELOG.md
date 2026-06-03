@@ -4,6 +4,27 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [3.2.0] — 2026-06-03
+
+Configurable Related Entries count in the Entry Template editor.
+
+---
+
+### New Features
+
+#### Related Entries Count Picker (Entry Template Editor)
+- The **Related Entries** section in the inline Entry Template editor now shows a **"Show: 1 2 3 4 5 6 entries"** control inside the section block.
+- The selected count is highlighted in blue; clicking any number instantly updates the live preview.
+- Saving the template persists the chosen count — public entry pages respect the saved value on every visit.
+- Grid layout adapts automatically: 1 column for 1 entry, 2 columns for 2, and 3 columns for 3–6.
+- Default remains **3** for any template that has not explicitly set a count.
+
+### Bug Fixes
+
+- **Related Entries API limit** — The related-entries query previously fetched only 4 records, capping the visible results at 3 after filtering out the current entry. The limit is now **7** (6 selectable slots + 1 buffer for the current entry), so all 6 slots can be filled when enough entries exist in the category.
+
+---
+
 ## [3.1.0] — 2026-06-03
 
 Custom field icon picker for the Entry Template editor.

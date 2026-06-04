@@ -15,6 +15,8 @@ export const directorySettings = pgTable("directory_settings", {
   navbarTextColor: text("navbar_text_color"),
   heroSearchPlaceholder: text("hero_search_placeholder"),
   heroSearchButtonText: text("hero_search_button_text"),
+  heroSearchButtonColor: text("hero_search_button_color"),
+  heroSearchButtonTextColor: text("hero_search_button_text_color"),
   footerText: text("footer_text"),
   privacyPolicyUrl: text("privacy_policy_url"),
   termsUrl: text("terms_url"),

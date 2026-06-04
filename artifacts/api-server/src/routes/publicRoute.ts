@@ -188,6 +188,8 @@ router.get("/settings", async (req, res) => {
       navbarTextColor: settings.navbarTextColor,
       heroSearchPlaceholder: settings.heroSearchPlaceholder,
       heroSearchButtonText: settings.heroSearchButtonText,
+      heroSearchButtonColor: settings.heroSearchButtonColor,
+      heroSearchButtonTextColor: settings.heroSearchButtonTextColor,
       footerText: settings.footerText,
       privacyPolicyUrl: settings.privacyPolicyUrl,
       termsUrl: settings.termsUrl,

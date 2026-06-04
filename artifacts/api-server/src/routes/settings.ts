@@ -20,6 +20,8 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     navbarTextColor: s.navbarTextColor,
     heroSearchPlaceholder: s.heroSearchPlaceholder,
     heroSearchButtonText: s.heroSearchButtonText,
+    heroSearchButtonColor: s.heroSearchButtonColor,
+    heroSearchButtonTextColor: s.heroSearchButtonTextColor,
     footerText: s.footerText,
     privacyPolicyUrl: s.privacyPolicyUrl,
     termsUrl: s.termsUrl,
@@ -63,8 +65,10 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.themeColor !== undefined)          dbUpdates.themeColor = req.body.themeColor;
     if (req.body.navbarBgColor !== undefined)           dbUpdates.navbarBgColor = req.body.navbarBgColor;
     if (req.body.navbarTextColor !== undefined)         dbUpdates.navbarTextColor = req.body.navbarTextColor;
-    if (req.body.heroSearchPlaceholder !== undefined)   dbUpdates.heroSearchPlaceholder = req.body.heroSearchPlaceholder;
-    if (req.body.heroSearchButtonText !== undefined)    dbUpdates.heroSearchButtonText = req.body.heroSearchButtonText;
+    if (req.body.heroSearchPlaceholder !== undefined)       dbUpdates.heroSearchPlaceholder = req.body.heroSearchPlaceholder;
+    if (req.body.heroSearchButtonText !== undefined)        dbUpdates.heroSearchButtonText = req.body.heroSearchButtonText;
+    if (req.body.heroSearchButtonColor !== undefined)       dbUpdates.heroSearchButtonColor = req.body.heroSearchButtonColor;
+    if (req.body.heroSearchButtonTextColor !== undefined)   dbUpdates.heroSearchButtonTextColor = req.body.heroSearchButtonTextColor;
     if (req.body.footerText !== undefined)              dbUpdates.footerText = req.body.footerText;
     if (req.body.privacyPolicyUrl !== undefined)        dbUpdates.privacyPolicyUrl = req.body.privacyPolicyUrl;
     if (req.body.termsUrl !== undefined)                dbUpdates.termsUrl = req.body.termsUrl;

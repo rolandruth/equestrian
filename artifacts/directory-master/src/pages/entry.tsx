@@ -1376,55 +1376,17 @@ export default function EntryPage() {
               </div>
             </div>
 
-            {/* Outside-card sections: Related — rendered in editSections order */}
-            {editSections
-              .filter(s => s.id === "related")
-              .map(s => {
-                if (s.id === "related") {
-                  return (
-                    <EditSectionWrapper
-                      key="related"
-                      section={rSec}
-                      onToggle={() => toggleSection("related")}
-                      isActive={activeId === "related"}
-                      disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
-                    >
-                      {renderRelatedContent()}
-                    </EditSectionWrapper>
-                  );
-                }
-                // claim
-                return (
-                  <EditSectionWrapper
-                    key="claim"
-                    section={claimSec}
-                    onToggle={() => toggleSection("claim")}
-                    onEdit={() => {
-                      setClaimDraft({
-                        heading: claimSec.heading ?? "Claim Yours Now",
-                        bodyText: claimSec.props?.bodyText ?? "",
-                        buttonText: claimSec.props?.buttonText ?? "Submit",
-                        thankYouMessage: claimSec.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.",
-                      });
-                      setClaimEditOpen(true);
-                    }}
-                    isActive={activeId === "claim"}
-                    disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
-                  >
-                    <div className="px-8 py-10 text-center" style={{ backgroundColor: claimSec.props?.backgroundColor || undefined }}>
-                      <h2 className="text-2xl font-bold mb-2" style={{ color: claimSec.props?.textColor || undefined }}>
-                        {claimSec.heading || "Claim Yours Now"}
-                      </h2>
-                      {claimSec.props?.bodyText && (
-                        <p className="text-muted-foreground text-sm mb-4">{claimSec.props.bodyText}</p>
-                      )}
-                      <p className="text-muted-foreground text-xs mb-6 opacity-60">Full Name · Phone Number · Email Address · Submit button</p>
-                      <EntryClaimFormBlock section={claimSec} />
-                    </div>
-                  </EditSectionWrapper>
-                );
-              })
-            }
+            {/* Related — full width, outside card */}
+            {editSections.some(s => s.id === "related") && (
+              <EditSectionWrapper
+                section={rSec}
+                onToggle={() => toggleSection("related")}
+                isActive={activeId === "related"}
+                disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
+              >
+                {renderRelatedContent()}
+              </EditSectionWrapper>
+            )}
 
             {/* Claim section edit dialog */}
             <Dialog open={claimEditOpen} onOpenChange={setClaimEditOpen}>

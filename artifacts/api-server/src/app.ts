@@ -26,8 +26,12 @@ app.use(
   }),
 );
 app.use(cors());
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+// Route-specific parser for CSV import must be mounted BEFORE the global parser so that
+// body-parser skips the global pass (it checks req._body) once the route-specific one runs.
+// This prevents the 50 MB global limit from accepting oversized import payloads.
+app.use("/api/import/csv", express.json({ limit: "6mb" }));
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.use("/api", router);
 

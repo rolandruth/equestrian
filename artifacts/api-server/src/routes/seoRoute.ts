@@ -228,6 +228,20 @@ router.get("/summary", requireAdmin, async (req, res) => {
 router.post("/bulk", requireAdmin, async (req, res) => {
   try {
     const { overwrite = false } = req.body as { overwrite?: boolean };
+
+    // Reject if a bulk SEO job is already running to prevent resource exhaustion
+    for (const [, job] of seoJobs) {
+      if (job.status === "running") {
+        res.status(409).json({ error: "A bulk SEO job is already in progress. Wait for it to finish before starting a new one." });
+        return;
+      }
+    }
+
+    // Prune finished/errored jobs so the map does not grow without bound
+    for (const [id, job] of seoJobs) {
+      if (job.status !== "running") seoJobs.delete(id);
+    }
+
     const jobId = randomUUID();
     const initialStatus: SeoJobStatus = {
       status: "running",

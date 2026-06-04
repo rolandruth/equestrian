@@ -172,6 +172,13 @@ const ENRICH_BATCH = 50;      // entries per Gemini call
 const ENRICH_PARALLEL = 3;    // concurrent Gemini calls at a time
 const INSERT_CHUNK = 250;     // rows per bulk DB insert
 
+// Resource-exhaustion guards
+const IMPORT_CSV_MAX_BYTES = 5 * 1024 * 1024; // 5 MB hard cap on raw CSV content
+const IMPORT_MAX_ROWS = 10_000;               // max data rows per import
+const IMPORT_MAX_CONCURRENT = 3;              // max simultaneous in-flight import jobs
+
+let activeImportJobs = 0;
+
 async function enrichBatch(batch: Array<{ index: number; data: Record<string, string | null> }>): Promise<Map<number, { summary: string; tags: string }>> {
   const needsEnrich = batch.filter(b => !b.data.summary || !b.data.tags);
   if (needsEnrich.length === 0) return new Map();
@@ -214,6 +221,10 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
     const headers = allRows[0];
     const dataRows = allRows.slice(1);
     const totalRows = dataRows.length;
+
+    if (totalRows > IMPORT_MAX_ROWS) {
+      throw new Error(`CSV exceeds the maximum of ${IMPORT_MAX_ROWS} rows. This import had ${totalRows} rows. Split the file and re-import.`);
+    }
 
     const approvedMappings = fieldMappings.filter(m => m.approved && m.targetField !== "skip");
     const needsEnrichment = !approvedMappings.some(m => m.targetField === "summary") ||
@@ -386,6 +397,8 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
       message: "Import failed. See error details below.",
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
+  } finally {
+    activeImportJobs--;
   }
 }
 
@@ -554,6 +567,12 @@ router.post("/csv", requireEditor, async (req, res) => {
       res.status(400).json({ error: "CSV content is required" });
       return;
     }
+
+    if (Buffer.byteLength(csvContent, "utf8") > IMPORT_CSV_MAX_BYTES) {
+      res.status(413).json({ error: `CSV content exceeds the ${IMPORT_CSV_MAX_BYTES / (1024 * 1024)} MB limit. Split the file and re-import.` });
+      return;
+    }
+
     if (!fieldMappings || !Array.isArray(fieldMappings) || fieldMappings.length === 0) {
       res.status(400).json({ error: "fieldMappings array is required" });
       return;
@@ -564,28 +583,43 @@ router.post("/csv", requireEditor, async (req, res) => {
       return;
     }
 
-    const jobId = randomUUID();
-    const [job] = await db.insert(importJobs).values({
-      jobId,
-      status: "pending",
-      message: "Import job queued",
-    }).returning();
+    if (activeImportJobs >= IMPORT_MAX_CONCURRENT) {
+      res.status(429).json({ error: `Too many imports in progress (max ${IMPORT_MAX_CONCURRENT}). Wait for an existing import to finish before starting a new one.` });
+      return;
+    }
 
-    processImport(jobId, csvContent, fieldMappings).catch(err =>
-      logger.error(err, "processImport unhandled error")
-    );
+    // Reserve the slot synchronously (before any await) so concurrent requests
+    // that pass the check above cannot also start — no race window.
+    activeImportJobs++;
 
-    res.json({
-      jobId: job.jobId,
-      status: job.status,
-      message: job.message,
-      progress: null,
-      totalRows: null,
-      processedRows: null,
-      entriesCreated: null,
-      categoriesCreated: null,
-      error: null,
-    });
+    try {
+      const jobId = randomUUID();
+      const [job] = await db.insert(importJobs).values({
+        jobId,
+        status: "pending",
+        message: "Import job queued",
+      }).returning();
+
+      processImport(jobId, csvContent, fieldMappings).catch(err =>
+        logger.error(err, "processImport unhandled error")
+      );
+
+      res.json({
+        jobId: job.jobId,
+        status: job.status,
+        message: job.message,
+        progress: null,
+        totalRows: null,
+        processedRows: null,
+        entriesCreated: null,
+        categoriesCreated: null,
+        error: null,
+      });
+    } catch (innerErr) {
+      // processImport never started — release the reserved slot
+      activeImportJobs--;
+      throw innerErr;
+    }
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to start import" });

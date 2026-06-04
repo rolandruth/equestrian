@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { categories, entries } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
-import { eq, count, sql } from "drizzle-orm";
+import { and, eq, count, isNotNull } from "drizzle-orm";
 
 const router = Router();
 
@@ -22,14 +22,14 @@ function formatCat(c: typeof categories.$inferSelect, entryCount = 0) {
   };
 }
 
-router.get("/", async (req, res) => {
+router.get("/", requireAuth, async (req, res) => {
   try {
     const cats = await db.select().from(categories).orderBy(categories.name);
     const counts = await db.select({
       category: entries.category,
       count: count(),
     }).from(entries)
-      .where(sql`${entries.category} IS NOT NULL`)
+      .where(and(isNotNull(entries.category), eq(entries.published, true)))
       .groupBy(entries.category);
 
     const countMap = new Map(counts.map(c => [c.category, Number(c.count)]));

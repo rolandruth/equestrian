@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { directorySettings, users } from "@workspace/db";
-import { hashPassword, createSession } from "../lib/auth.js";
+import { hashPassword } from "../lib/auth.js";
+import { getSetupToken, consumeSetupToken } from "../lib/setupToken.js";
 import { eq } from "drizzle-orm";
 
 const router = Router();
@@ -22,7 +23,13 @@ router.get("/status", async (req, res) => {
 
 router.post("/complete", async (req, res) => {
   try {
-    const { siteTitle, adminName, adminEmail, adminPassword, themeColor, homepageHeadline, homepageDescription } = req.body;
+    const { siteTitle, adminName, adminEmail, adminPassword, themeColor, homepageHeadline, homepageDescription, setupToken } = req.body;
+
+    const expectedToken = getSetupToken();
+    if (!expectedToken || setupToken !== expectedToken) {
+      res.status(403).json({ error: "Invalid or missing setup token. Check your server logs for the token." });
+      return;
+    }
 
     if (!siteTitle || !adminName || !adminEmail || !adminPassword) {
       res.status(400).json({ error: "Missing required fields" });
@@ -60,6 +67,8 @@ router.post("/complete", async (req, res) => {
         installed: true,
       });
     }
+
+    consumeSetupToken();
 
     res.json({ success: true, message: "Your directory has been created." });
   } catch (err) {

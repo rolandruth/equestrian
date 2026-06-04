@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { getSetupToken } from "./lib/setupToken.js";
 
 const rawPort = process.env["PORT"];
 
@@ -22,4 +23,12 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  const setupToken = getSetupToken();
+  if (setupToken) {
+    logger.warn(
+      { setupToken },
+      "=== SETUP TOKEN (required to complete first-run setup — keep this secret) ===",
+    );
+  }
 });

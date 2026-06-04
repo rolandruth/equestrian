@@ -773,6 +773,8 @@ components:
     CompleteSetupBody:
       type: object
       properties:
+        setupToken:
+          type: string
         siteTitle:
           type: string
         adminName:
@@ -787,7 +789,7 @@ components:
           type: ["string", "null"]
         homepageDescription:
           type: ["string", "null"]
-      required: [siteTitle, adminName, adminEmail, adminPassword]
+      required: [setupToken, siteTitle, adminName, adminEmail, adminPassword]
 
     SetupResult:
       type: object

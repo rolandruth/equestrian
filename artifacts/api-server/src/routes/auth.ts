@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import { db } from "@workspace/db";
 import { users } from "@workspace/db";
 import { verifyPassword, createSession, deleteSession } from "../lib/auth.js";
@@ -7,7 +8,16 @@ import { eq } from "drizzle-orm";
 
 const router = Router();
 
-router.post("/login", async (req, res) => {
+const loginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Too many login attempts. Please try again in 15 minutes." },
+  skipSuccessfulRequests: true,
+});
+
+router.post("/login", loginRateLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {

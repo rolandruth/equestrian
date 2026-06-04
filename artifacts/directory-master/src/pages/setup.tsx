@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
 const setupSchema = z.object({
+  setupToken: z.string().min(1, "Setup token is required"),
   adminName: z.string().min(2, "Name is required"),
   adminEmail: z.string().email("Invalid email address"),
   adminPassword: z.string().min(8, "Password must be at least 8 characters"),
@@ -36,6 +37,7 @@ export default function SetupPage() {
   const form = useForm<SetupFormValues>({
     resolver: zodResolver(setupSchema),
     defaultValues: {
+      setupToken: "",
       adminName: "",
       adminEmail: "",
       adminPassword: "",
@@ -101,10 +103,43 @@ export default function SetupPage() {
                 We'll guide you through setting up your admin account and basic site settings.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex justify-end">
-              <Button onClick={() => setStep(2)}>
-                Start Setup <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 text-sm text-amber-800 dark:text-amber-300">
+                <KeyRound className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  Find your <strong>setup token</strong> in the server logs — look for the line labelled{" "}
+                  <code className="font-mono text-xs">SETUP TOKEN</code>. You'll need it below to verify you are the legitimate deployer.
+                </p>
+              </div>
+              <Form {...form}>
+                <FormField
+                  control={form.control}
+                  name="setupToken"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Setup Token</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Paste your setup token from the server logs"
+                          autoComplete="off"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </Form>
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={async () => {
+                    const valid = await form.trigger(["setupToken"]);
+                    if (valid) setStep(2);
+                  }}
+                >
+                  Start Setup <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -159,7 +194,10 @@ export default function SetupPage() {
                       </FormItem>
                     )}
                   />
-                  <div className="flex justify-end pt-4">
+                  <div className="flex justify-between pt-4">
+                    <Button type="button" variant="outline" onClick={() => setStep(1)}>
+                      Back
+                    </Button>
                     <Button type="button" onClick={async () => {
                       const valid = await form.trigger(["adminName", "adminEmail", "adminPassword"]);
                       if (valid) setStep(3);

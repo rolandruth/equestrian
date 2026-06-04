@@ -7,6 +7,7 @@
  */
 
 export interface CompleteSetupBody {
+  setupToken: string;
   siteTitle: string;
   adminName: string;
   adminEmail: string;

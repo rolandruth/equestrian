@@ -88,6 +88,7 @@ export const GetSetupStatusResponse = zod.object({
  * @summary Complete setup wizard
  */
 export const CompleteSetupBody = zod.object({
+  setupToken: zod.string(),
   siteTitle: zod.string(),
   adminName: zod.string(),
   adminEmail: zod.string(),

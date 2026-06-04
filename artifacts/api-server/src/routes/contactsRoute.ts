@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, contacts } from "@workspace/db";
 import { requireAuth } from "../middlewares/auth.js";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -37,6 +37,25 @@ router.get("/", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to list contacts" });
+  }
+});
+
+router.delete("/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id as string, 10);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const deleted = await db.delete(contacts).where(eq(contacts.id, id)).returning();
+    if (deleted.length === 0) {
+      res.status(404).json({ error: "Contact not found" });
+      return;
+    }
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to delete contact" });
   }
 });
 

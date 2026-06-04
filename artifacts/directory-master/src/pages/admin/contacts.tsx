@@ -1,5 +1,7 @@
-import { useListContacts } from "@workspace/api-client-react";
-import { Users, Mail, Phone, Calendar } from "lucide-react";
+import { useListContacts, useDeleteContact } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Users, Mail, Phone, Calendar, Trash2 } from "lucide-react";
+import { useState } from "react";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString(undefined, {
@@ -13,7 +15,22 @@ function formatDate(iso: string) {
 
 export default function AdminContactsPage() {
   const { data, isLoading } = useListContacts();
+  const queryClient = useQueryClient();
+  const deleteContact = useDeleteContact();
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   const contacts = data?.contacts ?? [];
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Delete this contact submission? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await deleteContact.mutateAsync({ id });
+      await queryClient.invalidateQueries({ queryKey: ["/api/contacts"] });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -62,6 +79,7 @@ export default function AdminContactsPage() {
                 <th className="text-left px-5 py-3 font-semibold text-muted-foreground">
                   <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Submitted</span>
                 </th>
+                <th className="px-5 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -73,23 +91,28 @@ export default function AdminContactsPage() {
                   <td className="px-5 py-3.5 text-muted-foreground font-mono text-xs">{i + 1}</td>
                   <td className="px-5 py-3.5 font-medium">{c.fullName}</td>
                   <td className="px-5 py-3.5">
-                    <a
-                      href={`tel:${c.phone}`}
-                      className="text-primary hover:underline"
-                    >
+                    <a href={`tel:${c.phone}`} className="text-primary hover:underline">
                       {c.phone}
                     </a>
                   </td>
                   <td className="px-5 py-3.5">
-                    <a
-                      href={`mailto:${c.email}`}
-                      className="text-primary hover:underline"
-                    >
+                    <a href={`mailto:${c.email}`} className="text-primary hover:underline">
                       {c.email}
                     </a>
                   </td>
                   <td className="px-5 py-3.5 text-muted-foreground text-xs whitespace-nowrap">
                     {formatDate(c.createdAt)}
+                  </td>
+                  <td className="px-5 py-3.5 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(c.id)}
+                      disabled={deletingId === c.id}
+                      className="inline-flex items-center justify-center w-8 h-8 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Delete contact"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -32,6 +32,18 @@ export const ListContactsResponse = zod.object({
 });
 
 /**
+ * @summary Delete a contact submission (admin)
+ */
+export const DeleteContactParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteContactResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().nullish(),
+});
+
+/**
  * @summary Request a presigned upload URL
  */
 export const RequestUploadUrlBody = zod.object({

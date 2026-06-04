@@ -1166,6 +1166,57 @@ export default function EntryPage() {
             {renderEditModeCustomFields("sidebar")}
           </div>
         )}
+
+        {/* Claim Yours Now — embedded at bottom of sidebar */}
+        {(() => {
+          const claimS = findEditSection("claim");
+          return (
+            <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-semibold text-blue-600 uppercase tracking-wide flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" /> Claim Yours Now
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setClaimDraft({
+                        heading: claimS.heading ?? "Claim Yours Now",
+                        bodyText: claimS.props?.bodyText ?? "",
+                        buttonText: claimS.props?.buttonText ?? "Submit",
+                        thankYouMessage: claimS.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.",
+                      });
+                      setClaimEditOpen(true);
+                    }}
+                    title="Edit text"
+                    className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-blue-500"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection("claim")}
+                    title={claimS.enabled ? "Hide Claim form" : "Show Claim form"}
+                    className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors text-blue-500"
+                  >
+                    {claimS.enabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                  </button>
+                </div>
+              </div>
+              {claimS.enabled && (
+                <div className="pt-1">
+                  {claimS.heading && (
+                    <p className="text-sm font-semibold mb-3">{claimS.heading}</p>
+                  )}
+                  <EntryClaimFormBlock section={claimS} />
+                </div>
+              )}
+              {!claimS.enabled && (
+                <p className="text-xs text-muted-foreground italic">Form hidden — click the eye to show it</p>
+              )}
+            </div>
+          );
+        })()}
       </div>
     );
   };
@@ -1325,9 +1376,9 @@ export default function EntryPage() {
               </div>
             </div>
 
-            {/* Outside-card sections: Related + Claim — rendered in editSections order */}
+            {/* Outside-card sections: Related — rendered in editSections order */}
             {editSections
-              .filter(s => s.id === "related" || s.id === "claim")
+              .filter(s => s.id === "related")
               .map(s => {
                 if (s.id === "related") {
                   return (
@@ -1598,6 +1649,24 @@ export default function EntryPage() {
                   );
                 })}
               </div>
+              {/* Claim Yours Now — embedded at bottom of sidebar */}
+              {getSectionEnabled("claim") && (() => {
+                const claimSection = getEntrySection("claim");
+                const p = claimSection?.props ?? {};
+                return (
+                  <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+                    {claimSection?.heading && (
+                      <p className="font-semibold text-base mb-4" style={{ color: sidebarProps.headingColor || undefined }}>
+                        {claimSection.heading}
+                      </p>
+                    )}
+                    {p.bodyText && (
+                      <p className="text-sm text-muted-foreground mb-4">{p.bodyText}</p>
+                    )}
+                    <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
+                  </div>
+                );
+              })()}
             </div>
           );
 
@@ -1660,36 +1729,11 @@ export default function EntryPage() {
           );
         })()}
 
-        {/* Outside-card sections (Claim + Related) — rendered in saved template order */}
+        {/* Outside-card sections (Related) — rendered in saved template order */}
         {ts.entry.sections
-          .filter(s => s.id === "related" || s.id === "claim")
+          .filter(s => s.id === "related")
           .map(s => {
-            if (s.id === "claim") {
-              if (!getSectionEnabled("claim")) return null;
-              const claimSection = getEntrySection("claim");
-              const p = claimSection?.props ?? {};
-              const alignClass = p.textAlignment === "center" ? "text-center" : p.textAlignment === "right" ? "text-right" : "text-left";
-              return (
-                <div
-                  key="claim"
-                  className={`rounded-xl border bg-white dark:bg-gray-900 shadow-sm px-8 py-10 ${alignClass}`}
-                  style={{ backgroundColor: p.backgroundColor || undefined }}
-                >
-                  {claimSection?.heading && (
-                    <h2 className="text-2xl font-bold mb-3" style={{ color: p.textColor || undefined }}>
-                      {claimSection.heading}
-                    </h2>
-                  )}
-                  {p.bodyText && (
-                    <p className="text-muted-foreground mb-6 max-w-lg mx-auto" style={{ color: p.textColor || undefined }}>
-                      {p.bodyText}
-                    </p>
-                  )}
-                  <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
-                </div>
-              );
-            }
-            // related
+            if (s.id !== "related") return null;
             if (!getSectionEnabled("related") || isDemo || !relatedData) return null;
             const relatedMax = getEntrySection("related")?.props?.maxItems ?? 3;
             const filtered = relatedData.entries.filter((e) => e.id !== entryNumericId);

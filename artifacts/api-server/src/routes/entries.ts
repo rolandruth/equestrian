@@ -2,7 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { entries, categories } from "@workspace/db";
 import { requireAuth, requireEditor, requireAdmin } from "../middlewares/auth.js";
-import { eq, ilike, and, desc, count, sql } from "drizzle-orm";
+import { eq, ilike, and, or, desc, count, sql } from "drizzle-orm";
 
 const router = Router();
 
@@ -18,7 +18,20 @@ router.get("/", requireAuth, async (req, res) => {
     const featuredParam = req.query.featured as string;
 
     const conditions = [];
-    if (search && search !== "null") conditions.push(ilike(entries.title, `%${search}%`));
+    if (search && search !== "null") {
+      const q = `%${search}%`;
+      conditions.push(or(
+        ilike(entries.title, q),
+        ilike(entries.summary, q),
+        ilike(entries.description, q),
+        ilike(entries.tags, q),
+        ilike(entries.location, q),
+        ilike(entries.venue, q),
+        ilike(entries.eventType, q),
+        ilike(entries.category, q),
+        ilike(entries.moreDetails, q),
+      )!);
+    }
     if (category && category !== "null") conditions.push(eq(entries.category, category));
     if (publishedParam === "true") conditions.push(eq(entries.published, true));
     if (publishedParam === "false") conditions.push(eq(entries.published, false));

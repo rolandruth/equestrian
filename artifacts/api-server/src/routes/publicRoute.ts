@@ -45,7 +45,20 @@ router.get("/entries", async (req, res) => {
     const sort = (req.query.sort as string) || "newest";
 
     const conditions = [eq(entries.published, true)];
-    if (search && search !== "null") conditions.push(ilike(entries.title, `%${search}%`));
+    if (search && search !== "null") {
+      const q = `%${search}%`;
+      conditions.push(or(
+        ilike(entries.title, q),
+        ilike(entries.summary, q),
+        ilike(entries.description, q),
+        ilike(entries.tags, q),
+        ilike(entries.location, q),
+        ilike(entries.venue, q),
+        ilike(entries.eventType, q),
+        ilike(entries.category, q),
+        ilike(entries.moreDetails, q),
+      )!);
+    }
     if (category && category !== "null") conditions.push(eq(entries.category, category));
 
     const where = and(...conditions);

@@ -4,6 +4,36 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [3.3.0] — 2026-06-04
+
+"Claim Yours Now" lead-capture form embedded inside the Entry Details Sidebar, with contacts storage and admin management.
+
+---
+
+### New Features
+
+#### "Claim Yours Now" Sidebar Form (Entry Pages)
+- A **"Claim Yours Now"** lead-capture form is now embedded at the bottom of the **Contact & Details** sidebar on every public entry page.
+- Visitors fill in **Full Name**, **Phone**, and **Email** and submit directly from the sidebar — no page navigation required.
+- On success the form swaps to a configurable **thank-you message**; validation prevents empty submissions.
+- The section is **togglable** (eye icon) in the inline Entry Template editor, just like any other section.
+
+#### Claim Form Inline Editor
+- In **Edit Layout** mode on entry pages, the sidebar shows the Claim section at the bottom with a **pencil (✏️) icon** that opens an edit dialog.
+- Admins can customise the **heading**, **body text**, **button label**, and **thank-you message** without leaving the page.
+- Changes are saved along with the rest of the template via the existing **Apply Changes** flow.
+
+#### Contacts Storage & Admin Page
+- Submissions are stored in a new **`contacts`** database table (name, phone, email, timestamp, entry association).
+- A new **Contacts** admin page (`/admin/contacts`) lists all captured leads with sortable columns and entry links.
+- Full API route (`POST /api/contacts`, `GET /api/contacts`) with admin-only auth guard.
+
+### Bug Fixes
+
+- **Dead claim-section code removed** — leftover unreachable `claim` branch inside the edit-mode section renderer was cleaned up, eliminating the source of a transient HMR runtime crash after template saves.
+
+---
+
 ## [3.2.0] — 2026-06-03
 
 Configurable Related Entries count in the Entry Template editor.

@@ -6,3 +6,9 @@ id = "1-QQUc5zF-8LklClrIffz"
 uri = "file://CHANGELOG.md"
 type = "text"
 title = "Directory Master v1.0.0 — Changelog"
+
+[[outputs]]
+id = "vRM34Q26rZW6XhaI5pk2B"
+uri = "file://directory_master_db_export.tar.gz"
+type = "unspecified"
+title = "Directory Master — Full DB Export (v3.4.0)"

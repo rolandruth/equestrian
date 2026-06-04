@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map } from "lucide-react";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
 import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
 
@@ -205,6 +205,61 @@ function GeminiApiKeyCard() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function SitemapUrlField() {
+  const [copied, setCopied] = useState(false);
+  const sitemapUrl = `${window.location.origin}/sitemap.xml`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(sitemapUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className="text-sm font-medium mb-1.5">Your Sitemap URL</p>
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-md border bg-muted/40 text-sm font-mono text-muted-foreground select-all overflow-x-auto">
+            {sitemapUrl}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="shrink-0 gap-1.5"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3.5 w-3.5 text-green-600" />
+                <span className="text-green-600">Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-3.5 w-3.5" />
+                Copy
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+      <div className="rounded-md bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-800 dark:text-blue-300 space-y-1">
+        <p className="font-medium">How to submit to Google Search Console</p>
+        <ol className="list-decimal list-inside space-y-0.5 text-blue-700 dark:text-blue-400">
+          <li>Go to <a href="https://search.google.com/search-console" target="_blank" rel="noopener noreferrer" className="underline">search.google.com/search-console</a></li>
+          <li>Select your property, then open <strong>Sitemaps</strong> in the left menu</li>
+          <li>Paste the URL above into the "Add a new sitemap" field and click Submit</li>
+        </ol>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        The sitemap automatically includes your homepage, browse page, and all published entries. It updates in real time as entries are published.
+      </p>
+    </div>
   );
 }
 
@@ -745,6 +800,22 @@ export default function AdminSettingsPage() {
                   </FormItem>
                 )}
               />
+            </CardContent>
+          </Card>
+
+          {/* Sitemap */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Map className="h-5 w-5 text-muted-foreground" />
+                XML Sitemap
+              </CardTitle>
+              <CardDescription>
+                Submit your sitemap URL to Google Search Console to help search engines discover all your pages.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <SitemapUrlField />
             </CardContent>
           </Card>
 

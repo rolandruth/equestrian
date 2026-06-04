@@ -136,7 +136,10 @@ function ClaimFormBlock({ section }: { section: SectionConfig }) {
         type="submit"
         disabled={createContact.isPending}
         className="w-full"
-        style={p.buttonColor ? { backgroundColor: p.buttonColor, borderColor: p.buttonColor } : undefined}
+        style={{
+          ...(p.buttonColor ? { backgroundColor: p.buttonColor, borderColor: p.buttonColor } : {}),
+          ...(p.buttonTextColor ? { color: p.buttonTextColor } : {}),
+        }}
       >
         {createContact.isPending ? (
           <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
@@ -272,6 +275,7 @@ function EditSectionDialog({
   const [claimButtonText, setClaimButtonText] = useState(section.props?.buttonText ?? "Submit");
   const [claimThankYou, setClaimThankYou] = useState(section.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.");
   const [claimButtonColor, setClaimButtonColor] = useState(section.props?.buttonColor ?? "");
+  const [claimButtonTextColor, setClaimButtonTextColor] = useState(section.props?.buttonTextColor ?? "");
 
   const handleSave = () => {
     const updatedProps = {
@@ -301,6 +305,7 @@ function EditSectionDialog({
         bodyText,
         buttonText: claimButtonText,
         buttonColor: claimButtonColor || undefined,
+        buttonTextColor: claimButtonTextColor || undefined,
         thankYouMessage: claimThankYou,
         backgroundColor: bgColor || undefined,
         textColor: textColor || undefined,
@@ -650,6 +655,7 @@ function EditSectionDialog({
                 {[
                   { label: "Section Background", val: bgColor, set: setBgColor, placeholder: "#ffffff" },
                   { label: "Button Color", val: claimButtonColor, set: setClaimButtonColor, placeholder: "#3b82f6" },
+                  { label: "Button Text Color", val: claimButtonTextColor, set: setClaimButtonTextColor, placeholder: "#ffffff" },
                   { label: "Text Color", val: textColor, set: setTextColor, placeholder: "#111827" },
                 ].map(({ label, val, set, placeholder }) => (
                   <div key={label} className="space-y-1.5">

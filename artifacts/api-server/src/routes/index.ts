@@ -11,6 +11,7 @@ import publicRouter from "./publicRoute.js";
 import seoRouter from "./seoRoute.js";
 import storageRouter from "./storage.js";
 import builderRouter from "./builderRoute.js";
+import contactsRouter from "./contactsRoute.js";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/public", publicRouter);
 router.use("/seo", seoRouter);
 router.use(storageRouter);
 router.use("/builder", builderRouter);
+router.use("/contacts", contactsRouter);
 
 export default router;

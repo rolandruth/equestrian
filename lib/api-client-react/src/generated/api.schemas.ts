@@ -351,6 +351,24 @@ export interface PublicStats {
   categoryBreakdown: CategoryCount[];
 }
 
+export interface ContactSubmitBody {
+  fullName: string;
+  phone: string;
+  email: string;
+}
+
+export interface Contact {
+  id: number;
+  fullName: string;
+  phone: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface ContactListResponse {
+  contacts: Contact[];
+}
+
 export interface RequestUploadUrlBody {
   name: string;
   size: number;

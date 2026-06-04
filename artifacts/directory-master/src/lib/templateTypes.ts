@@ -47,6 +47,7 @@ export interface SectionProps {
   fontFamily?: string;
   buttonTarget?: "_blank" | "_self";
   buttonRadius?: "rounded" | "square";
+  thankYouMessage?: string;
 }
 
 export interface SectionConfig {
@@ -78,6 +79,7 @@ export const HOMEPAGE_BLOCK_DEFS: BlockDefinition[] = [
   { type: "custom-text", label: "Text Block",       description: "Custom heading and body text paragraph", defaultProps: { textAlignment: "left", bodyText: "Add your custom content here." } },
   { type: "custom-image",label: "Image Block",      description: "Display a full-width image with optional caption", defaultProps: {} },
   { type: "custom-cta",  label: "Call to Action",  description: "A prominent button with optional heading and description", defaultProps: { textAlignment: "center", buttonText: "Get Started", buttonRadius: "rounded", buttonTarget: "_self" } },
+  { type: "custom-claim", label: "Claim Your Listing", description: "Opt-in form to capture name, phone, and email leads", defaultProps: { textAlignment: "center", buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon." } },
 ];
 
 export const BROWSE_BLOCK_DEFS: BlockDefinition[] = [

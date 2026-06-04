@@ -29,6 +29,7 @@ import AdminImportPage from "@/pages/admin/import";
 import AdminSettingsPage from "@/pages/admin/settings";
 import AdminUsersPage from "@/pages/admin/users";
 import AdminSeoPage from "@/pages/admin/seo";
+import AdminContactsPage from "@/pages/admin/contacts";
 import BuilderPage from "@/pages/admin/builder";
 
 const queryClient = new QueryClient();
@@ -102,6 +103,13 @@ function Router() {
         <RequireAuth>
           <AdminLayout>
             <AdminSeoPage />
+          </AdminLayout>
+        </RequireAuth>
+      </Route>
+      <Route path="/admin/contacts">
+        <RequireAuth>
+          <AdminLayout>
+            <AdminContactsPage />
           </AdminLayout>
         </RequireAuth>
       </Route>

@@ -27,8 +27,48 @@ tags:
     description: CSV import and Gemini processing
   - name: public
     description: Public directory browsing
+  - name: contacts
+    description: Claim listing form submissions
 
 paths:
+  /contacts:
+    post:
+      operationId: createContact
+      tags: [contacts]
+      summary: Submit a claim listing form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactSubmitBody"
+      responses:
+        "201":
+          description: Contact submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listContacts
+      tags: [contacts]
+      summary: List all contact submissions (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Contact list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContactListResponse"
+
   /storage/uploads/request-url:
     post:
       operationId: requestUploadUrl
@@ -1117,6 +1157,41 @@ components:
         count:
           type: integer
       required: [category, count]
+
+    ContactSubmitBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+      required: [fullName, phone, email]
+
+    Contact:
+      type: object
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+      required: [id, fullName, phone, email, createdAt]
+
+    ContactListResponse:
+      type: object
+      properties:
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Contact"
+      required: [contacts]
 
     RequestUploadUrlBody:
       type: object

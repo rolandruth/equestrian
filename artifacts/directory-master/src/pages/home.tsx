@@ -8,6 +8,7 @@ import {
   useGetPublicSettings,
   useGetCurrentUser,
   useUpdateSettings,
+  useCreateContact,
   getGetPublicSettingsQueryKey,
   getGetSettingsQueryKey,
 } from "@workspace/api-client-react";
@@ -23,7 +24,7 @@ import {
 import {
   MapPin, ArrowRight, Search, GripVertical, Eye, EyeOff, Pencil, Trash2,
   Plus, CheckCircle2, Loader2, LayoutTemplate, AlignLeft, AlignCenter, AlignRight, Image as ImageIcon, MousePointerClick,
-  Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info,
+  Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info, ClipboardCheck,
 } from "lucide-react";
 import { FontLoader } from "@/components/template/FontLoader";
 import {
@@ -53,8 +54,97 @@ function BlockIcon({ type, className = "h-4 w-4" }: { type: string; className?: 
     case "custom-text":  return <AlignLeft className={className} />;
     case "custom-image": return <ImageIcon className={className} />;
     case "custom-cta":   return <MousePointerClick className={className} />;
+    case "custom-claim": return <ClipboardCheck className={className} />;
     default:             return <LayoutTemplate className={className} />;
   }
+}
+
+// ─── Claim Your Listing form block ────────────────────────────────────────────
+function ClaimFormBlock({ section }: { section: SectionConfig }) {
+  const p = section.props ?? {};
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const createContact = useCreateContact();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    try {
+      await createContact.mutateAsync({ data: { fullName, phone, email } });
+      setSubmitted(true);
+    } catch {
+      setErrorMsg("Something went wrong. Please try again.");
+    }
+  };
+
+  if (submitted) {
+    return (
+      <div className="inline-flex flex-col items-center gap-3 px-8 py-6 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 max-w-md mx-auto">
+        <CheckCircle2 className="h-8 w-8 text-green-500" />
+        <p className="font-medium text-green-800 dark:text-green-300">
+          {p.thankYouMessage || "Thank you! We'll be in touch soon."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto space-y-3">
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: p.textColor || undefined }}>
+          Full Name <span className="text-red-500">*</span>
+        </label>
+        <Input
+          type="text"
+          required
+          placeholder="Jane Smith"
+          value={fullName}
+          onChange={e => setFullName(e.target.value)}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: p.textColor || undefined }}>
+          Phone Number <span className="text-red-500">*</span>
+        </label>
+        <Input
+          type="tel"
+          required
+          placeholder="(555) 123-4567"
+          value={phone}
+          onChange={e => setPhone(e.target.value)}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1" style={{ color: p.textColor || undefined }}>
+          Email Address <span className="text-red-500">*</span>
+        </label>
+        <Input
+          type="email"
+          required
+          placeholder="jane@example.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+        />
+      </div>
+      {errorMsg && (
+        <p className="text-sm text-red-500">{errorMsg}</p>
+      )}
+      <Button
+        type="submit"
+        disabled={createContact.isPending}
+        className="w-full"
+      >
+        {createContact.isPending ? (
+          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
+        ) : (
+          p.buttonText || "Submit"
+        )}
+      </Button>
+    </form>
+  );
 }
 
 // ─── Sortable section wrapper for edit mode ───────────────────────────────────
@@ -177,6 +267,9 @@ function EditSectionDialog({
   const [ctaButtonColor, setCtaButtonColor] = useState(section.props?.buttonColor ?? "");
   const [ctaButtonRadius, setCtaButtonRadius] = useState<"rounded" | "square">((section.props?.buttonRadius as "rounded" | "square") ?? "rounded");
   const [ctaFontSize, setCtaFontSize] = useState(section.props?.bodyFontSize ?? "1rem");
+  // Claim-specific
+  const [claimButtonText, setClaimButtonText] = useState(section.props?.buttonText ?? "Submit");
+  const [claimThankYou, setClaimThankYou] = useState(section.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.");
 
   const handleSave = () => {
     const updatedProps = {
@@ -198,6 +291,14 @@ function EditSectionDialog({
         buttonColor: ctaButtonColor || undefined,
         buttonRadius: ctaButtonRadius,
         bodyFontSize: ctaFontSize,
+        backgroundColor: bgColor || undefined,
+        textColor: textColor || undefined,
+        textAlignment: alignment,
+      } : {}),
+      ...(type === "custom-claim" ? {
+        bodyText,
+        buttonText: claimButtonText,
+        thankYouMessage: claimThankYou,
         backgroundColor: bgColor || undefined,
         textColor: textColor || undefined,
         textAlignment: alignment,
@@ -502,6 +603,67 @@ function EditSectionDialog({
               </div>
             </>
           )}
+          {type === "custom-claim" && (
+            <>
+              <div className="space-y-1.5">
+                <Label>Description</Label>
+                <Textarea
+                  value={bodyText}
+                  onChange={(e) => setBodyText(e.target.value)}
+                  rows={3}
+                  placeholder="Tell visitors why they should claim their listing..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Submit Button Label</Label>
+                <Input value={claimButtonText} onChange={e => setClaimButtonText(e.target.value)} placeholder="Submit" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Thank You Message</Label>
+                <Textarea
+                  value={claimThankYou}
+                  onChange={(e) => setClaimThankYou(e.target.value)}
+                  rows={2}
+                  placeholder="Thank you! We'll be in touch soon."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Text Alignment</Label>
+                <div className="flex gap-1">
+                  {(["left", "center", "right"] as const).map((a) => {
+                    const Icon = a === "left" ? AlignLeft : a === "center" ? AlignCenter : AlignRight;
+                    return (
+                      <button key={a} type="button" onClick={() => setAlignment(a)}
+                        className={`flex items-center justify-center w-9 h-9 rounded border transition-colors ${alignment === a ? "bg-primary text-primary-foreground border-primary" : "bg-background text-muted-foreground border-border hover:bg-muted"}`}
+                        title={a.charAt(0).toUpperCase() + a.slice(1)}>
+                        <Icon className="h-4 w-4" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="border-t pt-4 space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colors</p>
+                {[
+                  { label: "Section Background", val: bgColor, set: setBgColor, placeholder: "#ffffff" },
+                  { label: "Text Color", val: textColor, set: setTextColor, placeholder: "#111827" },
+                ].map(({ label, val, set, placeholder }) => (
+                  <div key={label} className="space-y-1.5">
+                    <Label>{label}</Label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" className="w-10 h-9 rounded border cursor-pointer p-0.5"
+                        value={val || placeholder} onChange={e => set(e.target.value)} />
+                      <Input className="w-32 font-mono text-sm" placeholder={placeholder}
+                        value={val} onChange={e => set(e.target.value)} />
+                      {val && (
+                        <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => set("")}>Reset</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           {type === "hero" && (
             <p className="text-sm text-muted-foreground">
               Hero headline and description are configured in{" "}
@@ -609,7 +771,7 @@ export default function HomePage() {
   };
 
   const handleAddSection = (def: BlockDefinition) => {
-    const isSingleton = !["custom-text", "custom-image", "custom-cta"].includes(def.type);
+    const isSingleton = !["custom-text", "custom-image", "custom-cta", "custom-claim"].includes(def.type);
     if (isSingleton && editSections.some(s => (s.type ?? s.id) === def.type)) return;
     const newSection: SectionConfig = {
       id: isSingleton ? def.type : `${def.type}-${Date.now()}`,
@@ -1059,12 +1221,35 @@ export default function HomePage() {
       );
     }
 
+    if (type === "custom-claim") {
+      const p = section.props ?? {};
+      return (
+        <section
+          key={section.id}
+          className={`px-8 py-14 ${alignClass(p)}`}
+          style={{ backgroundColor: p.backgroundColor || undefined }}
+        >
+          {section.heading && (
+            <h2 className="font-bold mb-3" style={{ color: p.textColor || undefined, fontSize: "1.75rem" }}>
+              {section.heading}
+            </h2>
+          )}
+          {p.bodyText && (
+            <p className="mb-8 max-w-xl mx-auto" style={{ color: p.textColor || undefined }}>
+              {p.bodyText}
+            </p>
+          )}
+          <ClaimFormBlock section={section} />
+        </section>
+      );
+    }
+
     return null;
   }
 
   // ── Edit mode layout ─────────────────────────────────────────────────────────
   if (editMode) {
-    const singletonTypes = ["hero", "categories", "featured", "recent"];
+    const singletonTypes = ["hero", "categories", "featured", "recent", "custom-claim"];
 
     return (
       <div className="flex h-full min-h-screen" style={{ fontFamily: hpFont }}>

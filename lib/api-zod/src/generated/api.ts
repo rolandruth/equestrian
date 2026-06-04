@@ -8,6 +8,30 @@
 import * as zod from "zod";
 
 /**
+ * @summary Submit a claim listing form
+ */
+export const CreateContactBody = zod.object({
+  fullName: zod.string(),
+  phone: zod.string(),
+  email: zod.string(),
+});
+
+/**
+ * @summary List all contact submissions (admin)
+ */
+export const ListContactsResponse = zod.object({
+  contacts: zod.array(
+    zod.object({
+      id: zod.number(),
+      fullName: zod.string(),
+      phone: zod.string(),
+      email: zod.string(),
+      createdAt: zod.string(),
+    }),
+  ),
+});
+
+/**
  * @summary Request a presigned upload URL
  */
 export const RequestUploadUrlBody = zod.object({

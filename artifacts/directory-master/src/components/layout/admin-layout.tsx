@@ -171,6 +171,11 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
             {children}
           </div>
         </div>
+        <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800 px-4 md:px-8 py-2 text-center">
+          <p className="text-[11px] text-black dark:text-gray-400">
+            Bigfoot Blueprint Directories by BanjoSoft LLC | Copyright 2026
+          </p>
+        </div>
       </main>
     </div>
   );

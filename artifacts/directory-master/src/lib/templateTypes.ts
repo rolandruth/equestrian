@@ -47,6 +47,7 @@ export interface SectionProps {
   fontFamily?: string;
   buttonTarget?: "_blank" | "_self";
   buttonRadius?: "rounded" | "square";
+  buttonTextColor?: string;
   thankYouMessage?: string;
 }
 
@@ -94,6 +95,7 @@ export const ENTRY_BLOCK_DEFS: BlockDefinition[] = [
   { type: "moreDetails", label: "Additional Information", description: "Extended details section" },
   { type: "sidebar",     label: "Details Sidebar",        description: "Contact info and metadata in a side panel", defaultProps: { sidebarTitle: "Contact & Details" } },
   { type: "related",     label: "Related Entries",        description: "Grid of similar entries in the same category", defaultHeading: "Related Entries", defaultProps: { maxItems: 3 } },
+  { type: "claim",       label: "Claim Yours Now",        description: "Opt-in form to capture name, phone, and email for this listing", defaultHeading: "Claim Yours Now", defaultProps: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
 ];
 
 export function getBlockDefs(pageType: string): BlockDefinition[] {
@@ -160,6 +162,7 @@ export const DEFAULT_ENTRY_SECTIONS: SectionConfig[] = [
   { id: "moreDetails", label: "Additional Information", enabled: true },
   { id: "sidebar",     label: "Details Sidebar",        enabled: true },
   { id: "related",     label: "Related Entries",        enabled: true },
+  { id: "claim",       label: "Claim Yours Now",        enabled: false, heading: "Claim Yours Now", props: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
 ];
 
 export const BROWSE_CARD_FIELDS: Array<{ id: string; label: string }> = [

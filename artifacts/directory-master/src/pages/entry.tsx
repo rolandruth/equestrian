@@ -7,6 +7,7 @@ import {
   useGetPublicSettings,
   useGetCurrentUser,
   useUpdateSettings,
+  useCreateContact,
   getGetPublicSettingsQueryKey,
   getGetSettingsQueryKey,
 } from "@workspace/api-client-react";
@@ -64,6 +65,78 @@ import {
   verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+
+// ─── Claim Yours Now form block ────────────────────────────────────────────────
+function EntryClaimFormBlock({ section }: { section: SectionConfig }) {
+  const p = section.props ?? {};
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const createContact = useCreateContact();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg(null);
+    try {
+      await createContact.mutateAsync({ data: { fullName, phone, email } });
+      setSubmitted(true);
+    } catch {
+      setErrorMsg("Something went wrong. Please try again.");
+    }
+  };
+
+  const alignClass = p.textAlignment === "center" ? "text-center" : p.textAlignment === "right" ? "text-right" : "text-left";
+
+  if (submitted) {
+    return (
+      <div className={`flex flex-col items-center gap-3 px-8 py-6 rounded-xl bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 max-w-md ${p.textAlignment === "center" ? "mx-auto" : ""}`}>
+        <CheckCircle2 className="h-8 w-8 text-green-500" />
+        <p className="font-medium text-green-800 dark:text-green-300">
+          {p.thankYouMessage || "Thank you! We'll be in touch soon."}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className={`w-full max-w-md space-y-3 ${p.textAlignment === "center" ? "mx-auto" : ""}`}>
+      <div className={alignClass}>
+        <label className="block text-sm font-medium mb-1" style={{ color: p.textColor || undefined }}>
+          Full Name <span className="text-red-500">*</span>
+        </label>
+        <Input type="text" required placeholder="Jane Smith" value={fullName} onChange={e => setFullName(e.target.value)} />
+      </div>
+      <div className={alignClass}>
+        <label className="block text-sm font-medium mb-1" style={{ color: p.textColor || undefined }}>
+          Phone Number <span className="text-red-500">*</span>
+        </label>
+        <Input type="tel" required placeholder="(555) 123-4567" value={phone} onChange={e => setPhone(e.target.value)} />
+      </div>
+      <div className={alignClass}>
+        <label className="block text-sm font-medium mb-1" style={{ color: p.textColor || undefined }}>
+          Email Address <span className="text-red-500">*</span>
+        </label>
+        <Input type="email" required placeholder="jane@example.com" value={email} onChange={e => setEmail(e.target.value)} />
+      </div>
+      {errorMsg && <p className="text-sm text-red-500">{errorMsg}</p>}
+      <Button
+        type="submit"
+        disabled={createContact.isPending}
+        className="w-full"
+        style={{
+          ...(p.buttonColor ? { backgroundColor: p.buttonColor, borderColor: p.buttonColor } : {}),
+          ...(p.buttonTextColor ? { color: p.buttonTextColor } : {}),
+        }}
+      >
+        {createContact.isPending
+          ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
+          : (p.buttonText || "Submit")}
+      </Button>
+    </form>
+  );
+}
 
 // ─── Icon picker — curated icon map & components ──────────────────────────────
 type IconComponent = React.ComponentType<{ className?: string }>;
@@ -1131,10 +1204,11 @@ export default function EntryPage() {
 
   // ── EDIT MODE — two-column layout preserved ────────────────────────────────
   if (editMode) {
-    const hSec   = findEditSection("header");
-    const dSec   = findEditSection("description");
-    const sSec   = findEditSection("sidebar");
-    const rSec   = findEditSection("related");
+    const hSec     = findEditSection("header");
+    const dSec     = findEditSection("description");
+    const sSec     = findEditSection("sidebar");
+    const rSec     = findEditSection("related");
+    const claimSec = findEditSection("claim");
 
     // Which side is description vs sidebar? Determine by their order in editSections.
     const dIdx = editSections.findIndex((s) => s.id === "description");
@@ -1242,6 +1316,22 @@ export default function EntryPage() {
               disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
             >
               {renderRelatedContent()}
+            </EditSectionWrapper>
+
+            {/* Claim Yours Now — full width, outside card */}
+            <EditSectionWrapper
+              section={claimSec}
+              onToggle={() => toggleSection("claim")}
+              isActive={activeId === "claim"}
+              disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
+            >
+              <div className="px-8 py-10 text-center" style={{ backgroundColor: claimSec.props?.backgroundColor || undefined }}>
+                <h2 className="text-2xl font-bold mb-2" style={{ color: claimSec.props?.textColor || undefined }}>
+                  {claimSec.heading || "Claim Yours Now"}
+                </h2>
+                <p className="text-muted-foreground text-sm mb-6">Full Name · Phone Number · Email Address · Submit button</p>
+                <EntryClaimFormBlock section={claimSec} />
+              </div>
             </EditSectionWrapper>
 
             {/* Bottom action row */}
@@ -1457,6 +1547,31 @@ export default function EntryPage() {
                   )}
                 </div>
               )}
+            </div>
+          );
+        })()}
+
+        {/* Claim Yours Now */}
+        {getSectionEnabled("claim") && (() => {
+          const claimSection = getEntrySection("claim");
+          const p = claimSection?.props ?? {};
+          const alignClass = p.textAlignment === "center" ? "text-center" : p.textAlignment === "right" ? "text-right" : "text-left";
+          return (
+            <div
+              className={`rounded-xl border bg-white dark:bg-gray-900 shadow-sm px-8 py-10 ${alignClass}`}
+              style={{ backgroundColor: p.backgroundColor || undefined }}
+            >
+              {claimSection?.heading && (
+                <h2 className="text-2xl font-bold mb-3" style={{ color: p.textColor || undefined }}>
+                  {claimSection.heading}
+                </h2>
+              )}
+              {p.bodyText && (
+                <p className="text-muted-foreground mb-6 max-w-lg mx-auto" style={{ color: p.textColor || undefined }}>
+                  {p.bodyText}
+                </p>
+              )}
+              <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
             </div>
           );
         })()}

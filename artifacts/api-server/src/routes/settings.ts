@@ -28,6 +28,7 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     headScripts: s.headScripts,
     bodyScripts: s.bodyScripts,
     calloutSections: s.calloutSections,
+    faviconUrl: s.faviconUrl,
     homepageMetaTitle: s.homepageMetaTitle,
     homepageMetaDescription: s.homepageMetaDescription,
     homepageOgImageUrl: s.homepageOgImageUrl,
@@ -78,6 +79,7 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.headScripts !== undefined)             dbUpdates.headScripts = req.body.headScripts;
     if (req.body.bodyScripts !== undefined)             dbUpdates.bodyScripts = req.body.bodyScripts;
     if (req.body.calloutSections !== undefined)             dbUpdates.calloutSections = req.body.calloutSections;
+    if (req.body.faviconUrl !== undefined)                  dbUpdates.faviconUrl = req.body.faviconUrl || null;
     if (req.body.homepageMetaTitle !== undefined)           dbUpdates.homepageMetaTitle = req.body.homepageMetaTitle || null;
     if (req.body.homepageMetaDescription !== undefined)     dbUpdates.homepageMetaDescription = req.body.homepageMetaDescription || null;
     if (req.body.homepageOgImageUrl !== undefined)          dbUpdates.homepageOgImageUrl = req.body.homepageOgImageUrl || null;

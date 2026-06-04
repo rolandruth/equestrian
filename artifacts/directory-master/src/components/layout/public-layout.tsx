@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useGetPublicSettings, useLogout, useGetCurrentUser } from "@workspace/api-client-react";
 import { Search, Menu, X, LayoutDashboard } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScriptInjector } from "./ScriptInjector";
 import { ThemeColorInjector } from "@/components/template/ThemeColorInjector";
@@ -28,6 +28,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
       clearToken();
     }
   };
+
+  // Apply favicon whenever public settings load or change
+  useEffect(() => {
+    const faviconUrl = (settings as any)?.faviconUrl;
+    if (!faviconUrl) return;
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = faviconUrl;
+  }, [settings]);
 
   const navbarBg = (settings as any)?.navbarBgColor || undefined;
   const navbarText = (settings as any)?.navbarTextColor || undefined;

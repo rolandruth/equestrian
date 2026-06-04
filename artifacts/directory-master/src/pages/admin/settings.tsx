@@ -34,6 +34,7 @@ const settingsSchema = z.object({
   heroSearchButtonText: z.string().optional().nullable(),
   heroSearchButtonColor: z.string().optional().nullable(),
   heroSearchButtonTextColor: z.string().optional().nullable(),
+  faviconUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   footerText: z.string().optional().nullable(),
   privacyPolicyUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   termsUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
@@ -234,6 +235,7 @@ export default function AdminSettingsPage() {
       heroSearchButtonText: "",
       heroSearchButtonColor: "",
       heroSearchButtonTextColor: "",
+      faviconUrl: "",
       footerText: "",
       privacyPolicyUrl: "",
       termsUrl: "",
@@ -259,6 +261,7 @@ export default function AdminSettingsPage() {
         heroSearchButtonText: (settings as any).heroSearchButtonText || "",
         heroSearchButtonColor: (settings as any).heroSearchButtonColor || "",
         heroSearchButtonTextColor: (settings as any).heroSearchButtonTextColor || "",
+        faviconUrl: (settings as any).faviconUrl || "",
         footerText: (settings as any).footerText || "",
         privacyPolicyUrl: (settings as any).privacyPolicyUrl || "",
         termsUrl: (settings as any).termsUrl || "",
@@ -701,6 +704,47 @@ export default function AdminSettingsPage() {
             </CardHeader>
             <CardContent>
               <TemplateEditor value={templateSettings} onChange={setTemplateSettings} />
+            </CardContent>
+          </Card>
+
+          {/* Favicon */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Favicon</CardTitle>
+              <CardDescription>The small icon shown in browser tabs and bookmarks for every page on your site.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <FormField
+                control={form.control}
+                name="faviconUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Favicon URL</FormLabel>
+                    <div className="flex items-center gap-3">
+                      {field.value && (
+                        <img
+                          src={field.value}
+                          alt="Favicon preview"
+                          className="h-8 w-8 rounded object-contain border bg-muted/30"
+                          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                        />
+                      )}
+                      <FormControl>
+                        <Input
+                          type="url"
+                          placeholder="https://yoursite.com/favicon.ico"
+                          {...field}
+                          value={field.value || ""}
+                        />
+                      </FormControl>
+                    </div>
+                    <FormDescription>
+                      Direct URL to a <code className="text-xs bg-muted px-1 rounded">.ico</code>, <code className="text-xs bg-muted px-1 rounded">.png</code>, or <code className="text-xs bg-muted px-1 rounded">.svg</code> file. Recommended size: 32×32 px or 64×64 px. Changes take effect immediately after saving.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </CardContent>
           </Card>
 

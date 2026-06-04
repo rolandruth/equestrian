@@ -196,6 +196,7 @@ router.get("/settings", async (req, res) => {
       headScripts: settings.headScripts,
       bodyScripts: settings.bodyScripts,
       calloutSections: settings.calloutSections,
+      faviconUrl: settings.faviconUrl,
       homepageMetaTitle: settings.homepageMetaTitle,
       homepageMetaDescription: settings.homepageMetaDescription,
       homepageOgImageUrl: settings.homepageOgImageUrl,

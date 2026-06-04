@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useLogout, useGetPublicSettings, useGetCurrentUser } from "@workspace/api-client-react";
@@ -26,6 +26,19 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
   const { data: currentUser } = useGetCurrentUser({ query: { enabled: !!token, retry: false } });
 
   const isAdmin = currentUser?.role === "admin";
+
+  // Apply favicon from settings globally for admin pages too
+  useEffect(() => {
+    const faviconUrl = (settings as any)?.faviconUrl;
+    if (!faviconUrl) return;
+    let link = document.head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = faviconUrl;
+  }, [settings]);
 
   const handleLogout = async () => {
     try {

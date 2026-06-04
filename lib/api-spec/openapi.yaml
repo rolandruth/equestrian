@@ -1049,6 +1049,8 @@ components:
           type: ["string", "null"]
         calloutSections:
           type: ["string", "null"]
+        faviconUrl:
+          type: ["string", "null"]
         homepageMetaTitle:
           type: ["string", "null"]
         homepageMetaDescription:
@@ -1079,6 +1081,8 @@ components:
         themeColor:
           type: ["string", "null"]
         calloutSections:
+          type: ["string", "null"]
+        faviconUrl:
           type: ["string", "null"]
         homepageMetaTitle:
           type: ["string", "null"]

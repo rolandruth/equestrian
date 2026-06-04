@@ -23,6 +23,7 @@ export const directorySettings = pgTable("directory_settings", {
   headScripts: text("head_scripts"),
   bodyScripts: text("body_scripts"),
   calloutSections: text("callout_sections"),
+  faviconUrl: text("favicon_url"),
   homepageMetaTitle: text("homepage_meta_title"),
   homepageMetaDescription: text("homepage_meta_description"),
   homepageOgImageUrl: text("homepage_og_image_url"),

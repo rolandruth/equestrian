@@ -260,6 +260,8 @@ export interface DirectorySettings {
   /** @nullable */
   calloutSections?: string | null;
   /** @nullable */
+  faviconUrl?: string | null;
+  /** @nullable */
   homepageMetaTitle?: string | null;
   /** @nullable */
   homepageMetaDescription?: string | null;
@@ -285,6 +287,8 @@ export interface UpdateSettingsBody {
   themeColor?: string | null;
   /** @nullable */
   calloutSections?: string | null;
+  /** @nullable */
+  faviconUrl?: string | null;
   /** @nullable */
   homepageMetaTitle?: string | null;
   /** @nullable */

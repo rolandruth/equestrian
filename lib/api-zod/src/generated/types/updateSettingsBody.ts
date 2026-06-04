@@ -20,6 +20,8 @@ export interface UpdateSettingsBody {
   /** @nullable */
   calloutSections?: string | null;
   /** @nullable */
+  faviconUrl?: string | null;
+  /** @nullable */
   homepageMetaTitle?: string | null;
   /** @nullable */
   homepageMetaDescription?: string | null;

@@ -47,3 +47,17 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+.agents/
+
+# Database exports / backups (never commit production data)
+*.sql
+*.sql.gz
+*_db_export.*
+*_export.zip
+*_export.tar.gz
+directory_master_*.zip
+directory_master_*.tar.gz
+directory_master_*.sql
+
+# Project-specific assets that don't belong in a distribution repo
+attached_assets/

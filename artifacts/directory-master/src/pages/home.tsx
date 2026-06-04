@@ -136,6 +136,7 @@ function ClaimFormBlock({ section }: { section: SectionConfig }) {
         type="submit"
         disabled={createContact.isPending}
         className="w-full"
+        style={p.buttonColor ? { backgroundColor: p.buttonColor, borderColor: p.buttonColor } : undefined}
       >
         {createContact.isPending ? (
           <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...</>
@@ -270,6 +271,7 @@ function EditSectionDialog({
   // Claim-specific
   const [claimButtonText, setClaimButtonText] = useState(section.props?.buttonText ?? "Submit");
   const [claimThankYou, setClaimThankYou] = useState(section.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.");
+  const [claimButtonColor, setClaimButtonColor] = useState(section.props?.buttonColor ?? "");
 
   const handleSave = () => {
     const updatedProps = {
@@ -298,6 +300,7 @@ function EditSectionDialog({
       ...(type === "custom-claim" ? {
         bodyText,
         buttonText: claimButtonText,
+        buttonColor: claimButtonColor || undefined,
         thankYouMessage: claimThankYou,
         backgroundColor: bgColor || undefined,
         textColor: textColor || undefined,
@@ -646,6 +649,7 @@ function EditSectionDialog({
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Colors</p>
                 {[
                   { label: "Section Background", val: bgColor, set: setBgColor, placeholder: "#ffffff" },
+                  { label: "Button Color", val: claimButtonColor, set: setClaimButtonColor, placeholder: "#3b82f6" },
                   { label: "Text Color", val: textColor, set: setTextColor, placeholder: "#111827" },
                 ].map(({ label, val, set, placeholder }) => (
                   <div key={label} className="space-y-1.5">

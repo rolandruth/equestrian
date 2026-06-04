@@ -1017,8 +1017,11 @@ export default function HomePage() {
               </div>
               <button
                 type="submit"
-                className="px-7 py-4 font-semibold text-white text-base transition-opacity hover:opacity-90 whitespace-nowrap flex-shrink-0"
-                style={{ backgroundColor: p.buttonColor || themeColor }}
+                className="px-7 py-4 font-semibold text-base transition-opacity hover:opacity-90 whitespace-nowrap flex-shrink-0"
+                style={{
+                  backgroundColor: (settings as any)?.heroSearchButtonColor || p.buttonColor || themeColor,
+                  color: (settings as any)?.heroSearchButtonTextColor || "#ffffff",
+                }}
               >
                 {(settings as any)?.heroSearchButtonText || "Search"}
               </button>

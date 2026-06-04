@@ -32,6 +32,8 @@ const settingsSchema = z.object({
   navbarTextColor: z.string().optional().nullable(),
   heroSearchPlaceholder: z.string().optional().nullable(),
   heroSearchButtonText: z.string().optional().nullable(),
+  heroSearchButtonColor: z.string().optional().nullable(),
+  heroSearchButtonTextColor: z.string().optional().nullable(),
   footerText: z.string().optional().nullable(),
   privacyPolicyUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   termsUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
@@ -230,6 +232,8 @@ export default function AdminSettingsPage() {
       navbarTextColor: "",
       heroSearchPlaceholder: "",
       heroSearchButtonText: "",
+      heroSearchButtonColor: "",
+      heroSearchButtonTextColor: "",
       footerText: "",
       privacyPolicyUrl: "",
       termsUrl: "",
@@ -253,6 +257,8 @@ export default function AdminSettingsPage() {
         navbarTextColor: (settings as any).navbarTextColor || "",
         heroSearchPlaceholder: (settings as any).heroSearchPlaceholder || "",
         heroSearchButtonText: (settings as any).heroSearchButtonText || "",
+        heroSearchButtonColor: (settings as any).heroSearchButtonColor || "",
+        heroSearchButtonTextColor: (settings as any).heroSearchButtonTextColor || "",
         footerText: (settings as any).footerText || "",
         privacyPolicyUrl: (settings as any).privacyPolicyUrl || "",
         termsUrl: (settings as any).termsUrl || "",
@@ -563,6 +569,72 @@ export default function AdminSettingsPage() {
                           <Input placeholder="Search" {...field} value={field.value || ''} />
                         </FormControl>
                         <FormDescription>Label on the button next to the search field.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
+                  <FormField
+                    control={form.control}
+                    name="heroSearchButtonColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Search Button Color</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              className="w-10 h-9 rounded border cursor-pointer p-0.5"
+                              value={field.value || "#3b82f6"}
+                              onChange={e => field.onChange(e.target.value)}
+                            />
+                            <Input
+                              className="font-mono text-sm"
+                              placeholder="#3b82f6"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                            {field.value && (
+                              <button type="button" className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap" onClick={() => field.onChange("")}>
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormDescription>Leave blank to use the theme color.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="heroSearchButtonTextColor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Search Button Text Color</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              className="w-10 h-9 rounded border cursor-pointer p-0.5"
+                              value={field.value || "#ffffff"}
+                              onChange={e => field.onChange(e.target.value)}
+                            />
+                            <Input
+                              className="font-mono text-sm"
+                              placeholder="#ffffff"
+                              {...field}
+                              value={field.value || ""}
+                            />
+                            {field.value && (
+                              <button type="button" className="text-xs text-muted-foreground hover:text-foreground whitespace-nowrap" onClick={() => field.onChange("")}>
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        </FormControl>
+                        <FormDescription>Leave blank to use white.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}

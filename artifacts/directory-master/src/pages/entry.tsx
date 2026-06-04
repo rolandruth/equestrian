@@ -1325,43 +1325,55 @@ export default function EntryPage() {
               </div>
             </div>
 
-            {/* Related — full width, outside card */}
-            <EditSectionWrapper
-              section={rSec}
-              onToggle={() => toggleSection("related")}
-              isActive={activeId === "related"}
-              disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
-            >
-              {renderRelatedContent()}
-            </EditSectionWrapper>
-
-            {/* Claim Yours Now — full width, outside card */}
-            <EditSectionWrapper
-              section={claimSec}
-              onToggle={() => toggleSection("claim")}
-              onEdit={() => {
-                setClaimDraft({
-                  heading: claimSec.heading ?? "Claim Yours Now",
-                  bodyText: claimSec.props?.bodyText ?? "",
-                  buttonText: claimSec.props?.buttonText ?? "Submit",
-                  thankYouMessage: claimSec.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.",
-                });
-                setClaimEditOpen(true);
-              }}
-              isActive={activeId === "claim"}
-              disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
-            >
-              <div className="px-8 py-10 text-center" style={{ backgroundColor: claimSec.props?.backgroundColor || undefined }}>
-                <h2 className="text-2xl font-bold mb-2" style={{ color: claimSec.props?.textColor || undefined }}>
-                  {claimSec.heading || "Claim Yours Now"}
-                </h2>
-                {claimSec.props?.bodyText && (
-                  <p className="text-muted-foreground text-sm mb-4">{claimSec.props.bodyText}</p>
-                )}
-                <p className="text-muted-foreground text-xs mb-6 opacity-60">Full Name · Phone Number · Email Address · Submit button</p>
-                <EntryClaimFormBlock section={claimSec} />
-              </div>
-            </EditSectionWrapper>
+            {/* Outside-card sections: Related + Claim — rendered in editSections order */}
+            {editSections
+              .filter(s => s.id === "related" || s.id === "claim")
+              .map(s => {
+                if (s.id === "related") {
+                  return (
+                    <EditSectionWrapper
+                      key="related"
+                      section={rSec}
+                      onToggle={() => toggleSection("related")}
+                      isActive={activeId === "related"}
+                      disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
+                    >
+                      {renderRelatedContent()}
+                    </EditSectionWrapper>
+                  );
+                }
+                // claim
+                return (
+                  <EditSectionWrapper
+                    key="claim"
+                    section={claimSec}
+                    onToggle={() => toggleSection("claim")}
+                    onEdit={() => {
+                      setClaimDraft({
+                        heading: claimSec.heading ?? "Claim Yours Now",
+                        bodyText: claimSec.props?.bodyText ?? "",
+                        buttonText: claimSec.props?.buttonText ?? "Submit",
+                        thankYouMessage: claimSec.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.",
+                      });
+                      setClaimEditOpen(true);
+                    }}
+                    isActive={activeId === "claim"}
+                    disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
+                  >
+                    <div className="px-8 py-10 text-center" style={{ backgroundColor: claimSec.props?.backgroundColor || undefined }}>
+                      <h2 className="text-2xl font-bold mb-2" style={{ color: claimSec.props?.textColor || undefined }}>
+                        {claimSec.heading || "Claim Yours Now"}
+                      </h2>
+                      {claimSec.props?.bodyText && (
+                        <p className="text-muted-foreground text-sm mb-4">{claimSec.props.bodyText}</p>
+                      )}
+                      <p className="text-muted-foreground text-xs mb-6 opacity-60">Full Name · Phone Number · Email Address · Submit button</p>
+                      <EntryClaimFormBlock section={claimSec} />
+                    </div>
+                  </EditSectionWrapper>
+                );
+              })
+            }
 
             {/* Claim section edit dialog */}
             <Dialog open={claimEditOpen} onOpenChange={setClaimEditOpen}>
@@ -1648,39 +1660,43 @@ export default function EntryPage() {
           );
         })()}
 
-        {/* Claim Yours Now */}
-        {getSectionEnabled("claim") && (() => {
-          const claimSection = getEntrySection("claim");
-          const p = claimSection?.props ?? {};
-          const alignClass = p.textAlignment === "center" ? "text-center" : p.textAlignment === "right" ? "text-right" : "text-left";
-          return (
-            <div
-              className={`rounded-xl border bg-white dark:bg-gray-900 shadow-sm px-8 py-10 ${alignClass}`}
-              style={{ backgroundColor: p.backgroundColor || undefined }}
-            >
-              {claimSection?.heading && (
-                <h2 className="text-2xl font-bold mb-3" style={{ color: p.textColor || undefined }}>
-                  {claimSection.heading}
-                </h2>
-              )}
-              {p.bodyText && (
-                <p className="text-muted-foreground mb-6 max-w-lg mx-auto" style={{ color: p.textColor || undefined }}>
-                  {p.bodyText}
-                </p>
-              )}
-              <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
-            </div>
-          );
-        })()}
-
-        {/* Related Entries */}
-        {getSectionEnabled("related") && !isDemo && relatedData && (() => {
+        {/* Outside-card sections (Claim + Related) — rendered in saved template order */}
+        {ts.entry.sections
+          .filter(s => s.id === "related" || s.id === "claim")
+          .map(s => {
+            if (s.id === "claim") {
+              if (!getSectionEnabled("claim")) return null;
+              const claimSection = getEntrySection("claim");
+              const p = claimSection?.props ?? {};
+              const alignClass = p.textAlignment === "center" ? "text-center" : p.textAlignment === "right" ? "text-right" : "text-left";
+              return (
+                <div
+                  key="claim"
+                  className={`rounded-xl border bg-white dark:bg-gray-900 shadow-sm px-8 py-10 ${alignClass}`}
+                  style={{ backgroundColor: p.backgroundColor || undefined }}
+                >
+                  {claimSection?.heading && (
+                    <h2 className="text-2xl font-bold mb-3" style={{ color: p.textColor || undefined }}>
+                      {claimSection.heading}
+                    </h2>
+                  )}
+                  {p.bodyText && (
+                    <p className="text-muted-foreground mb-6 max-w-lg mx-auto" style={{ color: p.textColor || undefined }}>
+                      {p.bodyText}
+                    </p>
+                  )}
+                  <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
+                </div>
+              );
+            }
+            // related
+            if (!getSectionEnabled("related") || isDemo || !relatedData) return null;
             const relatedMax = getEntrySection("related")?.props?.maxItems ?? 3;
             const filtered = relatedData.entries.filter((e) => e.id !== entryNumericId);
             if (filtered.length === 0) return null;
             const relatedGridCols = relatedMax === 1 ? "grid-cols-1" : relatedMax === 2 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 md:grid-cols-3";
             return (
-              <div className="pt-8">
+              <div key="related" className="pt-8">
                 <h2 className="text-2xl font-bold tracking-tight mb-6">
                   {getEntrySection("related")?.heading || `Similar in ${displayEntry.category}`}
                 </h2>
@@ -1696,7 +1712,8 @@ export default function EntryPage() {
                 </div>
               </div>
             );
-          })()}
+          })
+        }
       </div>
     </div>
   );

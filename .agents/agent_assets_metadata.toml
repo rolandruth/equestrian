@@ -12,3 +12,9 @@ id = "vRM34Q26rZW6XhaI5pk2B"
 uri = "file://directory_master_db_export.tar.gz"
 type = "unspecified"
 title = "Directory Master — Full DB Export (v3.4.0)"
+
+[[outputs]]
+id = "L43jEJl9xTRy5FhvQ6Rtz"
+uri = "file://directory_master_production_export.zip"
+type = "unspecified"
+title = "Directory Master — Production DB Export (v3.4.0)"

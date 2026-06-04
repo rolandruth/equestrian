@@ -4,6 +4,42 @@ All notable changes to **Directory Master** are documented in this file.
 
 ---
 
+## [3.4.0] — 2026-06-04
+
+Favicon customisation, XML sitemap for SEO, admin branding footer, and object-storage security hardening.
+
+---
+
+### New Features
+
+#### Favicon URL (Site Settings)
+- A new **Favicon** card in **Admin → Settings** (above the Footer section) lets admins set a custom browser tab icon via URL.
+- Supports `.ico`, `.png`, and `.svg` formats; recommended size 32×32 or 64×64 px.
+- A **live image preview** (32×32) appears next to the URL field as you type.
+- The favicon is applied globally via a `useEffect` in both the public and admin layouts — takes effect on every page immediately after saving, with no page reload required.
+- Stored in the `favicon_url` column of `directory_settings`; exposed through both the admin settings API and the public settings endpoint.
+
+#### XML Sitemap
+- A new **`/sitemap.xml`** endpoint is served at the root of the application (outside the `/api` prefix).
+- Dynamically generates a standards-compliant XML sitemap containing the **homepage**, **browse page**, and all **published entry pages**, with correct `<lastmod>`, `<changefreq>`, and `<priority>` values.
+- Base URL is derived from the real request host, so it resolves correctly in both development and production.
+- Cached for 1 hour; auto-updates in real time as entries are published or unpublished.
+- A new **XML Sitemap** card in **Admin → Settings** (above the Footer section) displays the full dynamic sitemap URL with a one-click **Copy** button and step-by-step instructions for submitting to Google Search Console.
+
+#### Admin Footer Branding
+- A small footer line — *"Bigfoot Blueprint Directories by BanjoSoft LLC | Copyright 2026"* — now appears at the bottom of every admin screen (Dashboard, Entries, Categories, Import CSV, SEO, Contacts, Users, Settings).
+- Pinned below the page content with a subtle top border; 11 px, black in light mode / muted gray in dark mode.
+- Does **not** appear on any public-facing page.
+
+### Security
+
+#### Object Storage Origin Abuse (Storage Routes)
+- **Upload auth** — `POST /storage/uploads/request-url` now requires `requireEditor` middleware; unauthenticated callers can no longer obtain presigned PUT URLs.
+- **Private object auth + ACL** — `GET /storage/objects/*path` now requires `requireAuth` and enforces `canAccessObjectEntity` ACL checks, preventing any authenticated user from reading arbitrary private objects by path.
+- **Content-Type hardening** — The object download route now forces `Content-Type: application/octet-stream`, `Content-Disposition: attachment`, and `X-Content-Type-Options: nosniff`, closing the same-origin XSS vector that allowed uploaded HTML/SVG/JS to execute in the browser.
+
+---
+
 ## [3.3.0] — 2026-06-04
 
 "Claim Yours Now" lead-capture form embedded inside the Entry Details Sidebar, with contacts storage and admin management.

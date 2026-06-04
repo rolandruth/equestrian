@@ -258,6 +258,12 @@ export interface DirectorySettings {
   themeColor?: string | null;
   /** @nullable */
   calloutSections?: string | null;
+  /** @nullable */
+  homepageMetaTitle?: string | null;
+  /** @nullable */
+  homepageMetaDescription?: string | null;
+  /** @nullable */
+  homepageOgImageUrl?: string | null;
   installed: boolean;
   updatedAt: string;
   geminiApiKeySet?: boolean;
@@ -278,6 +284,12 @@ export interface UpdateSettingsBody {
   themeColor?: string | null;
   /** @nullable */
   calloutSections?: string | null;
+  /** @nullable */
+  homepageMetaTitle?: string | null;
+  /** @nullable */
+  homepageMetaDescription?: string | null;
+  /** @nullable */
+  homepageOgImageUrl?: string | null;
   /** @nullable */
   geminiApiKey?: string | null;
 }

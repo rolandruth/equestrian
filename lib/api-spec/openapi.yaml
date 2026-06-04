@@ -1047,6 +1047,12 @@ components:
           type: ["string", "null"]
         calloutSections:
           type: ["string", "null"]
+        homepageMetaTitle:
+          type: ["string", "null"]
+        homepageMetaDescription:
+          type: ["string", "null"]
+        homepageOgImageUrl:
+          type: ["string", "null"]
         installed:
           type: boolean
         updatedAt:
@@ -1071,6 +1077,12 @@ components:
         themeColor:
           type: ["string", "null"]
         calloutSections:
+          type: ["string", "null"]
+        homepageMetaTitle:
+          type: ["string", "null"]
+        homepageMetaDescription:
+          type: ["string", "null"]
+        homepageOgImageUrl:
           type: ["string", "null"]
         geminiApiKey:
           type: ["string", "null"]

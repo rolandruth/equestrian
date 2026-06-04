@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -727,6 +727,37 @@ export default function HomePage() {
       setLocation(`/browse?search=${encodeURIComponent(heroSearch.trim())}`);
     }
   };
+
+  // Apply homepage meta tags whenever settings load
+  useEffect(() => {
+    if (!settings) return;
+    const s = settings as any;
+
+    // <title>
+    const prevTitle = document.title;
+    if (s.homepageMetaTitle) document.title = s.homepageMetaTitle;
+
+    // helper to upsert a <meta> element
+    const setMeta = (selector: string, attr: string, value: string | null) => {
+      let el = document.head.querySelector(selector) as HTMLMetaElement | null;
+      if (!el && value) {
+        el = document.createElement("meta");
+        el.setAttribute(attr.split("=")[0], attr.split("=")[1] ?? attr);
+        document.head.appendChild(el);
+      }
+      if (el) el.setAttribute("content", value ?? "");
+      return el;
+    };
+
+    setMeta('meta[name="description"]', "name=description", s.homepageMetaDescription ?? null);
+    setMeta('meta[property="og:title"]', "property=og:title", s.homepageMetaTitle ?? null);
+    setMeta('meta[property="og:description"]', "property=og:description", s.homepageMetaDescription ?? null);
+    setMeta('meta[property="og:image"]', "property=og:image", s.homepageOgImageUrl ?? null);
+
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [settings]);
 
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const themeColor = (settings as any)?.themeColor || "#2563eb";

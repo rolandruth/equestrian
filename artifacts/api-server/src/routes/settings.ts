@@ -28,6 +28,9 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     headScripts: s.headScripts,
     bodyScripts: s.bodyScripts,
     calloutSections: s.calloutSections,
+    homepageMetaTitle: s.homepageMetaTitle,
+    homepageMetaDescription: s.homepageMetaDescription,
+    homepageOgImageUrl: s.homepageOgImageUrl,
     templateSettings: s.templateSettings ?? null,
     installed: s.installed,
     updatedAt: s.updatedAt.toISOString(),
@@ -74,8 +77,11 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.termsUrl !== undefined)                dbUpdates.termsUrl = req.body.termsUrl;
     if (req.body.headScripts !== undefined)             dbUpdates.headScripts = req.body.headScripts;
     if (req.body.bodyScripts !== undefined)             dbUpdates.bodyScripts = req.body.bodyScripts;
-    if (req.body.calloutSections !== undefined)         dbUpdates.calloutSections = req.body.calloutSections;
-    if (req.body.templateSettings !== undefined)    dbUpdates.templateSettings = req.body.templateSettings;
+    if (req.body.calloutSections !== undefined)             dbUpdates.calloutSections = req.body.calloutSections;
+    if (req.body.homepageMetaTitle !== undefined)           dbUpdates.homepageMetaTitle = req.body.homepageMetaTitle || null;
+    if (req.body.homepageMetaDescription !== undefined)     dbUpdates.homepageMetaDescription = req.body.homepageMetaDescription || null;
+    if (req.body.homepageOgImageUrl !== undefined)          dbUpdates.homepageOgImageUrl = req.body.homepageOgImageUrl || null;
+    if (req.body.templateSettings !== undefined)            dbUpdates.templateSettings = req.body.templateSettings;
     // geminiApiKey: null/empty clears the key; non-empty string stores it
     if (req.body.geminiApiKey !== undefined) {
       dbUpdates.geminiApiKey = req.body.geminiApiKey || null;

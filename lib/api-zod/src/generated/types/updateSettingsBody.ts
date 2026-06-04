@@ -20,5 +20,11 @@ export interface UpdateSettingsBody {
   /** @nullable */
   calloutSections?: string | null;
   /** @nullable */
+  homepageMetaTitle?: string | null;
+  /** @nullable */
+  homepageMetaDescription?: string | null;
+  /** @nullable */
+  homepageOgImageUrl?: string | null;
+  /** @nullable */
   geminiApiKey?: string | null;
 }

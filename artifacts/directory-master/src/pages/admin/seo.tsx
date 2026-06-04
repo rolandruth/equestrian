@@ -6,18 +6,24 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Search, 
-  Sparkles, 
-  CheckCircle2, 
-  AlertCircle, 
+import { useGetSettings, useUpdateSettings } from "@workspace/api-client-react";
+import {
+  Search,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
   Loader2,
   Globe,
   FileText,
   Tag,
-  RefreshCw
+  RefreshCw,
+  Save,
+  Home,
+  Image,
 } from "lucide-react";
 
 interface SeoSummary {
@@ -45,12 +51,56 @@ export default function AdminSeoPage() {
   const [job, setJob] = useState<SeoJobStatus | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const headers = { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+  // Homepage meta state
+  const [metaTitle, setMetaTitle] = useState("");
+  const [metaDescription, setMetaDescription] = useState("");
+  const [ogImageUrl, setOgImageUrl] = useState("");
+  const [metaSaving, setMetaSaving] = useState(false);
+
+  const authHeaders = { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" };
+
+  const { data: settings, isLoading: settingsLoading } = useGetSettings({
+    request: { headers: authHeaders },
+  });
+
+  const updateSettings = useUpdateSettings();
+
+  // Populate fields once settings load
+  useEffect(() => {
+    if (settings) {
+      setMetaTitle(settings.homepageMetaTitle ?? "");
+      setMetaDescription(settings.homepageMetaDescription ?? "");
+      setOgImageUrl(settings.homepageOgImageUrl ?? "");
+    }
+  }, [settings]);
+
+  const handleSaveMeta = async () => {
+    setMetaSaving(true);
+    try {
+      await updateSettings.mutateAsync({
+        data: {
+          homepageMetaTitle: metaTitle || null,
+          homepageMetaDescription: metaDescription || null,
+          homepageOgImageUrl: ogImageUrl || null,
+        },
+      });
+      toast({ title: "Homepage SEO saved", description: "Meta tags updated successfully." });
+    } catch {
+      toast({ title: "Save failed", description: "Could not update homepage SEO.", variant: "destructive" });
+    } finally {
+      setMetaSaving(false);
+    }
+  };
+
+  const metaDirty =
+    metaTitle !== (settings?.homepageMetaTitle ?? "") ||
+    metaDescription !== (settings?.homepageMetaDescription ?? "") ||
+    ogImageUrl !== (settings?.homepageOgImageUrl ?? "");
 
   const loadSummary = async () => {
     setSummaryLoading(true);
     try {
-      const res = await fetch("/api/seo/summary", { headers });
+      const res = await fetch("/api/seo/summary", { headers: authHeaders });
       if (res.ok) setSummary(await res.json());
     } finally {
       setSummaryLoading(false);
@@ -70,7 +120,7 @@ export default function AdminSeoPage() {
     stopPolling();
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/seo/status/${jobId}`, { headers });
+        const res = await fetch(`/api/seo/status/${jobId}`, { headers: authHeaders });
         if (!res.ok) return;
         const data: SeoJobStatus = await res.json();
         setJob(data);
@@ -91,7 +141,7 @@ export default function AdminSeoPage() {
     try {
       const res = await fetch("/api/seo/bulk", {
         method: "POST",
-        headers,
+        headers: authHeaders,
         body: JSON.stringify({ overwrite }),
       });
       if (!res.ok) {
@@ -102,7 +152,7 @@ export default function AdminSeoPage() {
       const data: SeoJobStatus = await res.json();
       setJob(data);
       pollJob(data.jobId);
-    } catch (err) {
+    } catch {
       toast({ title: "Error", description: "Could not start SEO generation", variant: "destructive" });
     }
   };
@@ -128,6 +178,115 @@ export default function AdminSeoPage() {
           Refresh
         </Button>
       </div>
+
+      {/* ── Homepage SEO ── */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Home className="h-4 w-4 text-primary" />
+            Homepage Meta Tags
+          </CardTitle>
+          <CardDescription>
+            Manually set the meta title, meta description, and Open Graph image shown when someone shares your homepage link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {settingsLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="meta-title" className="flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+                  Meta Title
+                </Label>
+                <Input
+                  id="meta-title"
+                  placeholder="e.g. Bigfoot Blueprint — Find Local Services"
+                  value={metaTitle}
+                  onChange={e => setMetaTitle(e.target.value)}
+                  maxLength={100}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown in browser tabs and search results. Aim for 50–60 characters.{" "}
+                  <span className={metaTitle.length > 60 ? "text-amber-500 font-medium" : ""}>
+                    {metaTitle.length}/60
+                  </span>
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="meta-desc" className="flex items-center gap-1.5">
+                  <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                  Meta Description
+                </Label>
+                <Textarea
+                  id="meta-desc"
+                  placeholder="e.g. Browse hundreds of local businesses, events, and services in one place."
+                  value={metaDescription}
+                  onChange={e => setMetaDescription(e.target.value)}
+                  rows={3}
+                  maxLength={300}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Shown under your link in Google and social previews. Aim for 140–160 characters.{" "}
+                  <span className={metaDescription.length > 160 ? "text-amber-500 font-medium" : ""}>
+                    {metaDescription.length}/160
+                  </span>
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="og-image" className="flex items-center gap-1.5">
+                  <Image className="h-3.5 w-3.5 text-muted-foreground" />
+                  Open Graph Image URL
+                </Label>
+                <Input
+                  id="og-image"
+                  type="url"
+                  placeholder="https://yoursite.com/og-image.jpg"
+                  value={ogImageUrl}
+                  onChange={e => setOgImageUrl(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The preview image shown when your homepage is shared on social media. Recommended: 1200×630 px.
+                </p>
+              </div>
+
+              {ogImageUrl && (
+                <div className="rounded-lg overflow-hidden border bg-muted/30 p-2">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">Image preview</p>
+                  <img
+                    src={ogImageUrl}
+                    alt="OG image preview"
+                    className="h-32 w-full object-cover rounded"
+                    onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-3 pt-1">
+                <Button
+                  onClick={handleSaveMeta}
+                  disabled={metaSaving || !metaDirty}
+                  size="sm"
+                  className="gap-2"
+                >
+                  {metaSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  {metaSaving ? "Saving…" : "Save Homepage SEO"}
+                </Button>
+                {!metaDirty && !metaSaving && settings && (
+                  <span className="text-xs text-green-600 dark:text-green-500 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+                  </span>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Coverage card */}
       <Card>

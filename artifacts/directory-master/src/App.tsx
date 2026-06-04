@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { RequireAuth } from "@/components/auth/require-auth";
+import { RequireAdmin } from "@/components/auth/require-admin";
 import { SetupGuard } from "@/components/setup/setup-guard";
 
 // Layouts
@@ -107,11 +108,11 @@ function Router() {
         </RequireAuth>
       </Route>
       <Route path="/admin/contacts">
-        <RequireAuth>
+        <RequireAdmin>
           <AdminLayout>
             <AdminContactsPage />
           </AdminLayout>
-        </RequireAuth>
+        </RequireAdmin>
       </Route>
       <Route path="/admin/builder/:page">
         <RequireAuth>

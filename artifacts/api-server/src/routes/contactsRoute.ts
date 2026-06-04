@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, contacts } from "@workspace/db";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAdmin } from "../middlewares/auth.js";
 import { desc, eq } from "drizzle-orm";
 
 const router = Router();
@@ -30,7 +30,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAdmin, async (req, res) => {
   try {
     const all = await db.select().from(contacts).orderBy(desc(contacts.createdAt));
     res.json({ contacts: all.map(formatContact) });
@@ -40,7 +40,7 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", requireAdmin, async (req, res) => {
   try {
     const id = parseInt(req.params.id as string, 10);
     if (isNaN(id)) {

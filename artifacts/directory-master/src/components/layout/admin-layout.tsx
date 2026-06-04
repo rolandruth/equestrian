@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useLogout, useGetPublicSettings } from "@workspace/api-client-react";
+import { useLogout, useGetPublicSettings, useGetCurrentUser } from "@workspace/api-client-react";
 import {
   LayoutDashboard,
   Files,
@@ -20,9 +20,12 @@ import {
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { logout: clearToken } = useAuth();
+  const { token, logout: clearToken } = useAuth();
   const logoutMutation = useLogout();
   const { data: settings } = useGetPublicSettings();
+  const { data: currentUser } = useGetCurrentUser({ query: { enabled: !!token, retry: false } });
+
+  const isAdmin = currentUser?.role === "admin";
 
   const handleLogout = async () => {
     try {
@@ -40,7 +43,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/admin/categories", label: "Categories", icon: Tags },
     { href: "/admin/import", label: "Import CSV", icon: Upload },
     { href: "/admin/seo", label: "SEO", icon: Search },
-    { href: "/admin/contacts", label: "Contacts", icon: ClipboardCheck },
+    ...(isAdmin ? [{ href: "/admin/contacts", label: "Contacts", icon: ClipboardCheck }] : []),
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/settings", label: "Settings", icon: Settings },
   ];

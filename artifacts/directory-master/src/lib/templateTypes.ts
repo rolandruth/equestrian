@@ -161,8 +161,8 @@ export const DEFAULT_ENTRY_SECTIONS: SectionConfig[] = [
   { id: "description", label: "Description",            enabled: true },
   { id: "moreDetails", label: "Additional Information", enabled: true },
   { id: "sidebar",     label: "Details Sidebar",        enabled: true },
+  { id: "claim",       label: "Claim Yours Now",        enabled: true, heading: "Claim Yours Now", props: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
   { id: "related",     label: "Related Entries",        enabled: true },
-  { id: "claim",       label: "Claim Yours Now",        enabled: false, heading: "Claim Yours Now", props: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
 ];
 
 export const BROWSE_CARD_FIELDS: Array<{ id: string; label: string }> = [

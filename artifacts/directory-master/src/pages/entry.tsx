@@ -16,7 +16,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   MapPin, Globe, Mail, Phone, ChevronLeft, Tag, Loader2,
   Building2, CalendarDays, Layers, Pencil, GripVertical,
@@ -301,12 +303,14 @@ function EditSectionWrapper({
   section,
   children,
   onToggle,
+  onEdit,
   isActive,
   disableDropZone,  // disable drop detection while a sidebar field is being dragged
 }: {
   section: SectionConfig;
   children: React.ReactNode;
   onToggle: () => void;
+  onEdit?: () => void;
   isActive?: boolean;
   disableDropZone?: boolean;
 }) {
@@ -362,17 +366,28 @@ function EditSectionWrapper({
           )}
         </div>
 
-        <button
-          onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          title={section.enabled ? "Hide this section" : "Show this section"}
-          className="p-1 rounded hover:bg-blue-400 transition-colors"
-        >
-          {section.enabled ? (
-            <Eye className="h-3.5 w-3.5" />
-          ) : (
-            <EyeOff className="h-3.5 w-3.5" />
+        <div className="flex items-center gap-1">
+          {onEdit && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              title="Edit section text"
+              className="p-1 rounded hover:bg-blue-400 transition-colors"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
           )}
-        </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggle(); }}
+            title={section.enabled ? "Hide this section" : "Show this section"}
+            className="p-1 rounded hover:bg-blue-400 transition-colors"
+          >
+            {section.enabled ? (
+              <Eye className="h-3.5 w-3.5" />
+            ) : (
+              <EyeOff className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ── Section content ── */}
@@ -678,6 +693,8 @@ export default function EntryPage() {
   const [editCustomFieldDisplay, setEditCustomFieldDisplay] = useState<CustomFieldDisplay[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [claimEditOpen, setClaimEditOpen] = useState(false);
+  const [claimDraft, setClaimDraft] = useState({ heading: "", bodyText: "", buttonText: "", thankYouMessage: "" });
   const updateSettings = useUpdateSettings();
 
   const sensors = useSensors(
@@ -1322,6 +1339,15 @@ export default function EntryPage() {
             <EditSectionWrapper
               section={claimSec}
               onToggle={() => toggleSection("claim")}
+              onEdit={() => {
+                setClaimDraft({
+                  heading: claimSec.heading ?? "Claim Yours Now",
+                  bodyText: claimSec.props?.bodyText ?? "",
+                  buttonText: claimSec.props?.buttonText ?? "Submit",
+                  thankYouMessage: claimSec.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.",
+                });
+                setClaimEditOpen(true);
+              }}
               isActive={activeId === "claim"}
               disableDropZone={activeId?.startsWith("sf-") || activeId?.startsWith("cf-")}
             >
@@ -1329,10 +1355,81 @@ export default function EntryPage() {
                 <h2 className="text-2xl font-bold mb-2" style={{ color: claimSec.props?.textColor || undefined }}>
                   {claimSec.heading || "Claim Yours Now"}
                 </h2>
-                <p className="text-muted-foreground text-sm mb-6">Full Name · Phone Number · Email Address · Submit button</p>
+                {claimSec.props?.bodyText && (
+                  <p className="text-muted-foreground text-sm mb-4">{claimSec.props.bodyText}</p>
+                )}
+                <p className="text-muted-foreground text-xs mb-6 opacity-60">Full Name · Phone Number · Email Address · Submit button</p>
                 <EntryClaimFormBlock section={claimSec} />
               </div>
             </EditSectionWrapper>
+
+            {/* Claim section edit dialog */}
+            <Dialog open={claimEditOpen} onOpenChange={setClaimEditOpen}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Pencil className="h-4 w-4 text-blue-500" />
+                    Edit "Claim Yours Now" Section
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="claim-heading">Heading</Label>
+                    <Input
+                      id="claim-heading"
+                      value={claimDraft.heading}
+                      onChange={e => setClaimDraft(d => ({ ...d, heading: e.target.value }))}
+                      placeholder="Claim Yours Now"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="claim-body">Description (optional)</Label>
+                    <Textarea
+                      id="claim-body"
+                      value={claimDraft.bodyText}
+                      onChange={e => setClaimDraft(d => ({ ...d, bodyText: e.target.value }))}
+                      placeholder="A short line under the heading…"
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="claim-btn">Submit Button Label</Label>
+                    <Input
+                      id="claim-btn"
+                      value={claimDraft.buttonText}
+                      onChange={e => setClaimDraft(d => ({ ...d, buttonText: e.target.value }))}
+                      placeholder="Submit"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="claim-ty">Thank You Message</Label>
+                    <Textarea
+                      id="claim-ty"
+                      value={claimDraft.thankYouMessage}
+                      onChange={e => setClaimDraft(d => ({ ...d, thankYouMessage: e.target.value }))}
+                      placeholder="Thank you! We'll be in touch soon."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setClaimEditOpen(false)}>Cancel</Button>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => {
+                      setEditSections(prev => prev.map(s =>
+                        s.id === "claim"
+                          ? { ...s, heading: claimDraft.heading, props: { ...s.props, bodyText: claimDraft.bodyText, buttonText: claimDraft.buttonText, thankYouMessage: claimDraft.thankYouMessage } }
+                          : s
+                      ));
+                      setClaimEditOpen(false);
+                    }}
+                  >
+                    Apply
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Bottom action row */}
             <div className="flex justify-end gap-2 pt-2 pb-8">

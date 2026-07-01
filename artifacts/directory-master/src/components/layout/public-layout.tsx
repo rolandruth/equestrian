@@ -91,19 +91,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex md:items-center md:space-x-8 flex-1 justify-end">
-              <form onSubmit={handleSearch} className="relative w-48 focus-within:w-64 transition-all duration-200">
-                <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                  <Search className="h-3.5 w-3.5" style={navbarText ? { color: navbarText, opacity: 0.5 } : { color: "#9ca3af" }} />
-                </div>
-                <input
-                  type="text"
-                  className="block w-full pl-8 pr-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-1 focus:ring-primary transition-colors"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </form>
-              
               <Link
                 href="/browse"
                 className={linkClass}
@@ -138,6 +125,18 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Sign In
                 </Link>
               )}
+              <form onSubmit={handleSearch} className="relative w-48 focus-within:w-64 transition-all duration-200">
+                <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                  <Search className="h-3.5 w-3.5" style={navbarText ? { color: navbarText, opacity: 0.5 } : { color: "#9ca3af" }} />
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-8 pr-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-1 focus:ring-primary transition-colors"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </form>
             </div>
 
             {/* Mobile menu button */}

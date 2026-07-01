@@ -27,6 +27,7 @@ import {
   Grid3X3, Star, Clock, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info, ClipboardCheck,
 } from "lucide-react";
 import { FontLoader } from "@/components/template/FontLoader";
+import { HomeSearchSection } from "@/components/directory/HomeSearchSection";
 import {
   mergeTemplateSettings, getFontFamily,
   HOMEPAGE_BLOCK_DEFS,
@@ -1498,6 +1499,7 @@ export default function HomePage() {
       {heroSection && renderSection(heroSection)}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full space-y-20">
+        <HomeSearchSection />
         {nonHeroSections.map(s => renderSection(s))}
       </div>
     </div>

@@ -22,6 +22,7 @@ export const entries = pgTable("entries", {
   sourceCsvRow: text("source_csv_row"),
   published: boolean("published").notNull().default(false),
   featured: boolean("featured").notNull().default(false),
+  premium: boolean("premium").notNull().default(false),
   slug: text("slug"),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),

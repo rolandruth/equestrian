@@ -29,6 +29,7 @@ import {
 import { FontLoader } from "@/components/template/FontLoader";
 import { HomeSearchSection } from "@/components/directory/HomeSearchSection";
 import { FeaturedSpotlightSection } from "@/components/directory/FeaturedSpotlightSection";
+import { PremiumSpotlightSection } from "@/components/directory/PremiumSpotlightSection";
 import {
   mergeTemplateSettings, getFontFamily,
   HOMEPAGE_BLOCK_DEFS,
@@ -1500,6 +1501,7 @@ export default function HomePage() {
       {heroSection && renderSection(heroSection)}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full space-y-14">
+        <PremiumSpotlightSection />
         <FeaturedSpotlightSection />
         <HomeSearchSection />
         {nonHeroSections.map(s => renderSection(s))}

@@ -135,6 +135,20 @@ router.patch("/:id/featured", requireEditor, async (req, res) => {
   }
 });
 
+router.patch("/:id/premium", requireEditor, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { premium } = req.body;
+    const [entry] = await db.update(entries).set({ premium, updatedAt: new Date() })
+      .where(eq(entries.id, id)).returning();
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+    res.json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to update premium status" });
+  }
+});
+
 // DELETE /api/entries — wipe all entries + categories (admin only)
 router.delete("/", requireAdmin, async (req, res) => {
   try {
@@ -169,6 +183,7 @@ function formatEntry(e: typeof entries.$inferSelect) {
     sourceCsvRow: e.sourceCsvRow,
     published: e.published,
     featured: e.featured,
+    premium: e.premium,
     slug: e.slug,
     metaTitle: e.metaTitle,
     metaDescription: e.metaDescription,

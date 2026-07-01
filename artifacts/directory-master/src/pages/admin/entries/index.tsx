@@ -24,7 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert, Star } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert, Star, Crown } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
@@ -41,6 +41,7 @@ export default function AdminEntriesPage() {
   const [clearConfirmText, setClearConfirmText] = useState("");
   const [isClearing, setIsClearing] = useState(false);
   const [togglingFeatured, setTogglingFeatured] = useState<number | null>(null);
+  const [togglingPremium, setTogglingPremium] = useState<number | null>(null);
 
   const { data: publicSettings } = useGetPublicSettings();
   const primaryColor = (publicSettings as any)?.primaryColor as string | undefined;
@@ -96,6 +97,28 @@ export default function AdminEntriesPage() {
       toast({ title: "Failed to update featured", description: e.message, variant: "destructive" });
     } finally {
       setTogglingFeatured(null);
+    }
+  };
+
+  const handleTogglePremium = async (id: number, currentPremium: boolean) => {
+    setTogglingPremium(id);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/entries/${id}/premium`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ premium: !currentPremium }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+      toast({ title: currentPremium ? "Removed from premium" : "Added to premium" });
+    } catch (e: any) {
+      toast({ title: "Failed to update premium", description: e.message, variant: "destructive" });
+    } finally {
+      setTogglingPremium(null);
     }
   };
 
@@ -206,10 +229,24 @@ export default function AdminEntriesPage() {
                 entriesData?.entries.map((entry) => {
                   const isFeatured = (entry as any).featured as boolean;
                   const isToggling = togglingFeatured === entry.id;
+                  const isPremium = (entry as any).premium as boolean;
+                  const isTogglingPremium = togglingPremium === entry.id;
                   return (
                     <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900 dark:text-white mb-1">{entry.title}</div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-gray-900 dark:text-white">{entry.title}</span>
+                          {isPremium && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 px-1.5 py-0.5 rounded-full">
+                              <Crown className="h-2.5 w-2.5" />Premium
+                            </span>
+                          )}
+                          {isFeatured && (
+                            <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded-full">
+                              <Star className="h-2.5 w-2.5" />Featured
+                            </span>
+                          )}
+                        </div>
                         {entry.location && <div className="text-xs text-muted-foreground">{entry.location}</div>}
                       </td>
                       <td className="px-6 py-4">
@@ -234,6 +271,26 @@ export default function AdminEntriesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right whitespace-nowrap">
+                        {/* Premium toggle */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          disabled={isTogglingPremium}
+                          title={isPremium ? "Remove from Premium" : "Add to Premium"}
+                          onClick={() => handleTogglePremium(entry.id, isPremium)}
+                        >
+                          {isTogglingPremium ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Crown
+                              className="h-4 w-4 transition-all"
+                              fill={isPremium ? "#8b5cf6" : "none"}
+                              color={isPremium ? "#8b5cf6" : "currentColor"}
+                            />
+                          )}
+                        </Button>
+                        {/* Featured toggle */}
                         <Button
                           variant="ghost"
                           size="icon"

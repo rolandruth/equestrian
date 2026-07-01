@@ -169,6 +169,19 @@ router.get("/featured", async (req, res) => {
   }
 });
 
+router.get("/premium", async (req, res) => {
+  try {
+    const rows = await db.select().from(entries)
+      .where(and(eq(entries.published, true), eq(entries.premium, true)))
+      .orderBy(desc(entries.createdAt))
+      .limit(4);
+    res.json(rows.map(formatEntry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get premium entries" });
+  }
+});
+
 router.get("/recent", async (req, res) => {
   try {
     const rows = await db.select().from(entries)

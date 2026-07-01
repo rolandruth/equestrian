@@ -223,10 +223,12 @@ export default function BrowsePage() {
       )}
       {/* Always-shown contact fields */}
       <div className="space-y-1 pt-1">
-        {entry.location && (
+        {(entry.location || entry.category) && (
           <div className="flex items-center text-sm text-muted-foreground">
             <MapPin className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
-            <span className="line-clamp-1">{entry.location}</span>
+            <span className="line-clamp-1">
+              {[entry.location, entry.category].filter(Boolean).join(", ")}
+            </span>
           </div>
         )}
         {entry.contactPhone && (

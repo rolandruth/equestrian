@@ -221,7 +221,33 @@ export default function BrowsePage() {
       {entry.summary && (
         <p className="text-muted-foreground line-clamp-3 text-sm">{entry.summary}</p>
       )}
-      {cardFields.filter(id => id !== "category").map(fid => renderCardField(entry, fid))}
+      {/* Always-shown contact fields */}
+      <div className="space-y-1 pt-1">
+        {entry.location && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <MapPin className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span className="line-clamp-1">{entry.location}</span>
+          </div>
+        )}
+        {entry.contactPhone && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Phone className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+            <a href={`tel:${entry.contactPhone}`} className="hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
+              {entry.contactPhone}
+            </a>
+          </div>
+        )}
+        {entry.website && (
+          <div className="flex items-center text-sm text-muted-foreground">
+            <Globe className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+            <a href={entry.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+              {entry.website.replace(/^https?:\/\/(www\.)?/, "")}
+            </a>
+          </div>
+        )}
+      </div>
+      {/* Remaining template-configured fields (excluding location/website/phone already shown) */}
+      {cardFields.filter(id => !["category","location","website","contactPhone"].includes(id)).map(fid => renderCardField(entry, fid))}
     </CardContent>
   );
 

@@ -30,6 +30,7 @@ export default function BrowsePage() {
   const [sort, setSort] = useState<string>("newest");
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
+  const [ridingType, setRidingType] = useState<string>("");
   const limit = 12;
 
   const { data: settings } = useGetPublicSettings();
@@ -41,6 +42,7 @@ export default function BrowsePage() {
     search: search || undefined,
     category: categoryParam || undefined,
     sort,
+    ridingType: ridingType || undefined,
   });
 
   const { data: allEntriesData, isLoading: isLoadingMap } = useListPublicEntries(
@@ -50,6 +52,7 @@ export default function BrowsePage() {
       search: search || undefined,
       category: categoryParam || undefined,
       sort,
+      ridingType: ridingType || undefined,
     },
     { query: { enabled: viewMode === "map" } }
   );
@@ -204,6 +207,7 @@ export default function BrowsePage() {
     setSearch("");
     setSearchInput("");
     setSort("newest");
+    setRidingType("");
     setPage(1);
     setLocation("/browse");
   };
@@ -372,7 +376,41 @@ export default function BrowsePage() {
                 </div>
               </div>
 
-              {(search || categoryParam || sort !== "newest") && (
+              {(stats as any)?.ridingTypeBreakdown?.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-4 text-lg">Riding Type</h3>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => { setRidingType(""); setPage(1); }}
+                      className={`block w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                        !ridingType
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
+                      }`}
+                    >
+                      All Types
+                    </button>
+                    {(stats as any).ridingTypeBreakdown.map((rt: { ridingType: string; count: number }) => (
+                      <button
+                        key={rt.ridingType}
+                        onClick={() => { setRidingType(rt.ridingType); setPage(1); }}
+                        className={`flex justify-between items-center w-full px-3 py-2 rounded-md text-sm transition-colors ${
+                          ridingType === rt.ridingType
+                            ? "bg-primary text-primary-foreground font-medium"
+                            : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
+                        }`}
+                      >
+                        <span className="truncate pr-2 capitalize">{rt.ridingType.replace(/-/g, " ")}</span>
+                        <span className={`text-xs ${ridingType === rt.ridingType ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                          {rt.count}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(search || categoryParam || sort !== "newest" || ridingType) && (
                 <Button variant="outline" className="w-full" onClick={clearFilters}>
                   <FilterX className="mr-2 h-4 w-4" />
                   Clear Filters

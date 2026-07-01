@@ -647,6 +647,10 @@ paths:
           in: query
           schema:
             type: ["string", "null"]
+        - name: ridingType
+          in: query
+          schema:
+            type: ["string", "null"]
       responses:
         "200":
           description: Published entries
@@ -1236,7 +1240,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CategoryCount"
-      required: [totalEntries, totalCategories, categoryBreakdown]
+        ridingTypeBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/RidingTypeCount"
+      required: [totalEntries, totalCategories, categoryBreakdown, ridingTypeBreakdown]
 
     CategoryCount:
       type: object
@@ -1246,6 +1254,15 @@ components:
         count:
           type: integer
       required: [category, count]
+
+    RidingTypeCount:
+      type: object
+      properties:
+        ridingType:
+          type: string
+        count:
+          type: integer
+      required: [ridingType, count]
 
     Review:
       type: object

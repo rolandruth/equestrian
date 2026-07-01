@@ -6,9 +6,11 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { CategoryCount } from "./categoryCount";
+import type { RidingTypeCount } from "./ridingTypeCount";
 
 export interface PublicStats {
   totalEntries: number;
   totalCategories: number;
   categoryBreakdown: CategoryCount[];
+  ridingTypeBreakdown: RidingTypeCount[];
 }

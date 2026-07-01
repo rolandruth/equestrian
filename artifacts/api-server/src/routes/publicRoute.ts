@@ -45,6 +45,7 @@ router.get("/entries", async (req, res) => {
     const search = (req.query.search as string) || "";
     const category = (req.query.category as string) || "";
     const sort = (req.query.sort as string) || "newest";
+    const ridingType = (req.query.ridingType as string) || "";
 
     const conditions = [eq(entries.published, true)];
     if (search && search !== "null") {
@@ -85,6 +86,7 @@ router.get("/entries", async (req, res) => {
       }
     }
     if (category && category !== "null") conditions.push(eq(entries.category, category));
+    if (ridingType && ridingType !== "null") conditions.push(sql`${entries.customFields}->>'ridingtype' = ${ridingType}`);
 
     const where = and(...conditions);
     const orderBy =
@@ -141,6 +143,14 @@ router.get("/stats", async (req, res) => {
     const cats = await db.select({ name: categories.name, imageUrl: categories.imageUrl }).from(categories);
     const imageMap = new Map(cats.map(c => [c.name, c.imageUrl]));
 
+    const ridingBreakdown = await db.select({
+      ridingType: sql<string>`${entries.customFields}->>'ridingtype'`,
+      count: count(),
+    }).from(entries)
+      .where(and(eq(entries.published, true), sql`${entries.customFields}->>'ridingtype' IS NOT NULL`))
+      .groupBy(sql`${entries.customFields}->>'ridingtype'`)
+      .orderBy(desc(count()));
+
     res.json({
       totalEntries: Number(totalEntries.count),
       totalCategories: breakdown.length,
@@ -148,6 +158,10 @@ router.get("/stats", async (req, res) => {
         category: b.category!,
         count: Number(b.count),
         imageUrl: imageMap.get(b.category!) ?? null,
+      })),
+      ridingTypeBreakdown: ridingBreakdown.map(r => ({
+        ridingType: r.ridingType,
+        count: Number(r.count),
       })),
     });
   } catch (err) {

@@ -362,10 +362,16 @@ export interface CategoryCount {
   count: number;
 }
 
+export interface RidingTypeCount {
+  ridingType: string;
+  count: number;
+}
+
 export interface PublicStats {
   totalEntries: number;
   totalCategories: number;
   categoryBreakdown: CategoryCount[];
+  ridingTypeBreakdown: RidingTypeCount[];
 }
 
 export interface Review {
@@ -475,4 +481,8 @@ export type ListPublicEntriesParams = {
    * @nullable
    */
   sort?: string | null;
+  /**
+   * @nullable
+   */
+  ridingType?: string | null;
 };

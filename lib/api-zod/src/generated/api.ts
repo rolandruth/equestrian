@@ -577,6 +577,7 @@ export const ListPublicEntriesQueryParams = zod.object({
   search: zod.coerce.string().nullish(),
   category: zod.coerce.string().nullish(),
   sort: zod.coerce.string().nullish(),
+  ridingType: zod.coerce.string().nullish(),
 });
 
 export const ListPublicEntriesResponse = zod.object({
@@ -648,6 +649,12 @@ export const GetPublicStatsResponse = zod.object({
   categoryBreakdown: zod.array(
     zod.object({
       category: zod.string(),
+      count: zod.number(),
+    }),
+  ),
+  ridingTypeBreakdown: zod.array(
+    zod.object({
+      ridingType: zod.string(),
       count: zod.number(),
     }),
   ),

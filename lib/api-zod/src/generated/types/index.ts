@@ -40,6 +40,7 @@ export * from "./requestUploadUrlResponse";
 export * from "./requestUploadUrlResponseMetadata";
 export * from "./review";
 export * from "./reviewListResponse";
+export * from "./ridingTypeCount";
 export * from "./setupResult";
 export * from "./setupStatus";
 export * from "./successResponse";

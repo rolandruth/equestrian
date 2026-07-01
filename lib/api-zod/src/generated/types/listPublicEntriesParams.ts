@@ -27,4 +27,8 @@ export type ListPublicEntriesParams = {
    * @nullable
    */
   sort?: string | null;
+  /**
+   * @nullable
+   */
+  ridingType?: string | null;
 };

@@ -48,18 +48,41 @@ router.get("/entries", async (req, res) => {
 
     const conditions = [eq(entries.published, true)];
     if (search && search !== "null") {
-      const q = `%${search}%`;
-      conditions.push(or(
-        ilike(entries.title, q),
-        ilike(entries.summary, q),
-        ilike(entries.description, q),
-        ilike(entries.tags, q),
-        ilike(entries.location, q),
-        ilike(entries.venue, q),
-        ilike(entries.eventType, q),
-        ilike(entries.category, q),
-        ilike(entries.moreDetails, q),
-      )!);
+      // Split into individual tokens; each token must appear somewhere in the entry (AND of ORs)
+      const terms = search
+        .split(/[\s,;]+/)
+        .map(t => t.trim())
+        .filter(t => t.length >= 3);
+      if (terms.length === 0) {
+        // Fallback: treat the whole string as one phrase
+        const q = `%${search}%`;
+        conditions.push(or(
+          ilike(entries.title, q),
+          ilike(entries.summary, q),
+          ilike(entries.description, q),
+          ilike(entries.tags, q),
+          ilike(entries.location, q),
+          ilike(entries.venue, q),
+          ilike(entries.eventType, q),
+          ilike(entries.category, q),
+          ilike(entries.moreDetails, q),
+        )!);
+      } else {
+        for (const term of terms) {
+          const q = `%${term}%`;
+          conditions.push(or(
+            ilike(entries.title, q),
+            ilike(entries.summary, q),
+            ilike(entries.description, q),
+            ilike(entries.tags, q),
+            ilike(entries.location, q),
+            ilike(entries.venue, q),
+            ilike(entries.eventType, q),
+            ilike(entries.category, q),
+            ilike(entries.moreDetails, q),
+          )!);
+        }
+      }
     }
     if (category && category !== "null") conditions.push(eq(entries.category, category));
 

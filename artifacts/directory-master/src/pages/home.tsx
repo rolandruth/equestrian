@@ -1217,7 +1217,7 @@ export default function HomePage() {
       }
       return (
         <section key={section.id} className="rounded-xl overflow-hidden" style={{ backgroundColor: p.backgroundColor || undefined }}>
-          <img src={p.imageUrl} alt={p.imageCaption || section.heading || ""} className="w-full object-cover" style={{ maxHeight: p.imageMaxHeight || undefined, objectPosition: p.imageObjectPosition || "center" }} />
+          <img src={p.imageUrl} alt={p.imageCaption || section.heading || ""} className="block mx-auto" style={{ width: p.imageWidth || "100%", maxHeight: p.imageWidth ? undefined : (p.imageMaxHeight || undefined), objectFit: p.imageWidth ? "contain" : "cover", objectPosition: p.imageObjectPosition || "center" }} />
           {p.imageCaption && (
             <p className="text-sm text-muted-foreground text-center px-4 py-2">{p.imageCaption}</p>
           )}

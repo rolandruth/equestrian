@@ -219,7 +219,7 @@ export function HomeSearchSection() {
                     <SelectItem value="__all__">All Categories</SelectItem>
                     {categories.map(cat => (
                       <SelectItem key={cat.category} value={cat.category}>
-                        {cat.category} ({cat.count})
+                        {cat.category}
                       </SelectItem>
                     ))}
                   </SelectContent>

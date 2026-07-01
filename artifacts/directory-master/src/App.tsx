@@ -23,6 +23,7 @@ import EntryPage from "@/pages/entry";
 import PrivacyPolicyPage from "@/pages/privacy-policy";
 import TermsPage from "@/pages/terms";
 import ContactPage from "@/pages/contact";
+import AdvertisePage from "@/pages/advertise";
 // Admin
 import LoginPage from "@/pages/admin/login";
 import DashboardPage from "@/pages/admin/dashboard";
@@ -156,6 +157,13 @@ function Router() {
         <SetupGuard>
           <PublicLayout>
             <ContactPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/advertise">
+        <SetupGuard>
+          <PublicLayout>
+            <AdvertisePage />
           </PublicLayout>
         </SetupGuard>
       </Route>

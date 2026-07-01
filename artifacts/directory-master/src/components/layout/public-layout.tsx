@@ -98,6 +98,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               >
                 Browse All
               </Link>
+              <Link
+                href="/listing-plans"
+                className={linkClass}
+                style={textStyle}
+              >
+                Listing Plans
+              </Link>
               {isAdmin && (
                 <Link
                   href="/admin"

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, ArrowRight, Loader2, X, LayoutGrid, List, Map } from "lucide-react";
+import { Search, MapPin, ArrowRight, Loader2, X, LayoutGrid, List, Map, Phone, Globe } from "lucide-react";
 import { mergeTemplateSettings } from "@/lib/templateTypes";
 
 // Fix Leaflet default marker icons when bundled with Vite
@@ -309,12 +309,30 @@ export function HomeSearchSection() {
                         {entry.summary && (
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{entry.summary}</p>
                         )}
-                        {showField("location") && entry.location && (
-                          <div className="flex items-center text-xs text-muted-foreground">
-                            <MapPin className="h-3 w-3 mr-1 shrink-0" />
-                            <span className="line-clamp-1">{entry.location}</span>
-                          </div>
-                        )}
+                        <div className="space-y-1">
+                          {entry.location && (
+                            <div className="flex items-center text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3 mr-1.5 shrink-0" />
+                              <span className="line-clamp-1">{entry.location}</span>
+                            </div>
+                          )}
+                          {entry.contactPhone && (
+                            <div className="flex items-center text-xs text-muted-foreground">
+                              <Phone className="h-3 w-3 mr-1.5 shrink-0" />
+                              <a href={`tel:${entry.contactPhone}`} className="hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
+                                {entry.contactPhone}
+                              </a>
+                            </div>
+                          )}
+                          {entry.website && (
+                            <div className="flex items-center text-xs text-muted-foreground">
+                              <Globe className="h-3 w-3 mr-1.5 shrink-0" />
+                              <a href={entry.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+                                {entry.website.replace(/^https?:\/\/(www\.)?/, "")}
+                              </a>
+                            </div>
+                          )}
+                        </div>
                       </CardContent>
                       <CardFooter className="pt-3 border-t">
                         <Link href={`/entry/${entry.slug || entry.id}`} className="w-full">
@@ -350,12 +368,30 @@ export function HomeSearchSection() {
                               </Badge>
                             )}
                           </div>
-                          {showField("location") && entry.location && (
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3 mr-1 shrink-0" />
-                              <span className="line-clamp-1">{entry.location}</span>
-                            </div>
-                          )}
+                          <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                            {entry.location && (
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <MapPin className="h-3 w-3 mr-1 shrink-0" />
+                                <span className="line-clamp-1">{entry.location}</span>
+                              </div>
+                            )}
+                            {entry.contactPhone && (
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Phone className="h-3 w-3 mr-1 shrink-0" />
+                                <a href={`tel:${entry.contactPhone}`} className="hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
+                                  {entry.contactPhone}
+                                </a>
+                              </div>
+                            )}
+                            {entry.website && (
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Globe className="h-3 w-3 mr-1 shrink-0" />
+                                <a href={entry.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+                                  {entry.website.replace(/^https?:\/\/(www\.)?/, "")}
+                                </a>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {entry.summary && (
                           <p className="hidden md:block text-xs text-muted-foreground line-clamp-1 max-w-xs flex-shrink">

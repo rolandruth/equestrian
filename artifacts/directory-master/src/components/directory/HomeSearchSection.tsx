@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, ArrowRight, Loader2, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { mergeTemplateSettings } from "@/lib/templateTypes";
 
 const PAGE_SIZE = 9;
@@ -124,36 +125,29 @@ export function HomeSearchSection() {
               )}
             </div>
 
-            {/* Category list */}
+            {/* Category dropdown */}
             {categories.length > 0 && (
-              <div className="space-y-1">
+              <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Category</p>
-                <button
-                  onClick={() => handleCategoryClick("")}
-                  className={`w-full text-left text-sm px-3 py-2 rounded-lg transition-colors ${
-                    !selectedCategory
-                      ? "bg-primary text-white font-medium"
-                      : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                  }`}
+                <Select
+                  value={selectedCategory || "__all__"}
+                  onValueChange={val => {
+                    setSelectedCategory(val === "__all__" ? "" : val);
+                    setPage(1);
+                  }}
                 >
-                  All Categories
-                </button>
-                {categories.map(cat => (
-                  <button
-                    key={cat.category}
-                    onClick={() => handleCategoryClick(cat.category)}
-                    className={`w-full text-left text-sm px-3 py-2 rounded-lg flex items-center justify-between transition-colors ${
-                      selectedCategory === cat.category
-                        ? "bg-primary text-white font-medium"
-                        : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    <span className="truncate">{cat.category}</span>
-                    <span className={`text-xs ml-2 shrink-0 ${selectedCategory === cat.category ? "text-white/80" : "text-muted-foreground"}`}>
-                      {cat.count}
-                    </span>
-                  </button>
-                ))}
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Categories</SelectItem>
+                    {categories.map(cat => (
+                      <SelectItem key={cat.category} value={cat.category}>
+                        {cat.category} ({cat.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>

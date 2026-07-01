@@ -7,6 +7,15 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Disable ETags globally — ETag + If-None-Match causes the browser to serve
+// stale 304 responses for API data (e.g. settings) even after a PATCH saves
+// new values. No-store ensures clients always fetch fresh data.
+app.set("etag", false);
+app.use("/api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+
 app.use(
   pinoHttp({
     logger,

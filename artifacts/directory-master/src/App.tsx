@@ -24,6 +24,7 @@ import PrivacyPolicyPage from "@/pages/privacy-policy";
 import TermsPage from "@/pages/terms";
 import ContactPage from "@/pages/contact";
 import AdvertisePage from "@/pages/advertise";
+import ListingPlansPage from "@/pages/listing-plans";
 // Admin
 import LoginPage from "@/pages/admin/login";
 import DashboardPage from "@/pages/admin/dashboard";
@@ -164,6 +165,13 @@ function Router() {
         <SetupGuard>
           <PublicLayout>
             <AdvertisePage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/listing-plans">
+        <SetupGuard>
+          <PublicLayout>
+            <ListingPlansPage />
           </PublicLayout>
         </SetupGuard>
       </Route>

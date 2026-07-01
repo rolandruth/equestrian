@@ -232,6 +232,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               <a href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Contact Us
               </a>
+              <a href="/listing-plans" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+                Listing Plans
+              </a>
               <a href="/advertise" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Advertise with Us
               </a>

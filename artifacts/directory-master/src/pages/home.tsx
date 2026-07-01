@@ -1000,9 +1000,9 @@ export default function HomePage() {
     if (type === "hero") {
       const heroImageUrl = ts.homepage.heroImageUrl || p.backgroundImage;
       const hasBg = !!heroImageUrl;
-      const paddingClass = p.padding === "sm" ? "py-12 lg:py-16" : p.padding === "lg" ? "py-28 lg:py-40" : "py-20 lg:py-32";
+      const paddingClass = p.padding === "sm" ? "py-12 lg:py-16" : p.padding === "xl" ? "py-36 lg:py-52" : p.padding === "lg" ? "py-28 lg:py-40" : "py-20 lg:py-32";
       const bgStyle: React.CSSProperties = hasBg
-        ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+        ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: p.backgroundPosition || "center" }
         : { backgroundColor: ts.homepage.heroBgColor || p.backgroundColor || themeColor };
 
       return (

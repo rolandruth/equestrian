@@ -37,7 +37,9 @@ export function HomeSearchSection() {
     sort: "newest",
   });
 
-  const categories = stats?.categoryBreakdown ?? [];
+  const categories = [...(stats?.categoryBreakdown ?? [])].sort((a, b) =>
+    a.category.localeCompare(b.category)
+  );
   const entries = entriesData?.entries ?? [];
   const total = (entriesData as any)?.total ?? 0;
   const totalPages = entriesData?.totalPages ?? 1;

@@ -10,11 +10,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, MapPin, ArrowRight, Loader2, FilterX, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info } from "lucide-react";
+import { Search, MapPin, ArrowRight, Loader2, FilterX, CalendarDays, Building2, Globe, Tag, Mail, Phone, Sparkles, Info, LayoutGrid, Map } from "lucide-react";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { FontLoader } from "@/components/template/FontLoader";
 import { mergeTemplateSettings, getFontFamily } from "@/lib/templateTypes";
 import type { SectionProps } from "@/lib/templateTypes";
+import { BrowseMapView } from "@/components/directory/BrowseMapView";
 
 export default function BrowsePage() {
   const [location, setLocation] = useLocation();
@@ -28,6 +29,7 @@ export default function BrowsePage() {
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [sort, setSort] = useState<string>("newest");
   const [page, setPage] = useState(1);
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const limit = 12;
 
   const { data: settings } = useGetPublicSettings();
@@ -40,6 +42,17 @@ export default function BrowsePage() {
     category: categoryParam || undefined,
     sort,
   });
+
+  const { data: allEntriesData, isLoading: isLoadingMap } = useListPublicEntries(
+    {
+      page: 1,
+      limit: 1000,
+      search: search || undefined,
+      category: categoryParam || undefined,
+      sort,
+    },
+    { query: { enabled: viewMode === "map" } }
+  );
 
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const browseFont = getFontFamily(ts.browse.font);
@@ -346,6 +359,22 @@ export default function BrowsePage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <div className="flex items-center rounded-lg border bg-background p-0.5 gap-0.5">
+                      <button
+                        onClick={() => setViewMode("grid")}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "grid" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                        Grid
+                      </button>
+                      <button
+                        onClick={() => setViewMode("map")}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-colors ${viewMode === "map" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        <Map className="h-4 w-4" />
+                        Map
+                      </button>
+                    </div>
                     <span className="text-sm font-medium whitespace-nowrap">Sort by:</span>
                     <Select value={sort} onValueChange={setSort}>
                       <SelectTrigger className="w-[140px]">
@@ -362,7 +391,20 @@ export default function BrowsePage() {
                 </div>
               )}
 
-              {isLoading ? (
+              {viewMode === "map" ? (
+                isLoadingMap ? (
+                  <div className="flex justify-center items-center py-20">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <BrowseMapView
+                      entries={(allEntriesData?.entries ?? []) as any}
+                      themeColor={(settings as any)?.themeColor}
+                    />
+                  </div>
+                )
+              ) : isLoading ? (
                 <div className="flex justify-center items-center py-20">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>

@@ -710,6 +710,40 @@ export const GetRecentEntriesResponseItem = zod.object({
 export const GetRecentEntriesResponse = zod.array(GetRecentEntriesResponseItem);
 
 /**
+ * @summary Get approved reviews for an entry
+ */
+export const ListPublicReviewsParams = zod.object({
+  entryId: zod.coerce.number(),
+});
+
+export const ListPublicReviewsResponse = zod.object({
+  reviews: zod.array(
+    zod.object({
+      id: zod.number(),
+      entryId: zod.number(),
+      reviewerName: zod.string(),
+      reviewerEmail: zod.string().nullish(),
+      rating: zod.number(),
+      body: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+  avgRating: zod.number().nullish(),
+  totalReviews: zod.number(),
+});
+
+/**
+ * @summary Submit a review for an entry
+ */
+export const CreatePublicReviewBody = zod.object({
+  entryId: zod.number(),
+  reviewerName: zod.string(),
+  reviewerEmail: zod.string().optional(),
+  rating: zod.number(),
+  body: zod.string().optional(),
+});
+
+/**
  * @summary Get public directory settings (no auth needed)
  */
 export const GetPublicSettingsResponse = zod.object({

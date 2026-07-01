@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ReviewsSection } from "@/components/directory/ReviewsSection";
+import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
 import {
   useGetPublicEntry,
   useListPublicEntries,
@@ -1611,6 +1613,22 @@ export default function EntryPage() {
                   );
                 })}
               </div>
+              {/* Map widget — shown when entry has coordinates */}
+              {(() => {
+                const lat = (displayEntry as any)?.latitude;
+                const lng = (displayEntry as any)?.longitude;
+                if (!lat || !lng || isDemo) return null;
+                return (
+                  <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+                    <EntryMapWidget
+                      latitude={lat}
+                      longitude={lng}
+                      title={displayEntry.title}
+                      address={displayEntry.location ?? undefined}
+                    />
+                  </div>
+                );
+              })()}
               {/* Claim Yours Now — embedded at bottom of sidebar */}
               {getSectionEnabled("claim") && (() => {
                 const claimSection = getEntrySection("claim");
@@ -1690,6 +1708,11 @@ export default function EntryPage() {
             </div>
           );
         })()}
+
+        {/* Reviews section */}
+        {!isDemo && entryNumericId && (
+          <ReviewsSection entryId={entryNumericId} />
+        )}
 
         {/* Outside-card sections (Related) — rendered in saved template order */}
         {ts.entry.sections

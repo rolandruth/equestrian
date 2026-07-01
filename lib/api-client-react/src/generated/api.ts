@@ -25,6 +25,7 @@ import type {
   ContactSubmitBody,
   CreateCategoryBody,
   CreateEntryBody,
+  CreateReviewBody,
   CreateUserBody,
   DirectorySettings,
   Entry,
@@ -41,6 +42,8 @@ import type {
   PublicStats,
   RequestUploadUrlBody,
   RequestUploadUrlResponse,
+  Review,
+  ReviewListResponse,
   SetupResult,
   SetupStatus,
   SuccessResponse,
@@ -2962,6 +2965,180 @@ export function useGetRecentEntries<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get approved reviews for an entry
+ */
+export const getListPublicReviewsUrl = (entryId: number) => {
+  return `/api/public/reviews/${entryId}`;
+};
+
+export const listPublicReviews = async (
+  entryId: number,
+  options?: RequestInit,
+): Promise<ReviewListResponse> => {
+  return customFetch<ReviewListResponse>(getListPublicReviewsUrl(entryId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublicReviewsQueryKey = (entryId: number) => {
+  return [`/api/public/reviews/${entryId}`] as const;
+};
+
+export const getListPublicReviewsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublicReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  entryId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPublicReviewsQueryKey(entryId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublicReviews>>
+  > = ({ signal }) => listPublicReviews(entryId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!entryId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublicReviews>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublicReviewsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublicReviews>>
+>;
+export type ListPublicReviewsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get approved reviews for an entry
+ */
+
+export function useListPublicReviews<
+  TData = Awaited<ReturnType<typeof listPublicReviews>>,
+  TError = ErrorType<unknown>,
+>(
+  entryId: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublicReviews>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublicReviewsQueryOptions(entryId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Submit a review for an entry
+ */
+export const getCreatePublicReviewUrl = () => {
+  return `/api/public/reviews`;
+};
+
+export const createPublicReview = async (
+  createReviewBody: CreateReviewBody,
+  options?: RequestInit,
+): Promise<Review> => {
+  return customFetch<Review>(getCreatePublicReviewUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createReviewBody),
+  });
+};
+
+export const getCreatePublicReviewMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPublicReview>>,
+    TError,
+    { data: BodyType<CreateReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createPublicReview>>,
+  TError,
+  { data: BodyType<CreateReviewBody> },
+  TContext
+> => {
+  const mutationKey = ["createPublicReview"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createPublicReview>>,
+    { data: BodyType<CreateReviewBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createPublicReview(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreatePublicReviewMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createPublicReview>>
+>;
+export type CreatePublicReviewMutationBody = BodyType<CreateReviewBody>;
+export type CreatePublicReviewMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Submit a review for an entry
+ */
+export const useCreatePublicReview = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createPublicReview>>,
+    TError,
+    { data: BodyType<CreateReviewBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createPublicReview>>,
+  TError,
+  { data: BodyType<CreateReviewBody> },
+  TContext
+> => {
+  return useMutation(getCreatePublicReviewMutationOptions(options));
+};
 
 /**
  * @summary Get public directory settings (no auth needed)

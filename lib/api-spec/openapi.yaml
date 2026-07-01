@@ -723,6 +723,50 @@ paths:
                 items:
                   $ref: "#/components/schemas/Entry"
 
+  /public/reviews/{entryId}:
+    get:
+      operationId: listPublicReviews
+      tags: [public]
+      summary: Get approved reviews for an entry
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reviews
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewListResponse"
+
+  /public/reviews:
+    post:
+      operationId: createPublicReview
+      tags: [public]
+      summary: Submit a review for an entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReviewBody"
+      responses:
+        "201":
+          description: Review created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /public/settings:
     get:
       operationId: getPublicSettings
@@ -1202,6 +1246,53 @@ components:
         count:
           type: integer
       required: [category, count]
+
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        entryId:
+          type: integer
+        reviewerName:
+          type: string
+        reviewerEmail:
+          type: ["string", "null"]
+        rating:
+          type: integer
+        body:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required: [id, entryId, reviewerName, rating, createdAt]
+
+    ReviewListResponse:
+      type: object
+      properties:
+        reviews:
+          type: array
+          items:
+            $ref: "#/components/schemas/Review"
+        avgRating:
+          type: ["number", "null"]
+        totalReviews:
+          type: integer
+      required: [reviews, totalReviews]
+
+    CreateReviewBody:
+      type: object
+      properties:
+        entryId:
+          type: integer
+        reviewerName:
+          type: string
+        reviewerEmail:
+          type: string
+        rating:
+          type: integer
+        body:
+          type: string
+      required: [entryId, reviewerName, rating]
 
     ContactSubmitBody:
       type: object

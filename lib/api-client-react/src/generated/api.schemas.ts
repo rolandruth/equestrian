@@ -368,6 +368,33 @@ export interface PublicStats {
   categoryBreakdown: CategoryCount[];
 }
 
+export interface Review {
+  id: number;
+  entryId: number;
+  reviewerName: string;
+  /** @nullable */
+  reviewerEmail?: string | null;
+  rating: number;
+  /** @nullable */
+  body?: string | null;
+  createdAt: string;
+}
+
+export interface ReviewListResponse {
+  reviews: Review[];
+  /** @nullable */
+  avgRating?: number | null;
+  totalReviews: number;
+}
+
+export interface CreateReviewBody {
+  entryId: number;
+  reviewerName: string;
+  reviewerEmail?: string;
+  rating: number;
+  body?: string;
+}
+
 export interface ContactSubmitBody {
   fullName: string;
   phone: string;

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { entries, directorySettings, categories } from "@workspace/db";
-import { eq, ilike, and, desc, asc, count, sql, or } from "drizzle-orm";
+import { entries, directorySettings, categories, reviews } from "@workspace/db";
+import { eq, ilike, and, desc, asc, count, avg, sql, or } from "drizzle-orm";
 
 const router = Router();
 
@@ -30,6 +30,8 @@ function formatEntry(e: typeof entries.$inferSelect) {
     metaDescription: e.metaDescription,
     ogTitle: e.ogTitle,
     ogDescription: e.ogDescription,
+    latitude: e.latitude ?? null,
+    longitude: e.longitude ?? null,
     createdAt: e.createdAt.toISOString(),
     updatedAt: e.updatedAt.toISOString(),
   };
@@ -207,6 +209,74 @@ router.get("/settings", async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to get settings" });
+  }
+});
+
+router.get("/reviews/:entryId", async (req, res) => {
+  try {
+    const entryId = parseInt(req.params.entryId, 10);
+    if (isNaN(entryId)) { res.status(400).json({ error: "Invalid entry id" }); return; }
+
+    const rows = await db.select().from(reviews)
+      .where(and(eq(reviews.entryId, entryId), eq(reviews.isApproved, true)))
+      .orderBy(desc(reviews.createdAt));
+
+    const [agg] = await db.select({ avg: avg(reviews.rating), total: count() })
+      .from(reviews)
+      .where(and(eq(reviews.entryId, entryId), eq(reviews.isApproved, true)));
+
+    res.json({
+      reviews: rows.map(r => ({
+        id: r.id,
+        entryId: r.entryId,
+        reviewerName: r.reviewerName,
+        rating: r.rating,
+        body: r.body,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      avgRating: agg.avg ? parseFloat(String(agg.avg)) : null,
+      totalReviews: Number(agg.total),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to get reviews" });
+  }
+});
+
+router.post("/reviews", async (req, res) => {
+  try {
+    const { entryId, reviewerName, reviewerEmail, rating, body } = req.body;
+    if (!entryId || !reviewerName || !rating) {
+      res.status(400).json({ error: "entryId, reviewerName, and rating are required" }); return;
+    }
+    const ratingNum = parseInt(rating, 10);
+    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      res.status(400).json({ error: "rating must be 1–5" }); return;
+    }
+    const [entry] = await db.select({ id: entries.id }).from(entries)
+      .where(and(eq(entries.id, parseInt(entryId, 10)), eq(entries.published, true))).limit(1);
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+
+    const [created] = await db.insert(reviews).values({
+      entryId: parseInt(entryId, 10),
+      reviewerName: String(reviewerName).slice(0, 100),
+      reviewerEmail: reviewerEmail ? String(reviewerEmail).slice(0, 200) : null,
+      rating: ratingNum,
+      body: body ? String(body).slice(0, 2000) : null,
+      isApproved: true,
+    }).returning();
+
+    res.status(201).json({
+      id: created.id,
+      entryId: created.entryId,
+      reviewerName: created.reviewerName,
+      rating: created.rating,
+      body: created.body,
+      createdAt: created.createdAt.toISOString(),
+    });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to create review" });
   }
 });
 

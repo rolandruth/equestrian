@@ -325,7 +325,7 @@ export default function BrowsePage() {
           
           {/* Sidebar Filters */}
           {getSectionEnabled("filters") && (
-            <aside className="w-full md:w-64 flex-shrink-0 space-y-8">
+            <aside className="w-full md:w-64 flex-shrink-0 space-y-8 md:sticky md:top-4 md:max-h-[calc(100vh-2rem)] md:overflow-y-auto md:pr-1">
               <div>
                 <h3 className="font-semibold mb-4 text-lg">Search</h3>
                 <form onSubmit={handleSearchSubmit}>
@@ -346,7 +346,7 @@ export default function BrowsePage() {
 
               <div>
                 <h3 className="font-semibold mb-4 text-lg">Categories</h3>
-                <div className="space-y-1">
+                <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
                   <Link 
                     href="/browse"
                     className={`block px-3 py-2 rounded-md text-sm transition-colors ${

@@ -158,10 +158,13 @@ function applyMappings(headers: string[], rowValues: string[], mappings: FieldMa
     else { entry[target] = value; }
   }
 
-  // Combine location parts if any were mapped
+  // Combine location parts if any were mapped — append to street address if present
   if (locationParts.city || locationParts.state || locationParts.country) {
     const parts = [locationParts.city, locationParts.state, locationParts.country].filter(Boolean);
-    entry["location"] = entry["location"] || parts.join(", ") || null;
+    const cityStateStr = parts.join(", ");
+    entry["location"] = entry["location"]
+      ? `${entry["location"]}, ${cityStateStr}`
+      : (cityStateStr || null);
   }
 
   return entry;

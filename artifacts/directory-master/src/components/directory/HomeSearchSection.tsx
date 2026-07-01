@@ -37,6 +37,7 @@ export function HomeSearchSection() {
   const [activeSearch, setActiveSearch] = useState("");
   const [activeLocation, setActiveLocation] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedRidingType, setSelectedRidingType] = useState("");
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [sortMode, setSortMode] = useState<SortMode>("newest");
@@ -53,6 +54,7 @@ export function HomeSearchSection() {
     limit: viewMode === "map" ? 200 : PAGE_SIZE,
     search: combinedSearch || undefined,
     category: selectedCategory || undefined,
+    ridingType: selectedRidingType || undefined,
     sort: sortMode === "newest" ? "newest" : "newest",
   });
 
@@ -75,7 +77,7 @@ export function HomeSearchSection() {
 
   const total = (entriesData as any)?.total ?? 0;
   const totalPages = entriesData?.totalPages ?? 1;
-  const isFiltered = !!combinedSearch || !!selectedCategory;
+  const isFiltered = !!combinedSearch || !!selectedCategory || !!selectedRidingType;
 
   const cardFields = ts.browse.cardFields;
   const showField = (id: string) => cardFields.includes(id);
@@ -112,6 +114,7 @@ export function HomeSearchSection() {
     setActiveSearch("");
     setActiveLocation("");
     setSelectedCategory("");
+    setSelectedRidingType("");
     setPage(1);
   };
 
@@ -217,6 +220,31 @@ export function HomeSearchSection() {
                     {categories.map(cat => (
                       <SelectItem key={cat.category} value={cat.category}>
                         {cat.category} ({cat.count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {((stats as any)?.ridingTypeBreakdown?.length > 0) && (
+              <div className="mt-4">
+                <p className="text-xs font-medium text-muted-foreground mb-2">Riding Type</p>
+                <Select
+                  value={selectedRidingType || "__all__"}
+                  onValueChange={val => {
+                    setSelectedRidingType(val === "__all__" ? "" : val);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="w-full text-sm">
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">All Types</SelectItem>
+                    {(stats as any).ridingTypeBreakdown.map((rt: { ridingType: string; count: number }) => (
+                      <SelectItem key={rt.ridingType} value={rt.ridingType}>
+                        {rt.ridingType.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} ({rt.count})
                       </SelectItem>
                     ))}
                   </SelectContent>

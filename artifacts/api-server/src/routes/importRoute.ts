@@ -22,6 +22,7 @@ const AVAILABLE_FIELDS = [
   { value: "location_city", label: "Location – City",     description: "City part — combined with state/country into Location" },
   { value: "location_state",label: "Location – State/Region", description: "State or region part of the location" },
   { value: "location_country",label:"Location – Country", description: "Country part of the location" },
+  { value: "location_zip",   label: "Location – ZIP / Postal Code", description: "ZIP or postal code — appended to the location" },
   { value: "venue",         label: "Venue",               description: "Venue or facility name" },
   { value: "eventType",     label: "Event Type",          description: "Type of event (conference, expo, summit…)" },
   { value: "startDate",     label: "Start Date",          description: "Start date of the event or listing" },
@@ -43,6 +44,7 @@ const HEURISTIC_RULES: Array<{ patterns: RegExp[]; target: string; confidence: n
   { patterns: [/^city$/i, /^town$/i, /^city_name$/i, /^location_city$/i, /^listing_city$/i, /^municipality$/i, /^locality$/i, /^city_town$/i], target: "location_city", confidence: 0.95 },
   { patterns: [/^state$/i, /^region$/i, /^province$/i, /^territory$/i, /^state_region$/i, /^state_code$/i, /^location_state$/i, /^listing_state$/i], target: "location_state", confidence: 0.92 },
   { patterns: [/^country$/i, /^nation$/i, /^country_code$/i, /^location_country$/i], target: "location_country", confidence: 0.95 },
+  { patterns: [/^zip$/i, /^zipcode$/i, /^zip_code$/i, /^postal$/i, /^postal_code$/i, /^postcode$/i, /^location_zip$/i, /^listing_zip$/i], target: "location_zip", confidence: 0.95 },
   { patterns: [/^street_address$/i, /^street$/i, /^address_line$/i, /^address_line_1$/i, /^street_1$/i, /^addr$/i], target: "location", confidence: 0.95 },
   { patterns: [/^location$/i, /^address$/i, /^place$/i, /^where$/i, /^full_address$/i], target: "location", confidence: 0.9 },
   { patterns: [/^venue$/i, /^venue_name$/i, /^facility$/i, /^hall$/i, /^building$/i], target: "venue", confidence: 0.95 },
@@ -142,7 +144,7 @@ interface FieldMapping {
 
 function applyMappings(headers: string[], rowValues: string[], mappings: FieldMapping[]): Record<string, string | null> {
   const entry: Record<string, string | null> = {};
-  const locationParts: { city?: string; state?: string; country?: string } = {};
+  const locationParts: { city?: string; state?: string; country?: string; zip?: string } = {};
 
   for (let i = 0; i < headers.length; i++) {
     const header = headers[i];
@@ -156,12 +158,14 @@ function applyMappings(headers: string[], rowValues: string[], mappings: FieldMa
     if (target === "location_city") { locationParts.city = value ?? undefined; }
     else if (target === "location_state") { locationParts.state = value ?? undefined; }
     else if (target === "location_country") { locationParts.country = value ?? undefined; }
+    else if (target === "location_zip") { locationParts.zip = value ?? undefined; }
     else { entry[target] = value; }
   }
 
-  // Combine location parts if any were mapped — append to street address if present
-  if (locationParts.city || locationParts.state || locationParts.country) {
-    const parts = [locationParts.city, locationParts.state, locationParts.country].filter(Boolean);
+  // Combine location parts — build "Street, City, State ZIP, Country"
+  if (locationParts.city || locationParts.state || locationParts.country || locationParts.zip) {
+    const stateZip = [locationParts.state, locationParts.zip].filter(Boolean).join(" ");
+    const parts = [locationParts.city, stateZip, locationParts.country].filter(Boolean);
     const cityStateStr = parts.join(", ");
     entry["location"] = entry["location"]
       ? `${entry["location"]}, ${cityStateStr}`

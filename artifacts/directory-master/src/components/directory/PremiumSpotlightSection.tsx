@@ -26,69 +26,82 @@ export function PremiumSpotlightSection() {
   if (loading || premium.length === 0) return null;
 
   return (
-    <section className="border-b pb-10">
+    <section className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-12 bg-gradient-to-br from-[#0f0c29] via-[#1a1040] to-[#24243e] rounded-2xl relative overflow-hidden">
+      {/* Decorative glow blobs */}
+      <div className="absolute -top-20 -left-20 w-72 h-72 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-20 -right-20 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+
       {/* Section header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-full px-3 py-1">
-            <Crown className="h-3.5 w-3.5 text-violet-500 fill-violet-400" />
-            <span className="text-xs font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wide">
-              Elite Featured Partners
-            </span>
+      <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex items-center gap-1.5 bg-violet-500/20 border border-violet-400/30 rounded-full px-3 py-1">
+              <Crown className="h-3.5 w-3.5 text-violet-300 fill-violet-400" />
+              <span className="text-xs font-bold text-violet-300 uppercase tracking-widest">
+                Elite Featured Partners
+              </span>
+            </div>
           </div>
+          <p className="text-white/50 text-sm">Hand-selected top providers in the equestrian community</p>
         </div>
-        <Link
-          href="/listing-plans"
-          className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-        >
-          <Sparkles className="h-3 w-3" />
-          Get premium placement
+        <Link href="/listing-plans">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-violet-400/40 text-violet-300 hover:bg-violet-500/20 hover:border-violet-400/60 bg-transparent text-xs gap-1.5 shrink-0"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Get Elite Placement
+          </Button>
         </Link>
       </div>
 
       {/* Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="relative grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {premium.map((entry: any) => (
           <div
             key={entry.id}
-            className="relative flex flex-col rounded-xl border border-violet-200 dark:border-violet-800/60 bg-gradient-to-b from-violet-50/60 to-white dark:from-violet-900/10 dark:to-gray-950 hover:border-violet-400 dark:hover:border-violet-600 transition-colors overflow-hidden"
+            className="group flex flex-col rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-violet-400/40 transition-all duration-200 overflow-hidden"
           >
-            {/* Premium ribbon */}
-            <div className="absolute top-3 right-3">
-              <Badge className="bg-violet-500 hover:bg-violet-500 text-white text-[10px] font-bold gap-1 px-2 py-0.5">
-                <Crown className="h-2.5 w-2.5 fill-white" />
-                Premium
-              </Badge>
-            </div>
+            {/* Top accent line */}
+            <div className="h-0.5 w-full bg-gradient-to-r from-violet-500 via-indigo-400 to-violet-500" />
 
             <div className="p-5 flex flex-col flex-grow">
-              {showField("category") && entry.category && (
-                <Badge variant="secondary" className="w-fit mb-2 text-[10px]">
-                  {entry.category}
-                </Badge>
-              )}
-              <h3 className="font-semibold text-base leading-snug line-clamp-2 pr-16 mb-2">
-                {entry.title}
-              </h3>
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex-1 min-w-0">
+                  {showField("category") && entry.category && (
+                    <Badge className="mb-2 text-[10px] bg-violet-500/20 text-violet-300 border-violet-400/30 hover:bg-violet-500/20">
+                      {entry.category}
+                    </Badge>
+                  )}
+                  <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2">
+                    {entry.title}
+                  </h3>
+                </div>
+                <Crown className="h-4 w-4 text-violet-400 fill-violet-500 shrink-0 mt-0.5" />
+              </div>
+
               {entry.summary && (
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-3 flex-grow">
+                <p className="text-white/50 text-xs line-clamp-2 mb-3 flex-grow leading-relaxed">
                   {entry.summary}
                 </p>
               )}
+
               {showField("location") && entry.location && (
-                <div className="flex items-center text-xs text-muted-foreground mb-4">
+                <div className="flex items-center text-xs text-white/40 mb-4">
                   <MapPin className="h-3 w-3 mr-1 shrink-0" />
                   <span className="line-clamp-1">{entry.location}</span>
                 </div>
               )}
+
               <Link href={`/entry/${entry.slug || entry.id}`} className="mt-auto">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="w-full group text-xs border-violet-200 dark:border-violet-800 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:border-violet-400"
+                  className="w-full group/btn text-xs text-violet-300 hover:text-white hover:bg-violet-500/30 border border-transparent hover:border-violet-400/30 transition-all"
                 >
                   View Details
-                  <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                  <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover/btn:translate-x-1" />
                 </Button>
               </Link>
             </div>

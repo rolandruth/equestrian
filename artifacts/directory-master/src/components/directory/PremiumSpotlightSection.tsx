@@ -33,7 +33,7 @@ export function PremiumSpotlightSection() {
           <div className="flex items-center gap-1.5 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-full px-3 py-1">
             <Crown className="h-3.5 w-3.5 text-violet-500 fill-violet-400" />
             <span className="text-xs font-semibold text-violet-700 dark:text-violet-400 uppercase tracking-wide">
-              Premium Listings
+              Elite Featured Partners
             </span>
           </div>
         </div>

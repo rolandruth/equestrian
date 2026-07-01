@@ -162,6 +162,15 @@ function applyMappings(headers: string[], rowValues: string[], mappings: FieldMa
     else { entry[target] = value; }
   }
 
+  // If category is set but no explicit state was mapped, use category as the state for address
+  if (!locationParts.state && entry["category"]) {
+    locationParts.state = entry["category"];
+  }
+  // If state was mapped but no category, use state as the category for filtering
+  if (locationParts.state && !entry["category"]) {
+    entry["category"] = locationParts.state;
+  }
+
   // Combine location parts — build "Street, City, State ZIP, Country"
   if (locationParts.city || locationParts.state || locationParts.country || locationParts.zip) {
     const stateZip = [locationParts.state, locationParts.zip].filter(Boolean).join(" ");

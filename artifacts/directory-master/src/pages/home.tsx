@@ -1215,9 +1215,23 @@ export default function HomePage() {
           </section>
         );
       }
+      const imgEl = (
+        <img
+          src={p.imageUrl}
+          alt={p.imageCaption || section.heading || ""}
+          style={p.imageContainerAspect
+            ? { position: "absolute", width: "100%", bottom: 0, display: "block" }
+            : { display: "block", width: p.imageWidth || "100%", margin: p.imageWidth ? "0 auto" : undefined, maxHeight: p.imageWidth ? undefined : (p.imageMaxHeight || undefined), objectFit: p.imageWidth ? "contain" : "cover", objectPosition: p.imageObjectPosition || "center" }
+          }
+        />
+      );
       return (
         <section key={section.id} className="rounded-xl overflow-hidden" style={{ backgroundColor: p.backgroundColor || undefined }}>
-          <img src={p.imageUrl} alt={p.imageCaption || section.heading || ""} className="block mx-auto" style={{ width: p.imageWidth || "100%", maxHeight: p.imageWidth ? undefined : (p.imageMaxHeight || undefined), objectFit: p.imageWidth ? "contain" : "cover", objectPosition: p.imageObjectPosition || "center" }} />
+          {p.imageContainerAspect ? (
+            <div style={{ position: "relative", width: p.imageWidth || "100%", aspectRatio: p.imageContainerAspect, overflow: "hidden", margin: "0 auto" }}>
+              {imgEl}
+            </div>
+          ) : imgEl}
           {p.imageCaption && (
             <p className="text-sm text-muted-foreground text-center px-4 py-2">{p.imageCaption}</p>
           )}

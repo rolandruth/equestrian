@@ -1241,6 +1241,27 @@ export default function HomePage() {
       );
     }
 
+    if (type === "custom-image-row") {
+      const imageUrls: string[] = p.imageUrls || [];
+      if (!imageUrls.length) return null;
+      const aspect = p.aspectRatio || "4/3";
+      return (
+        <section key={section.id} className="overflow-hidden" style={{ backgroundColor: p.backgroundColor || undefined }}>
+          <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${imageUrls.length}, 1fr)` }}>
+            {imageUrls.map((url: string, i: number) => (
+              <div key={i} style={{ position: "relative", aspectRatio: aspect, overflow: "hidden" }}>
+                <img
+                  src={url}
+                  alt=""
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: p.imageObjectPosition || "center" }}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
     if (type === "custom-cta") {
       const radius = p.buttonRadius === "square" ? "rounded-none" : "rounded-full";
       return (

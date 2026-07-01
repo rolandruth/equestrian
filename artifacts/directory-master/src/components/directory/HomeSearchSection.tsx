@@ -244,7 +244,7 @@ export function HomeSearchSection() {
                     <SelectItem value="__all__">All Types</SelectItem>
                     {(stats as any).ridingTypeBreakdown.map((rt: { ridingType: string; count: number }) => (
                       <SelectItem key={rt.ridingType} value={rt.ridingType}>
-                        {rt.ridingType.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())} ({rt.count})
+                        {rt.ridingType.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                       </SelectItem>
                     ))}
                   </SelectContent>

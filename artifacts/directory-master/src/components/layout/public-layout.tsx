@@ -230,6 +230,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 `\u00a9 ${new Date().getFullYear()} ${settings?.siteTitle || "Directory Master"}. All rights reserved.`}
             </p>
             <nav className="flex items-center gap-5">
+              <a href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+                Contact Us
+              </a>
               <a href="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Privacy Policy
               </a>

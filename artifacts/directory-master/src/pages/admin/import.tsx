@@ -667,6 +667,13 @@ export default function AdminImportPage() {
                                 <Select
                                   value={m.targetField}
                                   onValueChange={(val) => {
+                                    if (val === "__new_custom__") {
+                                      setEditingLabel({
+                                        csvColumn: m.csvColumn,
+                                        value: isCustom ? customLabel : "",
+                                      });
+                                      return;
+                                    }
                                     updateMapping(m.csvColumn, "targetField", val);
                                     updateMapping(m.csvColumn, "approved", val !== "skip");
                                     updateMapping(m.csvColumn, "isAiMapped", m.isAiMapped);
@@ -692,6 +699,12 @@ export default function AdminImportPage() {
                                         </div>
                                       </SelectItem>
                                     ))}
+                                    <SelectItem value="__new_custom__">
+                                      <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                        <Pencil className="h-3 w-3 shrink-0" />
+                                        <span className="font-medium">Custom Field…</span>
+                                      </div>
+                                    </SelectItem>
                                   </SelectContent>
                                 </Select>
                               )}

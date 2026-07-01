@@ -1030,6 +1030,7 @@ export default function HomePage() {
             >
               {settings?.homepageDescription || "A curated directory of tools, companies, and events."}
             </p>
+            {!p.hideSearch && (
             <form
               onSubmit={handleHeroSearch}
               className="flex items-center w-full max-w-2xl mx-auto mb-6 rounded-xl overflow-hidden shadow-lg"
@@ -1057,6 +1058,7 @@ export default function HomePage() {
                 {(settings as any)?.heroSearchButtonText || "Search"}
               </button>
             </form>
+            )}
             {p.buttonText && (
               <a
                 href={p.buttonUrl || "/browse"}

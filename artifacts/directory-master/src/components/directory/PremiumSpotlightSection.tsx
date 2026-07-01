@@ -61,7 +61,7 @@ export function PremiumSpotlightSection() {
         {premium.map((entry: any) => (
           <div
             key={entry.id}
-            className="group flex flex-col rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm hover:bg-white/10 hover:border-violet-400/40 transition-all duration-200 overflow-hidden"
+            className="group flex flex-col rounded-xl border border-violet-100 bg-white hover:border-violet-300 hover:shadow-lg hover:shadow-violet-900/20 transition-all duration-200 overflow-hidden"
           >
             {/* Top accent line */}
             <div className="h-0.5 w-full bg-gradient-to-r from-violet-500 via-indigo-400 to-violet-500" />
@@ -70,25 +70,25 @@ export function PremiumSpotlightSection() {
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div className="flex-1 min-w-0">
                   {showField("category") && entry.category && (
-                    <Badge className="mb-2 text-[10px] bg-violet-500/20 text-violet-300 border-violet-400/30 hover:bg-violet-500/20">
+                    <Badge className="mb-2 text-[10px] bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-50">
                       {entry.category}
                     </Badge>
                   )}
-                  <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2">
+                  <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2">
                     {entry.title}
                   </h3>
                 </div>
-                <Crown className="h-4 w-4 text-violet-400 fill-violet-500 shrink-0 mt-0.5" />
+                <Crown className="h-4 w-4 text-violet-500 fill-violet-400 shrink-0 mt-0.5" />
               </div>
 
               {entry.summary && (
-                <p className="text-white/50 text-xs line-clamp-2 mb-3 flex-grow leading-relaxed">
+                <p className="text-gray-500 text-xs line-clamp-2 mb-3 flex-grow leading-relaxed">
                   {entry.summary}
                 </p>
               )}
 
               {showField("location") && entry.location && (
-                <div className="flex items-center text-xs text-white/40 mb-4">
+                <div className="flex items-center text-xs text-gray-400 mb-4">
                   <MapPin className="h-3 w-3 mr-1 shrink-0" />
                   <span className="line-clamp-1">{entry.location}</span>
                 </div>
@@ -98,7 +98,7 @@ export function PremiumSpotlightSection() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full group/btn text-xs text-violet-300 hover:text-white hover:bg-violet-500/30 border border-transparent hover:border-violet-400/30 transition-all"
+                  className="w-full group/btn text-xs text-violet-600 hover:text-violet-700 hover:bg-violet-50 border border-transparent hover:border-violet-200 transition-all"
                 >
                   View Details
                   <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover/btn:translate-x-1" />

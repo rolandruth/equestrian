@@ -310,12 +310,22 @@ export function HomeSearchSection() {
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{entry.summary}</p>
                         )}
                         <div className="space-y-1">
-                          {(entry.location || entry.category) && (
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3 mr-1.5 shrink-0" />
-                              <span className="line-clamp-1">{[entry.location, entry.category].filter(Boolean).join(", ")}</span>
-                            </div>
-                          )}
+                          {(entry.location || entry.category) && (() => {
+                            const lp = entry.location?.split(",") || [];
+                            const street = lp[0]?.trim() || "";
+                            const cityState = lp.slice(1).join(",").trim();
+                            const cat = entry.category && !cityState.includes(entry.category) ? entry.category : "";
+                            const line2 = [cityState, cat].filter(Boolean).join(", ");
+                            return (
+                              <div className="flex items-start text-xs text-muted-foreground">
+                                <MapPin className="h-3 w-3 mr-1.5 shrink-0 mt-0.5" />
+                                <div>
+                                  {street && <div>{street}</div>}
+                                  {line2 && <div>{line2}</div>}
+                                </div>
+                              </div>
+                            );
+                          })()}
                           {entry.contactPhone && (
                             <div className="flex items-center text-xs text-muted-foreground">
                               <Phone className="h-3 w-3 mr-1.5 shrink-0" />
@@ -369,12 +379,22 @@ export function HomeSearchSection() {
                             )}
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-0.5">
-                            {(entry.location || entry.category) && (
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                <MapPin className="h-3 w-3 mr-1 shrink-0" />
-                                <span className="line-clamp-1">{[entry.location, entry.category].filter(Boolean).join(", ")}</span>
-                              </div>
-                            )}
+                            {(entry.location || entry.category) && (() => {
+                              const lp = entry.location?.split(",") || [];
+                              const street = lp[0]?.trim() || "";
+                              const cityState = lp.slice(1).join(",").trim();
+                              const cat = entry.category && !cityState.includes(entry.category) ? entry.category : "";
+                              const line2 = [cityState, cat].filter(Boolean).join(", ");
+                              return (
+                                <div className="flex items-start text-xs text-muted-foreground">
+                                  <MapPin className="h-3 w-3 mr-1 shrink-0 mt-0.5" />
+                                  <div>
+                                    {street && <div>{street}</div>}
+                                    {line2 && <div>{line2}</div>}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                             {entry.contactPhone && (
                               <div className="flex items-center text-xs text-muted-foreground">
                                 <Phone className="h-3 w-3 mr-1 shrink-0" />
@@ -442,9 +462,19 @@ export function HomeSearchSection() {
                                 </span>
                               )}
                               <strong className="text-sm block mb-1">{entry.title}</strong>
-                              {(entry.location || entry.category) && (
-                                <p className="text-xs text-gray-500 mb-2">{[entry.location, entry.category].filter(Boolean).join(", ")}</p>
-                              )}
+                              {(entry.location || entry.category) && (() => {
+                                const lp = entry.location?.split(",") || [];
+                                const street = lp[0]?.trim() || "";
+                                const cityState = lp.slice(1).join(",").trim();
+                                const cat = entry.category && !cityState.includes(entry.category) ? entry.category : "";
+                                const line2 = [cityState, cat].filter(Boolean).join(", ");
+                                return (
+                                  <div className="text-xs text-gray-500 mb-2">
+                                    {street && <div>{street}</div>}
+                                    {line2 && <div>{line2}</div>}
+                                  </div>
+                                );
+                              })()}
                               <a
                                 href={`/entry/${entry.slug || entry.id}`}
                                 className="text-xs text-primary font-medium hover:underline"

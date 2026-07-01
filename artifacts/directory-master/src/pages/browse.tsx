@@ -223,14 +223,22 @@ export default function BrowsePage() {
       )}
       {/* Always-shown contact fields */}
       <div className="space-y-1 pt-1">
-        {(entry.location || entry.category) && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <MapPin className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
-            <span className="line-clamp-1">
-              {[entry.location, entry.category].filter(Boolean).join(", ")}
-            </span>
-          </div>
-        )}
+        {(entry.location || entry.category) && (() => {
+          const locParts = entry.location?.split(",") || [];
+          const street = locParts[0]?.trim() || "";
+          const cityState = locParts.slice(1).join(",").trim();
+          const cat = entry.category && !cityState.includes(entry.category) ? entry.category : "";
+          const line2 = [cityState, cat].filter(Boolean).join(", ");
+          return (
+            <div className="flex items-start text-sm text-muted-foreground">
+              <MapPin className="mr-1.5 h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+              <div>
+                {street && <div>{street}</div>}
+                {line2 && <div>{line2}</div>}
+              </div>
+            </div>
+          );
+        })()}
         {entry.contactPhone && (
           <div className="flex items-center text-sm text-muted-foreground">
             <Phone className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />

@@ -229,30 +229,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               {(settings as any)?.footerText ||
                 `\u00a9 ${new Date().getFullYear()} ${settings?.siteTitle || "Directory Master"}. All rights reserved.`}
             </p>
-            {((settings as any)?.privacyPolicyUrl || (settings as any)?.termsUrl) && (
-              <nav className="flex items-center gap-5">
-                {(settings as any)?.privacyPolicyUrl && (
-                  <a
-                    href={(settings as any).privacyPolicyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    Privacy Policy
-                  </a>
-                )}
-                {(settings as any)?.termsUrl && (
-                  <a
-                    href={(settings as any).termsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    Terms &amp; Conditions
-                  </a>
-                )}
-              </nav>
-            )}
+            <nav className="flex items-center gap-5">
+              <a href="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+                Privacy Policy
+              </a>
+              <a href="/terms" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+                Terms &amp; Conditions
+              </a>
+            </nav>
           </div>
         </div>
       </footer>

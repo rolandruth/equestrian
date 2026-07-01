@@ -20,6 +20,8 @@ import SetupPage from "@/pages/setup";
 import HomePage from "@/pages/home";
 import BrowsePage from "@/pages/browse";
 import EntryPage from "@/pages/entry";
+import PrivacyPolicyPage from "@/pages/privacy-policy";
+import TermsPage from "@/pages/terms";
 // Admin
 import LoginPage from "@/pages/admin/login";
 import DashboardPage from "@/pages/admin/dashboard";
@@ -146,6 +148,20 @@ function Router() {
         <SetupGuard>
           <PublicLayout>
             <EntryPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/privacy-policy">
+        <SetupGuard>
+          <PublicLayout>
+            <PrivacyPolicyPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/terms">
+        <SetupGuard>
+          <PublicLayout>
+            <TermsPage />
           </PublicLayout>
         </SetupGuard>
       </Route>

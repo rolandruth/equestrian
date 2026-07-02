@@ -3,6 +3,8 @@ import { db } from "@workspace/db";
 import { directorySettings } from "@workspace/db";
 import { requireAdmin } from "../middlewares/auth.js";
 import { eq } from "drizzle-orm";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 
 const router = Router();
 
@@ -94,6 +96,44 @@ router.patch("/", requireAdmin, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update settings" });
+  }
+});
+
+const ALLOWED_LOGO_TYPES: Record<string, string> = {
+  "image/png": ".png",
+  "image/jpeg": ".jpg",
+  "image/jpg": ".jpg",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+  "image/svg+xml": ".svg",
+};
+
+router.post("/upload-logo", requireAdmin, async (req, res) => {
+  try {
+    const { data, contentType } = req.body as { data?: string; contentType?: string };
+    if (!data || !contentType) {
+      res.status(400).json({ error: "Missing data or contentType" });
+      return;
+    }
+    const ext = ALLOWED_LOGO_TYPES[contentType];
+    if (!ext) {
+      res.status(400).json({ error: "Unsupported image type" });
+      return;
+    }
+    const MAX_BYTES = 5 * 1024 * 1024;
+    const buffer = Buffer.from(data, "base64");
+    if (buffer.length > MAX_BYTES) {
+      res.status(400).json({ error: "Logo file must be under 5 MB" });
+      return;
+    }
+    const publicDir = path.join(process.cwd(), "artifacts", "directory-master", "public");
+    await mkdir(publicDir, { recursive: true });
+    const filename = `logo${ext}`;
+    await writeFile(path.join(publicDir, filename), buffer);
+    res.json({ url: `/${filename}` });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to upload logo" });
   }
 });
 

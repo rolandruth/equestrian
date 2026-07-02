@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import { 
   useGetSettings, 
@@ -16,13 +16,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload } from "lucide-react";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
 import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
 
 const settingsSchema = z.object({
   siteTitle: z.string().min(2, "Site title is required"),
-  logoUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  logoUrl: z.string().optional().or(z.literal("")).nullable(),
   homepageHeadline: z.string().optional().nullable(),
   homepageDescription: z.string().optional().nullable(),
   heroHeadlineColor: z.string().optional().nullable(),
@@ -274,6 +274,38 @@ export default function AdminSettingsPage() {
     mergeTemplateSettings(null)
   );
 
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const res = await fetch("/api/settings/upload-logo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ data: base64, contentType: file.type }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Upload failed");
+        form.setValue("logoUrl", json.url, { shouldDirty: true });
+        toast({ title: "Logo uploaded", description: "Click Save to apply it." });
+      };
+      reader.onerror = () => { throw new Error("Failed to read file"); };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setLogoUploading(false);
+      if (logoFileRef.current) logoFileRef.current.value = "";
+    }
+  };
+
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
@@ -383,11 +415,28 @@ export default function AdminSettingsPage() {
                 name="logoUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Logo URL</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com/logo.png" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormDescription>Absolute URL to your site's logo image.</FormDescription>
+                    <FormLabel>Logo</FormLabel>
+                    <div className="flex flex-col gap-2">
+                      {field.value && (
+                        <div className="flex items-center gap-3 p-2 border rounded-md bg-gray-50 dark:bg-gray-900">
+                          <img src={field.value} alt="Logo preview" className="max-h-12 max-w-[160px] w-auto h-auto object-contain" />
+                          <span className="text-xs text-muted-foreground truncate flex-1">{field.value}</span>
+                          <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => field.onChange("")}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input placeholder="https://example.com/logo.png or /logo.png" {...field} value={field.value || ''} />
+                        </FormControl>
+                        <input ref={logoFileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml" className="hidden" onChange={handleLogoUpload} />
+                        <Button type="button" variant="outline" size="sm" className="shrink-0" disabled={logoUploading} onClick={() => logoFileRef.current?.click()}>
+                          {logoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-1.5" />Upload</>}
+                        </Button>
+                      </div>
+                    </div>
+                    <FormDescription>Upload a logo file or paste a URL. Max 5 MB.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

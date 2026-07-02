@@ -104,6 +104,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             {/* Desktop Navigation */}
             <div className="hidden md:flex md:items-center md:space-x-8 flex-1 justify-end">
               <Link
+                href="/"
+                className={linkClass}
+                style={textStyle}
+              >
+                Home
+              </Link>
+              <Link
                 href="/browse"
                 className={linkClass}
                 style={textStyle}
@@ -168,6 +175,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             style={{ backgroundColor: navbarBg || undefined }}
           >
             <div className="flex flex-col space-y-2">
+              <Link
+                href="/"
+                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium"
+                style={navbarText ? textStyle : undefined}
+              >
+                Home
+              </Link>
               <Link
                 href="/browse"
                 onClick={() => setIsMenuOpen(false)}

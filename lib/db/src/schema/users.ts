@@ -9,6 +9,11 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("viewer"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  // Last time this user successfully triggered the SMTP test-email endpoint.
+  // Persisted (rather than kept in an in-memory Map) so the per-admin
+  // cooldown is enforced consistently across server restarts and across
+  // multiple API server instances if the app is ever scaled horizontally.
+  smtpTestLastSentAt: timestamp("smtp_test_last_sent_at", { withTimezone: true }),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });

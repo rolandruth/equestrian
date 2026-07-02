@@ -125,15 +125,18 @@ router.patch("/", requireAdmin, async (req, res) => {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // Basic per-admin throttle so this endpoint can't be hammered to spam an
-// inbox or exhaust the configured mail provider's quota.
-const lastTestSentAt = new Map<number, number>();
+// inbox or exhaust the configured mail provider's quota. The cooldown
+// timestamp is persisted on the user row (rather than an in-memory Map) so
+// it survives server restarts and stays consistent across multiple API
+// server instances if the app is ever scaled horizontally.
 const TEST_EMAIL_COOLDOWN_MS = 30_000;
 
 router.post("/smtp-test", requireAdmin, async (req, res) => {
   try {
     const userId = (req as any).userId as number;
     const now = Date.now();
-    const last = lastTestSentAt.get(userId);
+    const [currentUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    const last = currentUser?.smtpTestLastSentAt?.getTime();
     if (last && now - last < TEST_EMAIL_COOLDOWN_MS) {
       res.status(429).json({ error: "Please wait a moment before sending another test email" });
       return;
@@ -142,8 +145,7 @@ router.post("/smtp-test", requireAdmin, async (req, res) => {
     const { to } = req.body as { to?: string | null };
     let recipient = typeof to === "string" ? to.trim() : "";
     if (!recipient) {
-      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      recipient = user?.email ?? "";
+      recipient = currentUser?.email ?? "";
     }
     if (!recipient || !EMAIL_RE.test(recipient)) {
       res.status(400).json({ error: "A valid recipient email is required" });
@@ -156,7 +158,7 @@ router.post("/smtp-test", requireAdmin, async (req, res) => {
       return;
     }
 
-    lastTestSentAt.set(userId, now);
+    await db.update(users).set({ smtpTestLastSentAt: new Date(now) }).where(eq(users.id, userId));
 
     const siteTitle = settings.siteTitle || "Directory Master";
     const result = await sendMailWithResult({

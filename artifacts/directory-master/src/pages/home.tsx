@@ -29,6 +29,7 @@ import {
 import { FontLoader } from "@/components/template/FontLoader";
 import { HomeSearchSection } from "@/components/directory/HomeSearchSection";
 import { PremiumSpotlightSection } from "@/components/directory/PremiumSpotlightSection";
+import { AdSlot } from "@/components/ads/AdSlot";
 import {
   mergeTemplateSettings, getFontFamily,
   HOMEPAGE_BLOCK_DEFS,
@@ -1502,6 +1503,7 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full space-y-14">
         <PremiumSpotlightSection />
         <HomeSearchSection />
+        <AdSlot placement="homepage" className="max-w-2xl mx-auto" />
         {nonHeroSections.map(s => renderSection(s))}
       </div>
     </div>

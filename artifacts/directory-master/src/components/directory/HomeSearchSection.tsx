@@ -367,7 +367,7 @@ export function HomeSearchSection() {
                             return (
                               <div className="flex items-center text-xs text-muted-foreground">
                                 <Globe className="h-3 w-3 mr-1.5 shrink-0" />
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors break-all" onClick={e => e.stopPropagation()}>
                                   {url.replace(/^https?:\/\/(www\.)?/, "")}
                                 </a>
                               </div>
@@ -439,7 +439,7 @@ export function HomeSearchSection() {
                               return (
                                 <div className="flex items-center text-xs text-muted-foreground">
                                   <Globe className="h-3 w-3 mr-1 shrink-0" />
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+                                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors break-all" onClick={e => e.stopPropagation()}>
                                     {url.replace(/^https?:\/\/(www\.)?/, "")}
                                   </a>
                                 </div>

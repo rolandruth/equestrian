@@ -1502,8 +1502,15 @@ export default function HomePage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full space-y-14">
         <PremiumSpotlightSection />
-        <HomeSearchSection />
-        <AdSlot placement="homepage" className="max-w-2xl mx-auto" />
+        <div className="flex flex-col md:flex-row gap-8 items-start">
+          <div className="flex-1 min-w-0">
+            <HomeSearchSection />
+            <AdSlot placement="homepage" className="mt-8" />
+          </div>
+          <div className="w-full md:w-64 flex-shrink-0">
+            <AdSlot placement="sidebar" />
+          </div>
+        </div>
         {nonHeroSections.map(s => renderSection(s))}
       </div>
     </div>

@@ -499,7 +499,18 @@ export default function BrowsePage() {
               ) : (
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {entriesData?.entries.map(entry => renderEntryCard(entry))}
+                    {entriesData?.entries.flatMap((entry, i) => {
+                      const card = renderEntryCard(entry);
+                      if ((i + 1) % 6 === 0 && i < (entriesData.entries.length - 1)) {
+                        return [
+                          card,
+                          <div key={`ad-${i}`} className="col-span-1 md:col-span-2 lg:col-span-3">
+                            <AdSlot placement="browse_inline" />
+                          </div>,
+                        ];
+                      }
+                      return [card];
+                    })}
                   </div>
                   {entriesData && entriesData.totalPages > 1 && (
                     <Pagination>

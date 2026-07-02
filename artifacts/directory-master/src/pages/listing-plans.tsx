@@ -116,17 +116,6 @@ export default function ListingPlansPage() {
         ))}
       </div>
 
-      {/* Bottom note */}
-      <div className="text-center bg-gray-50 dark:bg-gray-900 border rounded-xl p-8">
-        <h3 className="font-semibold text-lg mb-2">Not sure which plan is right for you?</h3>
-        <p className="text-muted-foreground text-sm mb-5">
-          Reach out and we'll help you pick the best fit for your business size and goals.
-          All paid plans include a free 7-day trial.
-        </p>
-        <Link href="/contact">
-          <Button variant="outline">Talk to Us</Button>
-        </Link>
-      </div>
     </div>
   );
 }

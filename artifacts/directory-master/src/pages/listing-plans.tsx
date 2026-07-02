@@ -68,6 +68,8 @@ const plans: {
   },
 ];
 
+const UPGRADE_SUCCESS_MESSAGE = "saddleup:listing-upgrade-success";
+
 export default function ListingPlansPage() {
   const { data: settings } = useGetPublicSettings();
   const siteName = settings?.siteTitle || "SaddleUpGuide";
@@ -79,11 +81,59 @@ export default function ListingPlansPage() {
   const [selectedEntry, setSelectedEntry] = useState<EntryResult | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmedUpgrade, setConfirmedUpgrade] = useState<{ plan: PlanKey; entry: string } | null>(null);
+  const [checkoutWindowRef, setCheckoutWindowRef] = useState<Window | null>(null);
 
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const successPlan = params.get("success") === "1" ? (params.get("plan") as PlanKey | null) : null;
   const successEntry = params.get("entry");
   const canceled = params.get("canceled") === "1";
+  const isCheckoutPopup = typeof window !== "undefined" && window.opener != null;
+
+  // This page is also rendered inside the popup tab after Stripe redirects back to
+  // the success_url. If we're in that popup, notify the original tab and close
+  // ourselves instead of leaving the user stranded on an orphaned tab.
+  useEffect(() => {
+    if (!successPlan || !isCheckoutPopup) return;
+    try {
+      window.opener?.postMessage(
+        { type: UPGRADE_SUCCESS_MESSAGE, plan: successPlan, entry: successEntry },
+        window.location.origin
+      );
+    } catch {
+      // ignore — opener may be unavailable/cross-origin
+    }
+    const timer = setTimeout(() => window.close(), 1800);
+    return () => clearTimeout(timer);
+  }, [successPlan, isCheckoutPopup, successEntry]);
+
+  // Listen for the popup's success notification so the original tab updates
+  // itself even though the browser navigated the *popup*, not this page.
+  useEffect(() => {
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== UPGRADE_SUCCESS_MESSAGE) return;
+      setConfirmedUpgrade({ plan: event.data.plan, entry: event.data.entry ?? "" });
+      setCheckoutWindowRef(null);
+      closePicker();
+    }
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
+  // If the user closes the checkout tab manually without completing payment,
+  // stop showing the "processing" state on this tab so they aren't stuck.
+  useEffect(() => {
+    if (!checkoutWindowRef) return;
+    const interval = setInterval(() => {
+      if (checkoutWindowRef.closed) {
+        setCheckingOut(false);
+        setCheckoutWindowRef(null);
+        clearInterval(interval);
+      }
+    }, 500);
+    return () => clearInterval(interval);
+  }, [checkoutWindowRef]);
 
   useEffect(() => {
     if (!pickerPlan) return;
@@ -140,11 +190,14 @@ export default function ListingPlansPage() {
 
       if (checkoutWindow) {
         checkoutWindow.location.href = data.url;
+        // Keep a reference so we can detect when the tab closes/completes and
+        // stop showing "processing" on this tab — the user stays here the whole time.
+        setCheckoutWindowRef(checkoutWindow);
       } else {
         // Popup was blocked — fall back to a same-tab redirect.
         window.location.href = data.url;
+        setCheckingOut(false);
       }
-      setCheckingOut(false);
     } catch (err: any) {
       checkoutWindow?.close();
       setError(err.message || "Something went wrong. Please try again.");
@@ -154,6 +207,26 @@ export default function ListingPlansPage() {
 
   if (successPlan) {
     const item = plans.find((p) => p.key === successPlan);
+
+    // This is the checkout popup tab landing on the Stripe success_url — we've
+    // already notified the original tab and are about to auto-close, so show a
+    // brief "you're done, closing" state instead of the full success screen.
+    if (isCheckoutPopup) {
+      return (
+        <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+          <PartyPopper className="h-14 w-14 text-green-500 mx-auto mb-6" />
+          <h1 className="text-3xl font-bold mb-3">You're upgraded!</h1>
+          <p className="text-muted-foreground text-base mb-2">
+            {successEntry ? <strong>{successEntry}</strong> : "Your listing"} is now on the{" "}
+            <strong>{item?.name ?? successPlan}</strong> plan.
+          </p>
+          <p className="text-sm text-muted-foreground mt-6">
+            This tab will close automatically — you can also close it yourself.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-2xl mx-auto px-4 py-24 text-center">
         <PartyPopper className="h-14 w-14 text-green-500 mx-auto mb-6" />
@@ -183,6 +256,16 @@ export default function ListingPlansPage() {
       {canceled && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 mb-8 max-w-3xl mx-auto">
           Checkout was canceled — your card was not charged.
+        </div>
+      )}
+
+      {confirmedUpgrade && (
+        <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 px-4 py-3 text-sm text-green-800 dark:text-green-300 mb-8 max-w-3xl mx-auto flex items-center gap-2">
+          <PartyPopper className="h-4 w-4 shrink-0" />
+          <span>
+            {confirmedUpgrade.entry ? <strong>{confirmedUpgrade.entry}</strong> : "Your listing"} is now on the{" "}
+            <strong>{plans.find((p) => p.key === confirmedUpgrade.plan)?.name ?? confirmedUpgrade.plan}</strong> plan!
+          </span>
         </div>
       )}
 

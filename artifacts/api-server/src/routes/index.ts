@@ -13,6 +13,7 @@ import storageRouter from "./storage.js";
 import builderRouter from "./builderRoute.js";
 import contactsRouter from "./contactsRoute.js";
 import adsRouter from "./adsRoute.js";
+import stripeRouter from "./stripeRoute.js";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(storageRouter);
 router.use("/builder", builderRouter);
 router.use("/contacts", contactsRouter);
 router.use("/ads", adsRouter);
+router.use("/stripe", stripeRouter);
 
 export default router;

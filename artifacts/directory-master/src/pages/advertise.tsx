@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import { useGetPublicSettings } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, CheckCircle2, XCircle, Megaphone, ImageIcon } from "lucide-react";
+import { CheckCircle2, XCircle, Megaphone, ImageIcon, Loader2, PartyPopper } from "lucide-react";
 
 type Availability = { placement: string; available: boolean };
 
@@ -51,6 +52,13 @@ export default function AdvertisePage() {
   const { data: settings } = useGetPublicSettings();
   const siteName = (settings as any)?.siteTitle || "SaddleUpGuide";
   const [availability, setAvailability] = useState<Availability[] | null>(null);
+  const [loadingPlacement, setLoadingPlacement] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [location] = useLocation();
+
+  const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const successPlacement = params.get("success") === "1" ? params.get("placement") : null;
+  const canceled = params.get("canceled") === "1";
 
   useEffect(() => {
     fetch("/api/ads/availability")
@@ -65,7 +73,45 @@ export default function AdvertisePage() {
   const availableCount = Object.values(availMap).filter(Boolean).length;
   const allSoldOut = availability !== null && availableCount === 0;
 
-  const contactHref = "mailto:advertise@saddleupguide.com";
+  async function handleCheckout(placement: string) {
+    setLoadingPlacement(placement);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ placement }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Checkout failed");
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.");
+      setLoadingPlacement(null);
+    }
+  }
+
+  if (successPlacement) {
+    const item = PLACEMENTS.find((p) => p.key === successPlacement);
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+        <PartyPopper className="h-14 w-14 text-green-500 mx-auto mb-6" />
+        <h1 className="text-3xl font-bold mb-3">You're live!</h1>
+        <p className="text-muted-foreground text-base mb-2">
+          Your <strong>{item?.label ?? successPlacement}</strong> ad has been confirmed.
+          Send your image to <a href="mailto:advertise@saddleupguide.com" className="underline">advertise@saddleupguide.com</a> and we'll get it live within 24 hours.
+        </p>
+        {item && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Required image size: <span className="font-mono font-semibold">{item.size}</span>
+          </p>
+        )}
+        <Button className="mt-8" onClick={() => window.location.href = "/advertise"}>
+          Back to Advertise
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -84,6 +130,18 @@ export default function AdvertisePage() {
         </p>
       </div>
 
+      {canceled && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 mb-8">
+          Checkout was canceled — your card was not charged.
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 mb-8">
+          {error}
+        </div>
+      )}
+
       {/* Sold-out state */}
       {allSoldOut ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-10 text-center mb-10">
@@ -96,6 +154,7 @@ export default function AdvertisePage() {
           <div className="grid gap-5 mb-10">
             {PLACEMENTS.map((p) => {
               const isAvailable = availability === null ? null : (availMap[p.key] ?? true);
+              const isLoading = loadingPlacement === p.key;
               return (
                 <div
                   key={p.key}
@@ -130,9 +189,22 @@ export default function AdvertisePage() {
                       {isAvailable === null ? (
                         <Badge variant="outline" className="text-xs">Checking…</Badge>
                       ) : isAvailable ? (
-                        <div className="flex items-center gap-1.5">
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          <span className="text-sm font-medium text-green-600 dark:text-green-400">Available</span>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="text-sm font-medium text-green-600 dark:text-green-400">Available</span>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleCheckout(p.key)}
+                            disabled={loadingPlacement !== null}
+                          >
+                            {isLoading ? (
+                              <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Processing…</>
+                            ) : (
+                              "Buy Now"
+                            )}
+                          </Button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5">
@@ -148,37 +220,35 @@ export default function AdvertisePage() {
           </div>
 
           {/* Bundle — only shown when all 4 slots are free */}
-          {availableCount === 4 && <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 mb-10">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <h3 className="font-semibold text-lg mb-1">Directory Sponsor Bundle</h3>
-                <p className="text-sm text-muted-foreground">
-                  All four placements — homepage banner, browse sidebar, between-card ad, and entry
-                  page — for one flat monthly rate. Maximum coverage, best value.
-                </p>
-              </div>
-              <div className="text-right flex-shrink-0">
-                <p className="text-3xl font-bold">${BUNDLE_PRICE}</p>
-                <p className="text-xs text-muted-foreground">per month — saves $67</p>
+          {availableCount === 4 && (
+            <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 mb-10">
+              <div className="flex items-center justify-between gap-4 flex-wrap">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg mb-1">Directory Sponsor Bundle</h3>
+                  <p className="text-sm text-muted-foreground">
+                    All four placements — homepage banner, browse sidebar, between-card ad, and entry
+                    page — for one flat monthly rate. Maximum coverage, best value.
+                  </p>
+                </div>
+                <div className="flex flex-col items-end gap-3 flex-shrink-0">
+                  <div className="text-right">
+                    <p className="text-3xl font-bold">${BUNDLE_PRICE}</p>
+                    <p className="text-xs text-muted-foreground">per month — saves $67</p>
+                  </div>
+                  <Button
+                    onClick={() => handleCheckout("bundle")}
+                    disabled={loadingPlacement !== null}
+                  >
+                    {loadingPlacement === "bundle" ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
+                    ) : (
+                      "Buy Bundle"
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>}
-
-          {/* CTA */}
-          <div className="rounded-xl border bg-muted/30 p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">Ready to advertise?</h2>
-            <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
-              Email us with the placement you'd like and a bit about your business.
-              We'll confirm availability, invoice you, and get your ad live within 24 hours.
-            </p>
-            <Button size="lg" asChild>
-              <a href={contactHref}>
-                <Mail className="h-4 w-4 mr-2" />
-                Email Us to Get Started
-              </a>
-            </Button>
-            <p className="text-xs text-muted-foreground mt-4">advertise@saddleupguide.com</p>
-          </div>
+          )}
         </>
       )}
     </div>

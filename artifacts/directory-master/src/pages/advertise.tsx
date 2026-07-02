@@ -88,11 +88,7 @@ export default function AdvertisePage() {
       {allSoldOut ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-10 text-center mb-10">
           <XCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">All Ad Spots Are Sold Out This Month</h2>
-          <p className="text-muted-foreground text-sm max-w-md mx-auto">
-            We're currently at full capacity. Get in touch and we'll add you to our waitlist —
-            you'll be first to know when a spot opens up.
-          </p>
+          <h2 className="text-xl font-semibold">All Ad Spots Are Sold Out This Month</h2>
         </div>
       ) : (
         <>

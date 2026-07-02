@@ -251,7 +251,7 @@ export default function BrowsePage() {
             </a>
           </div>
         )}
-        {(entry.website || (entry.customFields as any)?.website) && (() => {
+        {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {
           const url = entry.website || (entry.customFields as any)?.website;
           return (
             <div className="flex items-center text-sm text-muted-foreground">

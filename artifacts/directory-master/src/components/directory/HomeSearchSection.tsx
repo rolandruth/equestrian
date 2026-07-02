@@ -372,7 +372,7 @@ export function HomeSearchSection() {
                               </a>
                             </div>
                           )}
-                          {(entry.website || (entry.customFields as any)?.website) && (() => {
+                          {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {
                             const url = entry.website || (entry.customFields as any)?.website;
                             return (
                               <div className="flex items-center text-xs text-muted-foreground">
@@ -450,7 +450,7 @@ export function HomeSearchSection() {
                                 </a>
                               </div>
                             )}
-                            {(entry.website || (entry.customFields as any)?.website) && (() => {
+                            {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {
                               const url = entry.website || (entry.customFields as any)?.website;
                               return (
                                 <div className="flex items-center text-xs text-muted-foreground">

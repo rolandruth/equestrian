@@ -5,24 +5,6 @@ import { Button } from "@/components/ui/button";
 
 const plans = [
   {
-    name: "Free Listing",
-    price: null,
-    priceLabel: "Free",
-    description: "Get your equestrian business in front of local riders at no cost.",
-    badge: null,
-    highlight: false,
-    features: [
-      "Basic business information",
-      "One photo",
-      "Contact information",
-      "Searchable in directory",
-      "Listed in your category",
-    ],
-    cta: "Get Listed Free",
-    ctaHref: "/contact",
-    ctaVariant: "outline" as const,
-  },
-  {
     name: "Featured Listing",
     price: "$29–99",
     priceLabel: "$29–99/mo",

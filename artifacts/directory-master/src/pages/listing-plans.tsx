@@ -31,6 +31,7 @@ const plans = [
       "Everything in Featured",
       "Additional 5 pictures on detail page",
       "Homepage placement",
+      '"Premium" badge on listing',
     ],
     cta: "Go Premium",
     ctaHref: "/advertise",

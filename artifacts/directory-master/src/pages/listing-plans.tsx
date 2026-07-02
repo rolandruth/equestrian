@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 const plans = [
   {
     name: "Featured Listing",
-    price: "$29–99",
-    priceLabel: "$29–99/mo",
+    price: "$39",
+    priceLabel: "$39/mo",
     description: "Stand out from the crowd with priority placement and richer profile options.",
     badge: "Most Popular",
     highlight: true,
@@ -22,8 +22,8 @@ const plans = [
   },
   {
     name: "Premium Listing",
-    price: "$149–299",
-    priceLabel: "$149–299/mo",
+    price: "$150",
+    priceLabel: "$150/mo",
     description: "Maximum exposure — own your category and dominate local search.",
     badge: "Best Value",
     highlight: false,

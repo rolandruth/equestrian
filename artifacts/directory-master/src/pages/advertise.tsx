@@ -89,16 +89,10 @@ export default function AdvertisePage() {
         <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-10 text-center mb-10">
           <XCircle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">All Ad Spots Are Sold Out This Month</h2>
-          <p className="text-muted-foreground text-sm mb-6 max-w-md mx-auto">
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
             We're currently at full capacity. Get in touch and we'll add you to our waitlist —
             you'll be first to know when a spot opens up.
           </p>
-          <Button asChild>
-            <a href={contactHref}>
-              <Mail className="h-4 w-4 mr-2" />
-              Join the Waitlist
-            </a>
-          </Button>
         </div>
       ) : (
         <>

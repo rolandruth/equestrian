@@ -4,7 +4,9 @@ import {
   useGetSettings, 
   useUpdateSettings,
   getGetSettingsQueryKey,
-  getGetPublicSettingsQueryKey
+  getGetPublicSettingsQueryKey,
+  useSendSmtpTestEmail,
+  useGetCurrentUser,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -15,8 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail, Send } from "lucide-react";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
 import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
 
@@ -268,6 +271,8 @@ function SmtpSettingsCard() {
   const queryClient = useQueryClient();
   const { data: settings, isLoading } = useGetSettings();
   const updateMutation = useUpdateSettings();
+  const sendTestMutation = useSendSmtpTestEmail();
+  const { data: currentUser } = useGetCurrentUser();
 
   const [editing, setEditing] = useState(false);
   const [host, setHost] = useState("");
@@ -276,6 +281,9 @@ function SmtpSettingsCard() {
   const [from, setFrom] = useState("");
   const [pass, setPass] = useState("");
   const [saving, setSaving] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testTo, setTestTo] = useState("");
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
 
   const s = settings as any;
   const configured: boolean = !!(s?.smtpHost && s?.smtpPort && s?.smtpUser && s?.smtpPassSet);
@@ -309,6 +317,38 @@ function SmtpSettingsCard() {
       toast({ title: "Failed to save email settings", description: e.message, variant: "destructive" });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openTestDialog = () => {
+    setTestTo((currentUser as any)?.email ?? "");
+    setTestDialogOpen(true);
+  };
+
+  const handleSendTest = async () => {
+    setTestingEmail(true);
+    try {
+      const result = await sendTestMutation.mutateAsync({
+        data: { to: testTo.trim() || null },
+      });
+      if ((result as any)?.success) {
+        toast({ title: "Test email sent", description: (result as any).message });
+        setTestDialogOpen(false);
+      } else {
+        toast({
+          title: "Test email failed",
+          description: (result as any)?.message ?? "Could not send test email",
+          variant: "destructive",
+        });
+      }
+    } catch (e: any) {
+      toast({
+        title: "Test email failed",
+        description: e?.message ?? "Could not send test email",
+        variant: "destructive",
+      });
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -358,6 +398,12 @@ function SmtpSettingsCard() {
                 </p>
               )}
             </div>
+            {configured && (
+              <Button variant="outline" size="sm" onClick={openTestDialog} className="gap-1.5">
+                <Send className="h-3.5 w-3.5" />
+                Send Test Email
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
               <Pencil className="h-3.5 w-3.5" />
               {configured ? "Edit" : "Set Up"}
@@ -417,6 +463,35 @@ function SmtpSettingsCard() {
           </div>
         )}
       </CardContent>
+
+      <Dialog open={testDialogOpen} onOpenChange={setTestDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Test Email</DialogTitle>
+            <DialogDescription>
+              Sends a short test message using your saved SMTP settings so you can confirm they work before relying on them for reminder emails.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">Send to</label>
+            <Input
+              type="email"
+              placeholder="you@example.com"
+              value={testTo}
+              onChange={e => setTestTo(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setTestDialogOpen(false)} disabled={testingEmail}>
+              Cancel
+            </Button>
+            <Button onClick={handleSendTest} disabled={testingEmail || !testTo.trim()} className="gap-1.5">
+              {testingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Send Test Email
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

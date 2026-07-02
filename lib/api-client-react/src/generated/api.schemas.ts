@@ -318,6 +318,19 @@ export interface DirectorySettings {
   smtpPassHint?: string | null;
 }
 
+export interface SmtpTestBody {
+  /**
+   * Address to send the test email to. Defaults to the requesting admin's own email if omitted.
+   * @nullable
+   */
+  to?: string | null;
+}
+
+export interface SmtpTestResult {
+  success: boolean;
+  message: string;
+}
+
 export interface UpdateSettingsBody {
   /** @nullable */
   siteTitle?: string | null;

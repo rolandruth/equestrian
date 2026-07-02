@@ -582,6 +582,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/DirectorySettings"
 
+  /settings/smtp-test:
+    post:
+      operationId: sendSmtpTestEmail
+      tags: [settings]
+      summary: Send a test email using the stored SMTP settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SmtpTestBody"
+      responses:
+        "200":
+          description: Test email result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SmtpTestResult"
+        "400":
+          description: SMTP not configured or invalid request
+
   /users:
     get:
       operationId: listUsers
@@ -1272,6 +1293,22 @@ components:
         smtpPassHint:
           type: ["string", "null"]
       required: [id, siteTitle, installed, updatedAt]
+
+    SmtpTestBody:
+      type: object
+      properties:
+        to:
+          type: ["string", "null"]
+          description: Address to send the test email to. Defaults to the requesting admin's own email if omitted.
+
+    SmtpTestResult:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success, message]
 
     UpdateSettingsBody:
       type: object

@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { directorySettings } from "@workspace/db";
+import { directorySettings, users } from "@workspace/db";
 import { requireAdmin } from "../middlewares/auth.js";
 import { eq } from "drizzle-orm";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
+import { sendMailWithResult } from "../lib/mailer.js";
 
 const router = Router();
 
@@ -119,6 +120,60 @@ router.patch("/", requireAdmin, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update settings" });
+  }
+});
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Basic per-admin throttle so this endpoint can't be hammered to spam an
+// inbox or exhaust the configured mail provider's quota.
+const lastTestSentAt = new Map<number, number>();
+const TEST_EMAIL_COOLDOWN_MS = 30_000;
+
+router.post("/smtp-test", requireAdmin, async (req, res) => {
+  try {
+    const userId = (req as any).userId as number;
+    const now = Date.now();
+    const last = lastTestSentAt.get(userId);
+    if (last && now - last < TEST_EMAIL_COOLDOWN_MS) {
+      res.status(429).json({ error: "Please wait a moment before sending another test email" });
+      return;
+    }
+
+    const { to } = req.body as { to?: string | null };
+    let recipient = typeof to === "string" ? to.trim() : "";
+    if (!recipient) {
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      recipient = user?.email ?? "";
+    }
+    if (!recipient || !EMAIL_RE.test(recipient)) {
+      res.status(400).json({ error: "A valid recipient email is required" });
+      return;
+    }
+
+    const [settings] = await db.select().from(directorySettings).limit(1);
+    if (!settings?.smtpHost || !settings?.smtpPort || !settings?.smtpUser || !settings?.smtpPass) {
+      res.status(400).json({ error: "SMTP is not configured yet — save your settings first" });
+      return;
+    }
+
+    lastTestSentAt.set(userId, now);
+
+    const siteTitle = settings.siteTitle || "Directory Master";
+    const result = await sendMailWithResult({
+      to: recipient,
+      subject: `${siteTitle}: SMTP test email`,
+      text: `This is a test email from ${siteTitle} confirming your SMTP settings are working correctly.`,
+      html: `<p>This is a test email from <strong>${siteTitle}</strong> confirming your SMTP settings are working correctly.</p>`,
+    });
+
+    if (!result.success) {
+      res.status(200).json({ success: false, message: result.error ?? "Failed to send test email" });
+      return;
+    }
+    res.json({ success: true, message: `Test email sent to ${recipient}` });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to send test email" });
   }
 });
 

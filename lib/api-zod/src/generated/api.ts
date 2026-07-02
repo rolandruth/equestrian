@@ -585,6 +585,23 @@ export const UpdateSettingsResponse = zod.object({
 });
 
 /**
+ * @summary Send a test email using the stored SMTP settings
+ */
+export const SendSmtpTestEmailBody = zod.object({
+  to: zod
+    .string()
+    .nullish()
+    .describe(
+      "Address to send the test email to. Defaults to the requesting admin's own email if omitted.",
+    ),
+});
+
+export const SendSmtpTestEmailResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string(),
+});
+
+/**
  * @summary List all users
  */
 export const ListUsersResponseItem = zod.object({

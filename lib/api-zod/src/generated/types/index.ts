@@ -49,6 +49,8 @@ export * from "./reviewListResponse";
 export * from "./ridingTypeCount";
 export * from "./setupResult";
 export * from "./setupStatus";
+export * from "./smtpTestBody";
+export * from "./smtpTestResult";
 export * from "./successResponse";
 export * from "./togglePublishBody";
 export * from "./updateCategoryBody";

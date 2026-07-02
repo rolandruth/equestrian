@@ -49,6 +49,8 @@ import type {
   ReviewListResponse,
   SetupResult,
   SetupStatus,
+  SmtpTestBody,
+  SmtpTestResult,
   SuccessResponse,
   TogglePublishBody,
   UpdateCategoryBody,
@@ -2411,6 +2413,92 @@ export const useUpdateSettings = <
   TContext
 > => {
   return useMutation(getUpdateSettingsMutationOptions(options));
+};
+
+/**
+ * @summary Send a test email using the stored SMTP settings
+ */
+export const getSendSmtpTestEmailUrl = () => {
+  return `/api/settings/smtp-test`;
+};
+
+export const sendSmtpTestEmail = async (
+  smtpTestBody: SmtpTestBody,
+  options?: RequestInit,
+): Promise<SmtpTestResult> => {
+  return customFetch<SmtpTestResult>(getSendSmtpTestEmailUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(smtpTestBody),
+  });
+};
+
+export const getSendSmtpTestEmailMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendSmtpTestEmail>>,
+    TError,
+    { data: BodyType<SmtpTestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendSmtpTestEmail>>,
+  TError,
+  { data: BodyType<SmtpTestBody> },
+  TContext
+> => {
+  const mutationKey = ["sendSmtpTestEmail"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendSmtpTestEmail>>,
+    { data: BodyType<SmtpTestBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendSmtpTestEmail(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendSmtpTestEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendSmtpTestEmail>>
+>;
+export type SendSmtpTestEmailMutationBody = BodyType<SmtpTestBody>;
+export type SendSmtpTestEmailMutationError = ErrorType<void>;
+
+/**
+ * @summary Send a test email using the stored SMTP settings
+ */
+export const useSendSmtpTestEmail = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendSmtpTestEmail>>,
+    TError,
+    { data: BodyType<SmtpTestBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendSmtpTestEmail>>,
+  TError,
+  { data: BodyType<SmtpTestBody> },
+  TContext
+> => {
+  return useMutation(getSendSmtpTestEmailMutationOptions(options));
 };
 
 /**

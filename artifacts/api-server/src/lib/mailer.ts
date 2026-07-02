@@ -53,8 +53,20 @@ async function getTransport(): Promise<Transporter | null> {
 }
 
 export async function sendMail(options: { to: string; subject: string; html: string; text: string }): Promise<boolean> {
+  const result = await sendMailWithResult(options);
+  return result.success;
+}
+
+// Like sendMail, but surfaces the underlying error message instead of just a
+// boolean, so callers (e.g. the SMTP test endpoint) can show admins why a
+// send failed instead of a generic failure.
+export async function sendMailWithResult(
+  options: { to: string; subject: string; html: string; text: string },
+): Promise<{ success: boolean; error?: string }> {
   const transport = await getTransport();
-  if (!transport || !cachedTransport) return false;
+  if (!transport || !cachedTransport) {
+    return { success: false, error: "SMTP is not configured (Settings > Email)" };
+  }
 
   try {
     await transport.sendMail({
@@ -64,9 +76,10 @@ export async function sendMail(options: { to: string; subject: string; html: str
       html: options.html,
       text: options.text,
     });
-    return true;
+    return { success: true };
   } catch (err) {
     logger.error({ err, to: options.to }, "Failed to send email");
-    return false;
+    const error = err instanceof Error ? err.message : "Unknown error sending email";
+    return { success: false, error };
   }
 }

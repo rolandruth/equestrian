@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useGetPublicSettings } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Mail, CheckCircle2, XCircle, Megaphone } from "lucide-react";
+import { Mail, CheckCircle2, XCircle, Megaphone, ImageIcon } from "lucide-react";
 
 type Availability = { placement: string; available: boolean };
 
@@ -116,7 +116,11 @@ export default function AdvertisePage() {
                       <p className="text-sm text-muted-foreground leading-relaxed mb-2">
                         {p.description}
                       </p>
-                      <p className="text-xs text-muted-foreground/70 font-mono">{p.size}</p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <ImageIcon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground font-medium">Required image size:</span>
+                        <span className="text-xs font-mono font-semibold">{p.size}</span>
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-3 flex-shrink-0">
                       <div className="text-right">

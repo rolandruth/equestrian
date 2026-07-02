@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import { useGetPublicSettings } from "@workspace/api-client-react";
 import { useBusinessAuth } from "@workspace/replit-auth-web";
-import { Check, Star, Zap, Loader2, PartyPopper, Search, LogIn } from "lucide-react";
+import { Check, Star, Zap, Loader2, PartyPopper, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,14 +11,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 
 type PlanKey = "featured" | "premium";
 
@@ -87,12 +80,11 @@ export default function ListingPlansPage() {
   const { data: settings } = useGetPublicSettings();
   const siteName = settings?.siteTitle || "SaddleUpGuide";
   const bizAuth = useBusinessAuth();
+  const [, setLocation] = useLocation();
 
-  const [preselectedEntry, setPreselectedEntry] = useState<EntryResult | null>(null);
   const [pickerPlan, setPickerPlan] = useState<PlanKey | null>(null);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<EntryResult[]>([]);
-  const [searching, setSearching] = useState(false);
+  const [myListings, setMyListings] = useState<EntryResult[] | null>(null);
+  const [loadingListings, setLoadingListings] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<EntryResult | null>(null);
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,28 +102,38 @@ export default function ListingPlansPage() {
   const isCheckoutPopup = typeof window !== "undefined" && window.name === CHECKOUT_POPUP_WINDOW_NAME;
   const preselectedEntryId = params.get("entryId");
 
-  // If we arrived from the "Buy Featured/Premium" buttons on the My Listings
-  // dashboard, preload that entry so the picker can skip the search step.
+  // Plan purchases only flow through listings the signed-in owner has already
+  // claimed — load their claimed listings once logged in so the picker can
+  // offer a choice among those (never an open search of every business).
   useEffect(() => {
-    if (!preselectedEntryId || !bizAuth.isAuthenticated) return;
+    if (!bizAuth.isAuthenticated) {
+      setMyListings(null);
+      return;
+    }
     let cancelled = false;
-    fetch(`/api/public/entries/${preselectedEntryId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((entry) => {
-        if (!cancelled && entry) {
-          setPreselectedEntry({
-            id: entry.id,
-            title: entry.title,
-            category: entry.category,
-            location: entry.location,
-          });
-        }
+    setLoadingListings(true);
+    fetch("/api/business/my-listings", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : { listings: [] }))
+      .then((data) => {
+        if (cancelled) return;
+        const entries: EntryResult[] = (data.listings ?? []).map((l: any) => ({
+          id: l.entry.id,
+          title: l.entry.title,
+          category: l.entry.category,
+          location: l.entry.location,
+        }));
+        setMyListings(entries);
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) setMyListings([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingListings(false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [preselectedEntryId, bizAuth.isAuthenticated]);
+  }, [bizAuth.isAuthenticated]);
 
   // This page is also rendered inside the popup tab after Stripe redirects back to
   // the success_url. If we're in that popup, just close ourselves — the original
@@ -198,40 +200,24 @@ export default function ListingPlansPage() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (!pickerPlan) return;
-    if (query.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    setSearching(true);
-    const handle = setTimeout(() => {
-      fetch(`/api/public/entries?search=${encodeURIComponent(query.trim())}&limit=8`)
-        .then((r) => r.json())
-        .then((data) => setResults(data.entries ?? []))
-        .catch(() => setResults([]))
-        .finally(() => setSearching(false));
-    }, 300);
-    return () => clearTimeout(handle);
-  }, [query, pickerPlan]);
-
   function openPicker(plan: PlanKey) {
     if (!bizAuth.isAuthenticated) {
       bizAuth.login(`/listing-plans`);
       return;
     }
     setPickerPlan(plan);
-    setQuery("");
-    setResults([]);
-    setSelectedEntry(preselectedEntry ?? null);
     setError(null);
+    // If we arrived via a "Buy Featured/Premium" link from the dashboard for a
+    // specific owned listing, skip straight to the confirm step for it.
+    const preselected = preselectedEntryId
+      ? (myListings ?? []).find((e) => String(e.id) === preselectedEntryId) ?? null
+      : null;
+    setSelectedEntry(preselected);
   }
 
   function closePicker() {
     setPickerPlan(null);
     setSelectedEntry(null);
-    setQuery("");
-    setResults([]);
     setError(null);
   }
 
@@ -255,19 +241,10 @@ export default function ListingPlansPage() {
     }
 
     try {
-      // Self-serve claim: if this listing isn't owned yet, claim it for the
-      // signed-in business owner before proceeding to checkout. Claiming is a
-      // no-op if the caller already owns it, and fails with a clear error if
-      // someone else already claimed it first.
-      const claimRes = await fetch("/api/business/claim", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entryId: selectedEntry.id }),
-      });
-      const claimData = await claimRes.json();
-      if (!claimRes.ok) throw new Error(claimData.error || "Unable to claim this listing");
-
+      // No claim call here — plan purchases only ever run against listings the
+      // owner has already claimed (selectedEntry always comes from
+      // /api/business/my-listings). The server independently re-verifies
+      // ownership before creating the Stripe session.
       const res = await fetch("/api/stripe/checkout-plan", {
         method: "POST",
         credentials: "include",
@@ -434,50 +411,52 @@ export default function ListingPlansPage() {
               {pickerPlan === "featured" ? "Get Featured" : "Go Premium"}
             </DialogTitle>
             <DialogDescription>
-              Search for your business listing to claim and upgrade it.
+              Choose which of your claimed listings to upgrade.
             </DialogDescription>
           </DialogHeader>
 
           {!selectedEntry ? (
-            <Command shouldFilter={false}>
-              <CommandInput
-                placeholder="Search your business by name…"
-                value={query}
-                onValueChange={setQuery}
-              />
-              <CommandList>
-                {query.trim().length < 2 ? (
-                  <CommandEmpty>Type at least 2 characters to search.</CommandEmpty>
-                ) : searching ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Searching…
-                  </div>
-                ) : results.length === 0 ? (
-                  <CommandEmpty>No matching listings found.</CommandEmpty>
-                ) : (
-                  <CommandGroup>
-                    {results.map((entry) => (
-                      <CommandItem
-                        key={entry.id}
-                        value={String(entry.id)}
-                        onSelect={() => setSelectedEntry(entry)}
-                        className="cursor-pointer"
-                      >
-                        <Search className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                        <div className="flex flex-col">
-                          <span className="font-medium">{entry.title}</span>
-                          {(entry.category || entry.location) && (
-                            <span className="text-xs text-muted-foreground">
-                              {[entry.category, entry.location].filter(Boolean).join(" · ")}
-                            </span>
-                          )}
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
+            <div className="p-4 pt-2">
+              {loadingListings ? (
+                <div className="py-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading your listings…
+                </div>
+              ) : !myListings || myListings.length === 0 ? (
+                <div className="py-6 text-center">
+                  <Building2 className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    You haven't claimed a listing yet. Claim your business from your dashboard first,
+                    then come back here to upgrade it.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      closePicker();
+                      setLocation("/business/dashboard");
+                    }}
+                  >
+                    Go to My Listings
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-72 overflow-y-auto">
+                  {myListings.map((entry) => (
+                    <button
+                      key={entry.id}
+                      onClick={() => setSelectedEntry(entry)}
+                      className="w-full text-left rounded-lg border px-3 py-2.5 hover:bg-muted/60 transition-colors flex flex-col"
+                    >
+                      <span className="font-medium text-sm">{entry.title}</span>
+                      {(entry.category || entry.location) && (
+                        <span className="text-xs text-muted-foreground">
+                          {[entry.category, entry.location].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="p-4">
               <div className="rounded-lg border p-4 mb-4">

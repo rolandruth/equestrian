@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useBusinessAuth } from "@workspace/replit-auth-web";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Star, Zap, Building2, LogOut, ExternalLink } from "lucide-react";
+import { Loader2, Star, Zap, Building2, LogOut, ExternalLink, Search, PlusCircle } from "lucide-react";
 
 type Entry = {
   id: number;
@@ -35,6 +36,12 @@ export default function BusinessDashboardPage() {
   const [cancelingId, setCancelingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [claimQuery, setClaimQuery] = useState("");
+  const [claimResults, setClaimResults] = useState<Entry[]>([]);
+  const [claimSearching, setClaimSearching] = useState(false);
+  const [claimingId, setClaimingId] = useState<number | null>(null);
+  const [claimError, setClaimError] = useState<string | null>(null);
+
   const loadListings = useCallback(async () => {
     setLoading(true);
     try {
@@ -53,6 +60,49 @@ export default function BusinessDashboardPage() {
     if (!bizAuth.isLoading && !bizAuth.isAuthenticated) return;
     if (bizAuth.isAuthenticated) loadListings();
   }, [bizAuth.isAuthenticated, bizAuth.isLoading, loadListings]);
+
+  // Self-serve claim search — restricted server-side to unclaimed, published
+  // listings only, so this can never surface someone else's already-claimed
+  // business.
+  useEffect(() => {
+    if (!bizAuth.isAuthenticated || claimQuery.trim().length < 2) {
+      setClaimResults([]);
+      return;
+    }
+    setClaimSearching(true);
+    const handle = setTimeout(() => {
+      fetch(`/api/business/claimable?search=${encodeURIComponent(claimQuery.trim())}`, {
+        credentials: "include",
+      })
+        .then((r) => (r.ok ? r.json() : { entries: [] }))
+        .then((data) => setClaimResults(data.entries ?? []))
+        .catch(() => setClaimResults([]))
+        .finally(() => setClaimSearching(false));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [claimQuery, bizAuth.isAuthenticated]);
+
+  async function handleClaim(entryId: number) {
+    setClaimingId(entryId);
+    setClaimError(null);
+    try {
+      const res = await fetch("/api/business/claim", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entryId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unable to claim this listing");
+      setClaimQuery("");
+      setClaimResults([]);
+      await loadListings();
+    } catch (err: any) {
+      setClaimError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setClaimingId(null);
+    }
+  }
 
   async function handleCancel(entryId: number) {
     setCancelingId(entryId);
@@ -115,6 +165,75 @@ export default function BusinessDashboardPage() {
           {error}
         </div>
       )}
+
+      <Card className="mb-10">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <PlusCircle className="h-4 w-4" />
+            Claim a Listing
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">
+            Search for your business among unclaimed listings to self-serve claim it — no
+            verification or approval needed.
+          </p>
+          <div className="relative mb-3">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search by business name…"
+              value={claimQuery}
+              onChange={(e) => setClaimQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          {claimError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300 mb-3">
+              {claimError}
+            </div>
+          )}
+
+          {claimQuery.trim().length >= 2 && (
+            claimSearching ? (
+              <div className="py-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Searching…
+              </div>
+            ) : claimResults.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">No unclaimed listings match your search.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {claimResults.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{entry.title}</span>
+                      {(entry.category || entry.location) && (
+                        <span className="text-xs text-muted-foreground">
+                          {[entry.category, entry.location].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleClaim(entry.id)}
+                      disabled={claimingId === entry.id}
+                    >
+                      {claimingId === entry.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        "Claim"
+                      )}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </CardContent>
+      </Card>
 
       {loading ? (
         <div className="flex justify-center py-16">

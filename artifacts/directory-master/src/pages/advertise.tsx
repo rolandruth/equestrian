@@ -143,8 +143,8 @@ export default function AdvertisePage() {
             })}
           </div>
 
-          {/* Bundle */}
-          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 mb-10">
+          {/* Bundle — only shown when all 4 slots are free */}
+          {availableCount === 4 && <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 mb-10">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <h3 className="font-semibold text-lg mb-1">Directory Sponsor Bundle</h3>
@@ -158,7 +158,7 @@ export default function AdvertisePage() {
                 <p className="text-xs text-muted-foreground">per month — saves $67</p>
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* CTA */}
           <div className="rounded-xl border bg-muted/30 p-8 text-center">

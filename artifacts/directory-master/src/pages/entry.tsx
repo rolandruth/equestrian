@@ -1710,12 +1710,12 @@ export default function EntryPage() {
           );
         })()}
 
+        <AdSlot placement="entry_page" className="my-6" />
+
         {/* Reviews section */}
         {!isDemo && entryNumericId && (
           <ReviewsSection entryId={entryNumericId} />
         )}
-
-        <AdSlot placement="entry_page" className="my-6" />
 
         {/* Outside-card sections (Related) — rendered in saved template order */}
         {ts.entry.sections

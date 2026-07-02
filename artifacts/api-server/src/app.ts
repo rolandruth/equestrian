@@ -40,6 +40,7 @@ app.use(cors());
 // body-parser skips the global pass (it checks req._body) once the route-specific one runs.
 // This prevents the 50 MB global limit from accepting oversized import payloads.
 app.use("/api/import/csv", express.json({ limit: "6mb" }));
+app.use("/api/ads/upload-image", express.json({ limit: "6mb" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 

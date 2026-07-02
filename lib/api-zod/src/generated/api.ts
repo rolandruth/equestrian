@@ -227,6 +227,15 @@ export const ListEntriesResponse = zod.object({
       customFields: zod.object({}).passthrough().nullish(),
       sourceCsvRow: zod.string().nullish(),
       published: zod.boolean(),
+      ownerId: zod.string().nullish(),
+      owner: zod
+        .object({
+          id: zod.string(),
+          email: zod.string().nullish(),
+          firstName: zod.string().nullish(),
+          lastName: zod.string().nullish(),
+        })
+        .nullish(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -283,6 +292,15 @@ export const GetEntryResponse = zod.object({
   customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
+  ownerId: zod.string().nullish(),
+  owner: zod
+    .object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+    })
+    .nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -332,6 +350,15 @@ export const UpdateEntryResponse = zod.object({
   customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
+  ownerId: zod.string().nullish(),
+  owner: zod
+    .object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+    })
+    .nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -346,6 +373,45 @@ export const DeleteEntryParams = zod.object({
 export const DeleteEntryResponse = zod.object({
   success: zod.boolean(),
   message: zod.string().nullish(),
+});
+
+/**
+ * @summary Release a listing's claimed owner (admin only)
+ */
+export const ClearEntryOwnerParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const ClearEntryOwnerResponse = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  category: zod.string().nullish(),
+  summary: zod.string().nullish(),
+  description: zod.string().nullish(),
+  contactEmail: zod.string().nullish(),
+  contactPhone: zod.string().nullish(),
+  website: zod.string().nullish(),
+  location: zod.string().nullish(),
+  venue: zod.string().nullish(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
+  tags: zod.string().nullish(),
+  moreDetails: zod.string().nullish(),
+  customFields: zod.object({}).passthrough().nullish(),
+  sourceCsvRow: zod.string().nullish(),
+  published: zod.boolean(),
+  ownerId: zod.string().nullish(),
+  owner: zod
+    .object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+    })
+    .nullish(),
+  createdAt: zod.string(),
+  updatedAt: zod.string(),
 });
 
 /**
@@ -378,6 +444,15 @@ export const ToggleEntryPublishedResponse = zod.object({
   customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
+  ownerId: zod.string().nullish(),
+  owner: zod
+    .object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+    })
+    .nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -655,6 +730,15 @@ export const ListPublicEntriesResponse = zod.object({
       customFields: zod.object({}).passthrough().nullish(),
       sourceCsvRow: zod.string().nullish(),
       published: zod.boolean(),
+      ownerId: zod.string().nullish(),
+      owner: zod
+        .object({
+          id: zod.string(),
+          email: zod.string().nullish(),
+          firstName: zod.string().nullish(),
+          lastName: zod.string().nullish(),
+        })
+        .nullish(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -690,6 +774,15 @@ export const GetPublicEntryResponse = zod.object({
   customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
+  ownerId: zod.string().nullish(),
+  owner: zod
+    .object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+    })
+    .nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -736,6 +829,15 @@ export const GetFeaturedEntriesResponseItem = zod.object({
   customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
+  ownerId: zod.string().nullish(),
+  owner: zod
+    .object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+    })
+    .nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -765,6 +867,15 @@ export const GetRecentEntriesResponseItem = zod.object({
   customFields: zod.object({}).passthrough().nullish(),
   sourceCsvRow: zod.string().nullish(),
   published: zod.boolean(),
+  ownerId: zod.string().nullish(),
+  owner: zod
+    .object({
+      id: zod.string(),
+      email: zod.string().nullish(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+    })
+    .nullish(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });

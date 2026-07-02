@@ -425,6 +425,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /entries/{id}/owner:
+    delete:
+      operationId: clearEntryOwner
+      tags: [entries]
+      summary: Release a listing's claimed owner (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Owner cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Entry"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /entries/{id}/publish:
     patch:
       operationId: toggleEntryPublished
@@ -1054,6 +1079,20 @@ components:
           type: ["string", "null"]
         published:
           type: boolean
+        ownerId:
+          type: ["string", "null"]
+        owner:
+          type: ["object", "null"]
+          properties:
+            id:
+              type: string
+            email:
+              type: ["string", "null"]
+            firstName:
+              type: ["string", "null"]
+            lastName:
+              type: ["string", "null"]
+          required: [id]
         createdAt:
           type: string
         updatedAt:

@@ -1750,6 +1750,90 @@ export const useDeleteEntry = <
 };
 
 /**
+ * @summary Release a listing's claimed owner (admin only)
+ */
+export const getClearEntryOwnerUrl = (id: number) => {
+  return `/api/entries/${id}/owner`;
+};
+
+export const clearEntryOwner = async (
+  id: number,
+  options?: RequestInit,
+): Promise<Entry> => {
+  return customFetch<Entry>(getClearEntryOwnerUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearEntryOwnerMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearEntryOwner>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearEntryOwner>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["clearEntryOwner"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearEntryOwner>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return clearEntryOwner(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearEntryOwnerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearEntryOwner>>
+>;
+
+export type ClearEntryOwnerMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Release a listing's claimed owner (admin only)
+ */
+export const useClearEntryOwner = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearEntryOwner>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearEntryOwner>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getClearEntryOwnerMutationOptions(options));
+};
+
+/**
  * @summary Toggle entry published status
  */
 export const getToggleEntryPublishedUrl = (id: number) => {

@@ -5,6 +5,7 @@ import {
   useCreateEntry, 
   useUpdateEntry,
   useListCategories,
+  useClearEntryOwner,
   getGetEntryQueryKey,
   getListEntriesQueryKey
 } from "@workspace/api-client-react";
@@ -20,8 +21,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ArrowLeft, Save, Settings2 } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Settings2, UserCheck, UserX } from "lucide-react";
 
 const entrySchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -66,6 +77,21 @@ export default function AdminEntryFormPage() {
 
   const createMutation = useCreateEntry();
   const updateMutation = useUpdateEntry();
+  const clearOwnerMutation = useClearEntryOwner();
+  const [showClearOwner, setShowClearOwner] = useState(false);
+
+  const handleClearOwner = async () => {
+    try {
+      await clearOwnerMutation.mutateAsync({ id: entryId });
+      toast({ title: "Owner removed", description: "This listing is now unclaimed." });
+      queryClient.invalidateQueries({ queryKey: getGetEntryQueryKey(entryId) });
+      queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+    } catch (e: any) {
+      toast({ title: "Failed to remove owner", description: e.message, variant: "destructive" });
+    } finally {
+      setShowClearOwner(false);
+    }
+  };
 
   const form = useForm<EntryFormValues>({
     resolver: zodResolver(entrySchema),
@@ -369,6 +395,49 @@ export default function AdminEntryFormPage() {
             </Card>
           )}
 
+          {/* Ownership */}
+          {isEditing && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    {entry?.owner ? (
+                      <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
+                    ) : (
+                      <UserX className="h-5 w-5 text-muted-foreground shrink-0" />
+                    )}
+                    <div className="space-y-0.5">
+                      <div className="text-base font-medium">
+                        {entry?.owner ? "Claimed by Business Owner" : "Unclaimed"}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {entry?.owner
+                          ? [entry.owner.firstName, entry.owner.lastName].filter(Boolean).join(" ") ||
+                            entry.owner.email ||
+                            "Business owner"
+                          : "No business owner has claimed this listing."}
+                      </p>
+                      {entry?.owner?.email && (
+                        <p className="text-sm text-muted-foreground">{entry.owner.email}</p>
+                      )}
+                    </div>
+                  </div>
+                  {entry?.owner && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-900 dark:hover:bg-red-950/30"
+                      onClick={() => setShowClearOwner(true)}
+                    >
+                      <UserX className="h-4 w-4 mr-2" />
+                      Remove Owner
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Publish status */}
           <Card>
             <CardContent className="pt-6">
@@ -406,6 +475,24 @@ export default function AdminEntryFormPage() {
           </div>
         </form>
       </Form>
+
+      <AlertDialog open={showClearOwner} onOpenChange={(open) => !open && setShowClearOwner(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Claimed Owner</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will release the listing back to unclaimed. The business owner will lose access to manage it and will need to re-claim it if this was a mistake.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearOwnerMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearOwner} disabled={clearOwnerMutation.isPending} className="bg-red-600 hover:bg-red-700 text-white">
+              {clearOwnerMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Remove Owner
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

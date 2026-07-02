@@ -4,6 +4,7 @@ import {
   useListEntries, 
   useDeleteEntry,
   useToggleEntryPublished,
+  useClearEntryOwner,
   useGetPublicSettings,
   getListEntriesQueryKey,
   getListCategoriesQueryKey
@@ -24,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert, Star, Crown } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert, Star, Crown, UserX, UserCheck } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
@@ -42,6 +43,7 @@ export default function AdminEntriesPage() {
   const [isClearing, setIsClearing] = useState(false);
   const [togglingFeatured, setTogglingFeatured] = useState<number | null>(null);
   const [togglingPremium, setTogglingPremium] = useState<number | null>(null);
+  const [clearOwnerId, setClearOwnerId] = useState<number | null>(null);
 
   const { data: publicSettings } = useGetPublicSettings();
   const primaryColor = (publicSettings as any)?.primaryColor as string | undefined;
@@ -55,6 +57,7 @@ export default function AdminEntriesPage() {
 
   const deleteMutation = useDeleteEntry();
   const togglePublishMutation = useToggleEntryPublished();
+  const clearOwnerMutation = useClearEntryOwner();
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -119,6 +122,19 @@ export default function AdminEntriesPage() {
       toast({ title: "Failed to update premium", description: e.message, variant: "destructive" });
     } finally {
       setTogglingPremium(null);
+    }
+  };
+
+  const handleClearOwner = async () => {
+    if (!clearOwnerId) return;
+    try {
+      await clearOwnerMutation.mutateAsync({ id: clearOwnerId });
+      toast({ title: "Owner removed", description: "This listing is now unclaimed." });
+      queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+    } catch (e: any) {
+      toast({ title: "Failed to remove owner", description: e.message, variant: "destructive" });
+    } finally {
+      setClearOwnerId(null);
     }
   };
 
@@ -211,6 +227,7 @@ export default function AdminEntriesPage() {
               <tr>
                 <th className="px-6 py-4 font-medium">Entry</th>
                 <th className="px-6 py-4 font-medium">Category</th>
+                <th className="px-6 py-4 font-medium">Owner</th>
                 <th className="px-6 py-4 font-medium">Updated</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -219,11 +236,11 @@ export default function AdminEntriesPage() {
             <tbody className="divide-y">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">Loading...</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">Loading...</td>
                 </tr>
               ) : entriesData?.entries.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">No entries found matching your criteria.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">No entries found matching your criteria.</td>
                 </tr>
               ) : (
                 entriesData?.entries.map((entry) => {
@@ -256,6 +273,23 @@ export default function AdminEntriesPage() {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </td>
+                      <td className="px-6 py-4">
+                        {entry.owner ? (
+                          <div className="flex items-center gap-1.5">
+                            <UserCheck className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                            <div className="leading-tight">
+                              <div className="text-gray-900 dark:text-white">
+                                {[entry.owner.firstName, entry.owner.lastName].filter(Boolean).join(" ") || "Business owner"}
+                              </div>
+                              {entry.owner.email && (
+                                <div className="text-xs text-muted-foreground">{entry.owner.email}</div>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">Unclaimed</span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
                         {format(new Date(entry.updatedAt), "MMM d, yyyy")}
                       </td>
@@ -271,6 +305,18 @@ export default function AdminEntriesPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right whitespace-nowrap">
+                        {/* Clear owner */}
+                        {entry.owner && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Remove claimed owner"
+                            onClick={() => setClearOwnerId(entry.id)}
+                          >
+                            <UserX className="h-4 w-4" />
+                          </Button>
+                        )}
                         {/* Premium toggle */}
                         <Button
                           variant="ghost"
@@ -372,6 +418,25 @@ export default function AdminEntriesPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700 text-white">
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear owner dialog */}
+      <AlertDialog open={!!clearOwnerId} onOpenChange={(open) => !open && setClearOwnerId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Claimed Owner</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will release the listing back to unclaimed. The business owner will lose access to manage it and will need to re-claim it if this was a mistake.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={clearOwnerMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleClearOwner} disabled={clearOwnerMutation.isPending} className="bg-red-600 hover:bg-red-700 text-white">
+              {clearOwnerMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Remove Owner
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

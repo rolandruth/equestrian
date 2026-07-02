@@ -27,6 +27,7 @@ export * from "./directorySettings";
 export * from "./entry";
 export * from "./entryCustomFields";
 export * from "./entryListResponse";
+export * from "./entryOwner";
 export * from "./errorResponse";
 export * from "./handleBrowserLoginCallbackParams";
 export * from "./healthStatus";

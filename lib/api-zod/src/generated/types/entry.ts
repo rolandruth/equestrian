@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { EntryCustomFields } from "./entryCustomFields";
+import type { EntryOwner } from "./entryOwner";
 
 export interface Entry {
   id: number;
@@ -41,6 +42,10 @@ export interface Entry {
   /** @nullable */
   sourceCsvRow?: string | null;
   published: boolean;
+  /** @nullable */
+  ownerId?: string | null;
+  /** @nullable */
+  owner?: EntryOwner;
   createdAt: string;
   updatedAt: string;
 }

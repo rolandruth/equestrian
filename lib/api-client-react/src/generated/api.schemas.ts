@@ -118,6 +118,19 @@ export interface UpdateUserBody {
  */
 export type EntryCustomFields = { [key: string]: unknown } | null;
 
+/**
+ * @nullable
+ */
+export type EntryOwner = {
+  id: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  lastName?: string | null;
+} | null;
+
 export interface Entry {
   id: number;
   title: string;
@@ -152,6 +165,10 @@ export interface Entry {
   /** @nullable */
   sourceCsvRow?: string | null;
   published: boolean;
+  /** @nullable */
+  ownerId?: string | null;
+  /** @nullable */
+  owner?: EntryOwner;
   createdAt: string;
   updatedAt: string;
 }

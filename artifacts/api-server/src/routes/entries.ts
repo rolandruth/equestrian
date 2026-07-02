@@ -1,8 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { entries, categories } from "@workspace/db";
+import { entries, categories, bizUsers } from "@workspace/db";
 import { requireAuth, requireEditor, requireAdmin } from "../middlewares/auth.js";
-import { eq, ilike, and, or, desc, count, sql } from "drizzle-orm";
+import { eq, ilike, and, or, desc, count, sql, inArray } from "drizzle-orm";
+
+async function getOwnersMap(ownerIds: (string | null)[]) {
+  const ids = [...new Set(ownerIds.filter((id): id is string => !!id))];
+  if (ids.length === 0) return new Map<string, typeof bizUsers.$inferSelect>();
+  const owners = await db.select().from(bizUsers).where(inArray(bizUsers.id, ids));
+  return new Map(owners.map((o) => [o.id, o]));
+}
 
 const router = Router();
 
@@ -44,8 +51,10 @@ router.get("/", requireAuth, async (req, res) => {
     const rows = await db.select().from(entries).where(where)
       .orderBy(desc(entries.createdAt)).limit(limit).offset(offset);
 
+    const ownersMap = await getOwnersMap(rows.map((r) => r.ownerId));
+
     res.json({
-      entries: rows.map(formatEntry),
+      entries: rows.map((r) => formatEntry(r, ownersMap.get(r.ownerId ?? ""))),
       total: Number(total.count),
       page,
       totalPages: Math.ceil(Number(total.count) / limit),
@@ -76,7 +85,8 @@ router.get("/:id", requireAuth, async (req, res) => {
     const id = parseInt(req.params.id);
     const [entry] = await db.select().from(entries).where(eq(entries.id, id)).limit(1);
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
-    res.json(formatEntry(entry));
+    const ownersMap = await getOwnersMap([entry.ownerId]);
+    res.json(formatEntry(entry, ownersMap.get(entry.ownerId ?? "")));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to get entry" });
@@ -89,7 +99,8 @@ router.patch("/:id", requireEditor, async (req, res) => {
     const [entry] = await db.update(entries).set({ ...req.body, updatedAt: new Date() })
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
-    res.json(formatEntry(entry));
+    const ownersMap = await getOwnersMap([entry.ownerId]);
+    res.json(formatEntry(entry, ownersMap.get(entry.ownerId ?? "")));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update entry" });
@@ -149,6 +160,21 @@ router.patch("/:id/premium", requireEditor, async (req, res) => {
   }
 });
 
+// DELETE /api/entries/:id/owner — release a claimed listing back to unclaimed (admin only)
+router.delete("/:id/owner", requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [entry] = await db.update(entries).set({ ownerId: null, updatedAt: new Date() })
+      .where(eq(entries.id, id)).returning();
+    if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+    req.log.info({ entryId: id }, "Admin cleared entry owner");
+    res.json(formatEntry(entry));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to clear entry owner" });
+  }
+});
+
 // DELETE /api/entries — wipe all entries + categories (admin only)
 router.delete("/", requireAdmin, async (req, res) => {
   try {
@@ -162,7 +188,7 @@ router.delete("/", requireAdmin, async (req, res) => {
   }
 });
 
-function formatEntry(e: typeof entries.$inferSelect) {
+function formatEntry(e: typeof entries.$inferSelect, owner?: typeof bizUsers.$inferSelect) {
   return {
     id: e.id,
     title: e.title,
@@ -189,6 +215,15 @@ function formatEntry(e: typeof entries.$inferSelect) {
     metaDescription: e.metaDescription,
     ogTitle: e.ogTitle,
     ogDescription: e.ogDescription,
+    ownerId: e.ownerId,
+    owner: owner
+      ? {
+          id: owner.id,
+          email: owner.email,
+          firstName: owner.firstName,
+          lastName: owner.lastName,
+        }
+      : null,
     createdAt: e.createdAt.toISOString(),
     updatedAt: e.updatedAt.toISOString(),
   };

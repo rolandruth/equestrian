@@ -29,7 +29,7 @@ const plans = [
     highlight: false,
     features: [
       "Everything in Featured",
-      "Category sponsorship",
+      "Additional 5 pictures on detail page",
       "Homepage placement",
     ],
     cta: "Go Premium",

@@ -12,7 +12,7 @@ const plans = [
     badge: "Most Popular",
     highlight: true,
     features: [
-      "Up to 10 photos",
+      "Up to 5 pictures on detail page",
       "Website link",
       '"Featured" badge on listing',
     ],

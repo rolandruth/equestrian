@@ -362,14 +362,17 @@ export function HomeSearchSection() {
                               </a>
                             </div>
                           )}
-                          {entry.website && (
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Globe className="h-3 w-3 mr-1.5 shrink-0" />
-                              <a href={entry.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
-                                {entry.website.replace(/^https?:\/\/(www\.)?/, "")}
-                              </a>
-                            </div>
-                          )}
+                          {(entry.website || (entry.customFields as any)?.website) && (() => {
+                            const url = entry.website || (entry.customFields as any)?.website;
+                            return (
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Globe className="h-3 w-3 mr-1.5 shrink-0" />
+                                <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+                                  {url.replace(/^https?:\/\/(www\.)?/, "")}
+                                </a>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </CardContent>
                       <CardFooter className="pt-3 border-t">
@@ -431,14 +434,17 @@ export function HomeSearchSection() {
                                 </a>
                               </div>
                             )}
-                            {entry.website && (
-                              <div className="flex items-center text-xs text-muted-foreground">
-                                <Globe className="h-3 w-3 mr-1 shrink-0" />
-                                <a href={entry.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
-                                  {entry.website.replace(/^https?:\/\/(www\.)?/, "")}
-                                </a>
-                              </div>
-                            )}
+                            {(entry.website || (entry.customFields as any)?.website) && (() => {
+                              const url = entry.website || (entry.customFields as any)?.website;
+                              return (
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                  <Globe className="h-3 w-3 mr-1 shrink-0" />
+                                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+                                    {url.replace(/^https?:\/\/(www\.)?/, "")}
+                                  </a>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                         {entry.summary && (

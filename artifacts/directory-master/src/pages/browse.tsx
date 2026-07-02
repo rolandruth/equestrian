@@ -251,14 +251,17 @@ export default function BrowsePage() {
             </a>
           </div>
         )}
-        {entry.website && (
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Globe className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
-            <a href={entry.website} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
-              {entry.website.replace(/^https?:\/\/(www\.)?/, "")}
-            </a>
-          </div>
-        )}
+        {(entry.website || (entry.customFields as any)?.website) && (() => {
+          const url = entry.website || (entry.customFields as any)?.website;
+          return (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Globe className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+              <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors line-clamp-1" onClick={e => e.stopPropagation()}>
+                {url.replace(/^https?:\/\/(www\.)?/, "")}
+              </a>
+            </div>
+          );
+        })()}
       </div>
       {/* Remaining template-configured fields (excluding location/website/phone already shown) */}
       {cardFields.filter(id => !["category","location","website","contactPhone"].includes(id)).map(fid => renderCardField(entry, fid))}

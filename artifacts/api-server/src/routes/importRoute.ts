@@ -52,7 +52,7 @@ const HEURISTIC_RULES: Array<{ patterns: RegExp[]; target: string; confidence: n
   { patterns: [/^summary$/i, /^excerpt$/i, /^brief$/i, /^abstract$/i, /^short_description$/i], target: "summary", confidence: 0.9 },
   { patterns: [/^email$/i, /^contact_email$/i, /^e_mail$/i, /^mailto$/i], target: "contactEmail", confidence: 0.95 },
   { patterns: [/^phone$/i, /^telephone$/i, /^mobile$/i, /^contact_phone$/i, /^tel$/i, /^phone_number$/i, /^business_phone$/i, /^listing_phone$/i, /^contact_number$/i, /^phone_no$/i, /^cell$/i, /^cell_phone$/i, /^fax$/i], target: "contactPhone", confidence: 0.95 },
-  { patterns: [/^website$/i, /^url$/i, /^web$/i, /^link$/i, /^homepage$/i, /^site$/i], target: "website", confidence: 0.9 },
+  { patterns: [/^website$/i, /^url$/i, /^web$/i, /^link$/i, /^homepage$/i, /^site$/i, /website/i, /^web_url$/i, /^site_url$/i], target: "website", confidence: 0.9 },
   { patterns: [/^tags$/i, /^tag$/i, /^keywords$/i, /^keyword$/i, /^labels$/i], target: "tags", confidence: 0.9 },
   { patterns: [/^notes$/i, /^additional$/i, /^extra$/i, /^more_details$/i, /^remarks$/i], target: "moreDetails", confidence: 0.85 },
 ];

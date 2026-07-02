@@ -12,8 +12,6 @@ const plans = [
     badge: "Most Popular",
     highlight: true,
     features: [
-      "Everything in Free",
-      "Top placement in search results",
       "Up to 10 photos",
       "Website link",
       '"Featured" badge on listing',

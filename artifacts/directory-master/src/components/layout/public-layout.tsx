@@ -132,18 +132,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Sign In
                 </Link>
               )}
-              <form onSubmit={handleSearch} className="relative w-48 focus-within:w-64 transition-all duration-200">
-                <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
-                  <Search className="h-3.5 w-3.5" style={navbarText ? { color: navbarText, opacity: 0.5 } : { color: "#9ca3af" }} />
-                </div>
-                <input
-                  type="text"
-                  className="block w-full pl-8 pr-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-full text-xs bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-1 focus:ring-primary transition-colors"
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </form>
             </div>
 
             {/* Mobile menu button */}
@@ -167,20 +155,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             className="md:hidden border-b border-gray-200 dark:border-gray-800 pb-4 px-4"
             style={{ backgroundColor: navbarBg || undefined }}
           >
-            <form onSubmit={handleSearch} className="mt-2 mb-4">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary sm:text-sm"
-                  placeholder="Search directory..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </form>
             <div className="flex flex-col space-y-2">
               <Link
                 href="/browse"

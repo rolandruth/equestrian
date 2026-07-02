@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { StripeSync } from 'stripe-replit-sync';
+import { pool } from '@workspace/db';
 
 async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecret?: string }> {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
@@ -28,10 +29,16 @@ async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecre
     throw new Error(`Failed to fetch Stripe credentials: ${resp.status} ${resp.statusText}`);
   }
 
-  const data = await resp.json() as { items?: Array<{ settings?: { secret_key?: string; webhook_secret?: string } }> };
-  const settings = data.items?.[0]?.settings;
+  const data = await resp.json() as {
+    items?: Array<{
+      settings?: { secret?: string; webhook_secret?: string };
+      webhook_config?: { secret?: string; signing_secret?: string } | null;
+    }>
+  };
+  const item = data.items?.[0];
+  const settings = item?.settings;
 
-  if (!settings?.secret_key) {
+  if (!settings?.secret) {
     throw new Error(
       'Stripe integration not connected or missing secret key. ' +
       'Connect Stripe via the Integrations tab first.'
@@ -39,14 +46,37 @@ async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecre
   }
 
   return {
-    secretKey: settings.secret_key,
-    webhookSecret: settings.webhook_secret,
+    secretKey: settings.secret,
+    webhookSecret:
+      settings.webhook_secret ??
+      item?.webhook_config?.secret ??
+      item?.webhook_config?.signing_secret ??
+      process.env.STRIPE_WEBHOOK_SECRET,
   };
 }
 
 export async function getUncachableStripeClient(): Promise<Stripe> {
   const { secretKey } = await getStripeCredentials();
   return new Stripe(secretKey);
+}
+
+async function getManagedWebhookSecret(): Promise<string | undefined> {
+  try {
+    const result = await pool.query(
+      `SELECT secret FROM "stripe"."_managed_webhooks" ORDER BY created DESC LIMIT 1`
+    );
+    return result.rows[0]?.secret as string | undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function constructStripeEvent(payload: Buffer, signature: string): Promise<Stripe.Event | null> {
+  const { secretKey, webhookSecret } = await getStripeCredentials();
+  const resolvedSecret = webhookSecret ?? (await getManagedWebhookSecret());
+  if (!resolvedSecret) return null;
+  const stripe = new Stripe(secretKey);
+  return stripe.webhooks.constructEvent(payload, signature, resolvedSecret);
 }
 
 export async function getStripeSync(): Promise<StripeSync> {

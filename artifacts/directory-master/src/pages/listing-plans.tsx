@@ -1,13 +1,46 @@
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
 import { useGetPublicSettings } from "@workspace/api-client-react";
-import { Check, Star, Zap } from "lucide-react";
+import { Check, Star, Zap, Loader2, PartyPopper, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
-const plans = [
+type PlanKey = "featured" | "premium";
+
+type EntryResult = {
+  id: number;
+  title: string;
+  category?: string | null;
+  location?: string | null;
+};
+
+const plans: {
+  key: PlanKey;
+  name: string;
+  price: string;
+  description: string;
+  badge: string;
+  highlight: boolean;
+  features: string[];
+  cta: string;
+}[] = [
   {
+    key: "featured",
     name: "Featured Listing",
     price: "$39",
-    priceLabel: "$39/mo",
     description: "Stand out from the crowd with priority placement and richer profile options.",
     badge: "Most Popular",
     highlight: true,
@@ -17,13 +50,11 @@ const plans = [
       '"Featured" badge on listing',
     ],
     cta: "Get Featured",
-    ctaHref: "/advertise",
-    ctaVariant: "default" as const,
   },
   {
+    key: "premium",
     name: "Premium Listing",
     price: "$150",
-    priceLabel: "$150/mo",
     description: "Maximum exposure — own your category and dominate local search.",
     badge: "Best Value",
     highlight: false,
@@ -34,14 +65,94 @@ const plans = [
       '"Premium" badge on listing',
     ],
     cta: "Go Premium",
-    ctaHref: "/advertise",
-    ctaVariant: "default" as const,
   },
 ];
 
 export default function ListingPlansPage() {
   const { data: settings } = useGetPublicSettings();
   const siteName = settings?.siteTitle || "SaddleUpGuide";
+
+  const [pickerPlan, setPickerPlan] = useState<PlanKey | null>(null);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<EntryResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [selectedEntry, setSelectedEntry] = useState<EntryResult | null>(null);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+  const successPlan = params.get("success") === "1" ? (params.get("plan") as PlanKey | null) : null;
+  const successEntry = params.get("entry");
+  const canceled = params.get("canceled") === "1";
+
+  useEffect(() => {
+    if (!pickerPlan) return;
+    if (query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    const handle = setTimeout(() => {
+      fetch(`/api/public/entries?search=${encodeURIComponent(query.trim())}&limit=8`)
+        .then((r) => r.json())
+        .then((data) => setResults(data.entries ?? []))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [query, pickerPlan]);
+
+  function openPicker(plan: PlanKey) {
+    setPickerPlan(plan);
+    setQuery("");
+    setResults([]);
+    setSelectedEntry(null);
+    setError(null);
+  }
+
+  function closePicker() {
+    setPickerPlan(null);
+    setSelectedEntry(null);
+    setQuery("");
+    setResults([]);
+    setError(null);
+  }
+
+  async function handleConfirm() {
+    if (!pickerPlan || !selectedEntry) return;
+    setCheckingOut(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/checkout-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entryId: selectedEntry.id, plan: pickerPlan }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Checkout failed");
+      window.location.href = data.url;
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.");
+      setCheckingOut(false);
+    }
+  }
+
+  if (successPlan) {
+    const item = plans.find((p) => p.key === successPlan);
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
+        <PartyPopper className="h-14 w-14 text-green-500 mx-auto mb-6" />
+        <h1 className="text-3xl font-bold mb-3">You're upgraded!</h1>
+        <p className="text-muted-foreground text-base mb-2">
+          {successEntry ? <strong>{successEntry}</strong> : "Your listing"} is now on the{" "}
+          <strong>{item?.name ?? successPlan}</strong> plan.
+        </p>
+        <Button className="mt-8" onClick={() => (window.location.href = "/listing-plans")}>
+          Back to Listing Plans
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -53,6 +164,12 @@ export default function ListingPlansPage() {
           exactly what you offer. Choose the plan that fits your goals.
         </p>
       </div>
+
+      {canceled && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 mb-8 max-w-3xl mx-auto">
+          Checkout was canceled — your card was not charged.
+        </div>
+      )}
 
       {/* Plan cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-14 max-w-3xl mx-auto w-full">
@@ -83,12 +200,8 @@ export default function ListingPlansPage() {
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-1">{plan.name}</h2>
               <div className="flex items-baseline gap-1 mb-3">
-                <span className={`font-bold ${plan.price ? "text-3xl" : "text-2xl"}`}>
-                  {plan.price ?? "Free"}
-                </span>
-                {plan.price && (
-                  <span className="text-sm text-muted-foreground">/mo</span>
-                )}
+                <span className="font-bold text-3xl">{plan.price}</span>
+                <span className="text-sm text-muted-foreground">/mo</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">{plan.description}</p>
             </div>
@@ -104,18 +217,108 @@ export default function ListingPlansPage() {
             </ul>
 
             {/* CTA */}
-            <Link href={plan.ctaHref}>
-              <Button
-                variant={plan.ctaVariant}
-                className={`w-full ${plan.highlight ? "bg-primary hover:bg-primary/90 text-white" : ""}`}
-              >
-                {plan.cta}
-              </Button>
-            </Link>
+            <Button
+              onClick={() => openPicker(plan.key)}
+              className={`w-full ${plan.highlight ? "bg-primary hover:bg-primary/90 text-white" : ""}`}
+              variant={plan.highlight ? "default" : "default"}
+            >
+              {plan.cta}
+            </Button>
           </div>
         ))}
       </div>
 
+      {/* Business picker dialog */}
+      <Dialog open={pickerPlan !== null} onOpenChange={(open) => !open && closePicker()}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
+          <DialogHeader className="px-4 pt-4">
+            <DialogTitle>
+              {pickerPlan === "featured" ? "Get Featured" : "Go Premium"}
+            </DialogTitle>
+            <DialogDescription>
+              Search for your business listing to upgrade it. No account needed.
+            </DialogDescription>
+          </DialogHeader>
+
+          {!selectedEntry ? (
+            <Command shouldFilter={false}>
+              <CommandInput
+                placeholder="Search your business by name…"
+                value={query}
+                onValueChange={setQuery}
+              />
+              <CommandList>
+                {query.trim().length < 2 ? (
+                  <CommandEmpty>Type at least 2 characters to search.</CommandEmpty>
+                ) : searching ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Searching…
+                  </div>
+                ) : results.length === 0 ? (
+                  <CommandEmpty>No matching listings found.</CommandEmpty>
+                ) : (
+                  <CommandGroup>
+                    {results.map((entry) => (
+                      <CommandItem
+                        key={entry.id}
+                        value={String(entry.id)}
+                        onSelect={() => setSelectedEntry(entry)}
+                        className="cursor-pointer"
+                      >
+                        <Search className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{entry.title}</span>
+                          {(entry.category || entry.location) && (
+                            <span className="text-xs text-muted-foreground">
+                              {[entry.category, entry.location].filter(Boolean).join(" · ")}
+                            </span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </Command>
+          ) : (
+            <div className="p-4">
+              <div className="rounded-lg border p-4 mb-4">
+                <p className="text-xs text-muted-foreground mb-1">Upgrading</p>
+                <p className="font-semibold">{selectedEntry.title}</p>
+                {(selectedEntry.category || selectedEntry.location) && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {[selectedEntry.category, selectedEntry.location].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </div>
+
+              {error && (
+                <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300 mb-4">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setSelectedEntry(null)}
+                  disabled={checkingOut}
+                >
+                  Back
+                </Button>
+                <Button className="flex-1" onClick={handleConfirm} disabled={checkingOut}>
+                  {checkingOut ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
+                  ) : (
+                    `Continue to Payment`
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

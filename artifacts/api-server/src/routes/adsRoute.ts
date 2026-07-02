@@ -152,6 +152,22 @@ router.post("/upload-image", requireAdmin, async (req, res) => {
 
 // --- Public routes ---
 
+const ALL_PLACEMENTS = ["homepage", "sidebar", "browse_inline", "entry_page"];
+
+router.get("/availability", async (_req, res) => {
+  try {
+    const rows = await db.select({ placement: ads.placement }).from(ads);
+    const takenSet = new Set(rows.map((r) => r.placement));
+    const availability = ALL_PLACEMENTS.map((p) => ({
+      placement: p,
+      available: !takenSet.has(p),
+    }));
+    res.json(availability);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch availability" });
+  }
+});
+
 router.get("/public", async (req, res) => {
   try {
     const placement = (req.query.placement as string) || "sidebar";

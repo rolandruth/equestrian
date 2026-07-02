@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReviewsSection } from "@/components/directory/ReviewsSection";
+import { AdSlot } from "@/components/ads/AdSlot";
 import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
 import {
   useGetPublicEntry,
@@ -1713,6 +1714,8 @@ export default function EntryPage() {
         {!isDemo && entryNumericId && (
           <ReviewsSection entryId={entryNumericId} />
         )}
+
+        <AdSlot placement="entry_page" className="my-6" />
 
         {/* Outside-card sections (Related) — rendered in saved template order */}
         {ts.entry.sections

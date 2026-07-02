@@ -78,10 +78,6 @@ export default function AdminAdsPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  // Placements already used by other ads (not the one being edited)
-  const takenPlacements = adsList
-    .filter((a) => !editingAd || a.id !== editingAd.id)
-    .map((a) => a.placement);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
@@ -92,6 +88,11 @@ export default function AdminAdsPage() {
       fetch("/api/ads", { headers }).then((r) => r.json()),
     enabled: !!token,
   });
+
+  // Placements already used by other ads (not the one being edited)
+  const takenPlacements = adsList
+    .filter((a) => !editingAd || a.id !== editingAd.id)
+    .map((a) => a.placement);
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>

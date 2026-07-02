@@ -89,6 +89,7 @@ export class WebhookHandlers {
           status: 'active',
           cancelAtPeriodEnd: false,
           currentPeriodEnd,
+          expiryReminderSentAt: null,
           updatedAt: new Date(),
         },
       });
@@ -102,6 +103,8 @@ export class WebhookHandlers {
         cancelAtPeriodEnd: subscription.cancel_at_period_end ?? false,
         currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
         status: subscription.status === 'active' || subscription.status === 'trialing' ? 'active' : subscription.status,
+        // Un-cancelling clears the reminder flag so a later cancellation gets its own email.
+        ...(subscription.cancel_at_period_end ? {} : { expiryReminderSentAt: null }),
         updatedAt: new Date(),
       })
       .where(eq(listingSubscriptions.stripeSubscriptionId, subscription.id));

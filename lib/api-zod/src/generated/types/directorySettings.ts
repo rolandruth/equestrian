@@ -32,4 +32,15 @@ export interface DirectorySettings {
   geminiApiKeySet?: boolean;
   /** @nullable */
   geminiApiKeyHint?: string | null;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpFrom?: string | null;
+  smtpPassSet?: boolean;
+  /** @nullable */
+  smtpPassHint?: string | null;
 }

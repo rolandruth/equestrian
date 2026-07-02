@@ -29,4 +29,14 @@ export interface UpdateSettingsBody {
   homepageOgImageUrl?: string | null;
   /** @nullable */
   geminiApiKey?: string | null;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: string | number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpFrom?: string | null;
+  /** @nullable */
+  smtpPass?: string | null;
 }

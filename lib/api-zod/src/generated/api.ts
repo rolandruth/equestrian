@@ -530,6 +530,12 @@ export const GetSettingsResponse = zod.object({
   updatedAt: zod.string(),
   geminiApiKeySet: zod.boolean().optional(),
   geminiApiKeyHint: zod.string().nullish(),
+  smtpHost: zod.string().nullish(),
+  smtpPort: zod.number().nullish(),
+  smtpUser: zod.string().nullish(),
+  smtpFrom: zod.string().nullish(),
+  smtpPassSet: zod.boolean().optional(),
+  smtpPassHint: zod.string().nullish(),
 });
 
 /**
@@ -547,6 +553,11 @@ export const UpdateSettingsBody = zod.object({
   homepageMetaDescription: zod.string().nullish(),
   homepageOgImageUrl: zod.string().nullish(),
   geminiApiKey: zod.string().nullish(),
+  smtpHost: zod.string().nullish(),
+  smtpPort: zod.union([zod.string(), zod.number()]).nullish(),
+  smtpUser: zod.string().nullish(),
+  smtpFrom: zod.string().nullish(),
+  smtpPass: zod.string().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -565,6 +576,12 @@ export const UpdateSettingsResponse = zod.object({
   updatedAt: zod.string(),
   geminiApiKeySet: zod.boolean().optional(),
   geminiApiKeyHint: zod.string().nullish(),
+  smtpHost: zod.string().nullish(),
+  smtpPort: zod.number().nullish(),
+  smtpUser: zod.string().nullish(),
+  smtpFrom: zod.string().nullish(),
+  smtpPassSet: zod.boolean().optional(),
+  smtpPassHint: zod.string().nullish(),
 });
 
 /**
@@ -934,4 +951,10 @@ export const GetPublicSettingsResponse = zod.object({
   updatedAt: zod.string(),
   geminiApiKeySet: zod.boolean().optional(),
   geminiApiKeyHint: zod.string().nullish(),
+  smtpHost: zod.string().nullish(),
+  smtpPort: zod.number().nullish(),
+  smtpUser: zod.string().nullish(),
+  smtpFrom: zod.string().nullish(),
+  smtpPassSet: zod.boolean().optional(),
+  smtpPassHint: zod.string().nullish(),
 });

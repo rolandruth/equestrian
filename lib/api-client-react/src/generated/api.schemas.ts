@@ -305,6 +305,17 @@ export interface DirectorySettings {
   geminiApiKeySet?: boolean;
   /** @nullable */
   geminiApiKeyHint?: string | null;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpFrom?: string | null;
+  smtpPassSet?: boolean;
+  /** @nullable */
+  smtpPassHint?: string | null;
 }
 
 export interface UpdateSettingsBody {
@@ -330,6 +341,16 @@ export interface UpdateSettingsBody {
   homepageOgImageUrl?: string | null;
   /** @nullable */
   geminiApiKey?: string | null;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: string | number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpFrom?: string | null;
+  /** @nullable */
+  smtpPass?: string | null;
 }
 
 export interface ImportAnalyzeBody {

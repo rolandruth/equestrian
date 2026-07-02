@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail } from "lucide-react";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
 import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
 
@@ -260,6 +260,164 @@ function SitemapUrlField() {
         The sitemap automatically includes your homepage, browse page, and all published entries. It updates in real time as entries are published.
       </p>
     </div>
+  );
+}
+
+function SmtpSettingsCard() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: settings, isLoading } = useGetSettings();
+  const updateMutation = useUpdateSettings();
+
+  const [editing, setEditing] = useState(false);
+  const [host, setHost] = useState("");
+  const [port, setPort] = useState("");
+  const [user, setUser] = useState("");
+  const [from, setFrom] = useState("");
+  const [pass, setPass] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const s = settings as any;
+  const configured: boolean = !!(s?.smtpHost && s?.smtpPort && s?.smtpUser && s?.smtpPassSet);
+
+  const startEditing = () => {
+    setHost(s?.smtpHost ?? "");
+    setPort(s?.smtpPort ? String(s.smtpPort) : "");
+    setUser(s?.smtpUser ?? "");
+    setFrom(s?.smtpFrom ?? "");
+    setPass("");
+    setEditing(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const data: Record<string, unknown> = {
+        smtpHost: host.trim() || null,
+        smtpPort: port.trim() || null,
+        smtpUser: user.trim() || null,
+        smtpFrom: from.trim() || null,
+      };
+      // Only overwrite the stored password if a new one was typed, so leaving
+      // it blank keeps the existing credential instead of clearing it.
+      if (pass.trim()) data.smtpPass = pass.trim();
+      await updateMutation.mutateAsync({ data: data as any });
+      queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      toast({ title: "Email settings saved" });
+      setEditing(false);
+    } catch (e: any) {
+      toast({ title: "Failed to save email settings", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setSaving(true);
+    try {
+      await updateMutation.mutateAsync({
+        data: { smtpHost: null, smtpPort: null, smtpUser: null, smtpFrom: null, smtpPass: null } as any,
+      });
+      queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      toast({ title: "Email settings removed" });
+      setEditing(false);
+    } catch (e: any) {
+      toast({ title: "Failed to remove email settings", description: e.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (isLoading) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Mail className="h-5 w-5 text-primary" />
+          Email (SMTP)
+        </CardTitle>
+        <CardDescription>
+          Used to send transactional emails, such as reminding a business owner when a Featured/Premium badge is about to lapse. Enter the SMTP credentials from your email provider (e.g. SendGrid, Mailgun, Gmail, or your own mail server).
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {!editing ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              {configured ? (
+                <div className="text-sm">
+                  <div><span className="text-muted-foreground">Host:</span> {s.smtpHost}:{s.smtpPort}</div>
+                  <div><span className="text-muted-foreground">User:</span> {s.smtpUser}</div>
+                  <div><span className="text-muted-foreground">Password:</span> <span className="font-mono">{s.smtpPassHint}</span></div>
+                  {s.smtpFrom && <div><span className="text-muted-foreground">From:</span> {s.smtpFrom}</div>}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Not configured — reminder emails will be skipped until SMTP is set up.
+                </p>
+              )}
+            </div>
+            <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
+              <Pencil className="h-3.5 w-3.5" />
+              {configured ? "Edit" : "Set Up"}
+            </Button>
+            {configured && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClear}
+                disabled={saving}
+                className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+              >
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Remove
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">SMTP Host</label>
+                <Input placeholder="smtp.example.com" value={host} onChange={e => setHost(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">SMTP Port</label>
+                <Input placeholder="587" value={port} onChange={e => setPort(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Username</label>
+                <Input placeholder="username" value={user} onChange={e => setUser(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium">Password</label>
+                <Input
+                  type="password"
+                  placeholder={configured ? "Leave blank to keep current password" : "password"}
+                  value={pass}
+                  onChange={e => setPass(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <label className="text-sm font-medium">From Address (optional)</label>
+                <Input placeholder="noreply@yourdomain.com" value={from} onChange={e => setFrom(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleSave} disabled={saving || !host.trim() || !port.trim() || !user.trim()} className="gap-1.5">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                Save
+              </Button>
+              <Button variant="outline" onClick={() => setEditing(false)} className="gap-1.5">
+                <X className="h-4 w-4" />
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1051,6 +1209,7 @@ export default function AdminSettingsPage() {
       </Form>
 
       <GeminiApiKeyCard />
+      <SmtpSettingsCard />
     </div>
   );
 }

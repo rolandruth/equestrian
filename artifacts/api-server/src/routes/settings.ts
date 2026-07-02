@@ -42,6 +42,18 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     geminiApiKeyHint: s.geminiApiKey
       ? `${"•".repeat(Math.max(0, s.geminiApiKey.length - 4))}${s.geminiApiKey.slice(-4)}`
       : null,
+    // SMTP config for outbound email (e.g. expiry reminders). Host/port/user/
+    // from are not secret so they're returned as-is for editing; the password
+    // follows the same set+hint pattern as the Gemini key and is never
+    // returned in full.
+    smtpHost: s.smtpHost,
+    smtpPort: s.smtpPort,
+    smtpUser: s.smtpUser,
+    smtpFrom: s.smtpFrom,
+    smtpPassSet: !!s.smtpPass,
+    smtpPassHint: s.smtpPass
+      ? `${"•".repeat(Math.max(0, s.smtpPass.length - 4))}${s.smtpPass.slice(-4)}`
+      : null,
   };
 }
 
@@ -89,6 +101,17 @@ router.patch("/", requireAdmin, async (req, res) => {
     // geminiApiKey: null/empty clears the key; non-empty string stores it
     if (req.body.geminiApiKey !== undefined) {
       dbUpdates.geminiApiKey = req.body.geminiApiKey || null;
+    }
+    if (req.body.smtpHost !== undefined) dbUpdates.smtpHost = req.body.smtpHost || null;
+    if (req.body.smtpPort !== undefined) {
+      const port = Number(req.body.smtpPort);
+      dbUpdates.smtpPort = req.body.smtpPort === null || req.body.smtpPort === "" || Number.isNaN(port) ? null : port;
+    }
+    if (req.body.smtpUser !== undefined) dbUpdates.smtpUser = req.body.smtpUser || null;
+    if (req.body.smtpFrom !== undefined) dbUpdates.smtpFrom = req.body.smtpFrom || null;
+    // smtpPass: null/empty clears it; non-empty string stores it (same pattern as geminiApiKey)
+    if (req.body.smtpPass !== undefined) {
+      dbUpdates.smtpPass = req.body.smtpPass || null;
     }
 
     const [updated] = await db.update(directorySettings).set(dbUpdates).where(eq(directorySettings.id, existing.id)).returning();

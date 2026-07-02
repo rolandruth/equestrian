@@ -1259,6 +1259,18 @@ components:
           type: boolean
         geminiApiKeyHint:
           type: ["string", "null"]
+        smtpHost:
+          type: ["string", "null"]
+        smtpPort:
+          type: ["integer", "null"]
+        smtpUser:
+          type: ["string", "null"]
+        smtpFrom:
+          type: ["string", "null"]
+        smtpPassSet:
+          type: boolean
+        smtpPassHint:
+          type: ["string", "null"]
       required: [id, siteTitle, installed, updatedAt]
 
     UpdateSettingsBody:
@@ -1285,6 +1297,16 @@ components:
         homepageOgImageUrl:
           type: ["string", "null"]
         geminiApiKey:
+          type: ["string", "null"]
+        smtpHost:
+          type: ["string", "null"]
+        smtpPort:
+          type: ["string", "integer", "null"]
+        smtpUser:
+          type: ["string", "null"]
+        smtpFrom:
+          type: ["string", "null"]
+        smtpPass:
           type: ["string", "null"]
 
     ImportAnalyzeBody:

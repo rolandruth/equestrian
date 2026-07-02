@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, jsonb, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -29,6 +29,15 @@ export const directorySettings = pgTable("directory_settings", {
   homepageOgImageUrl: text("homepage_og_image_url"),
   templateSettings: jsonb("template_settings"),
   geminiApiKey: text("gemini_api_key"),
+  // SMTP config for outbound transactional email (e.g. the upgrade-badge
+  // expiry reminder). Configured from the admin Settings page rather than
+  // env vars/secrets so a self-hosted owner can wire up their own mail
+  // provider without shell/deploy access.
+  smtpHost: text("smtp_host"),
+  smtpPort: integer("smtp_port"),
+  smtpUser: text("smtp_user"),
+  smtpPass: text("smtp_pass"),
+  smtpFrom: text("smtp_from"),
   installed: boolean("installed").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

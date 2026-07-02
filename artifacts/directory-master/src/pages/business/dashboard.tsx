@@ -5,7 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Star, Zap, Building2, LogOut, ExternalLink, Search, PlusCircle, CreditCard } from "lucide-react";
+import { Loader2, Star, Zap, Building2, LogOut, ExternalLink, Search, PlusCircle, CreditCard, AlertTriangle } from "lucide-react";
+
+const EXPIRY_WARNING_WINDOW_DAYS = 7;
+
+function daysUntil(dateStr: string): number {
+  const ms = new Date(dateStr).getTime() - Date.now();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
 
 type Entry = {
   id: number;
@@ -218,6 +225,47 @@ export default function BusinessDashboardPage() {
           {error}
         </div>
       )}
+
+      {listings &&
+        (() => {
+          const expiringSoon = listings.filter(
+            ({ subscription }) =>
+              subscription?.cancelAtPeriodEnd &&
+              subscription.currentPeriodEnd &&
+              daysUntil(subscription.currentPeriodEnd) <= EXPIRY_WARNING_WINDOW_DAYS,
+          );
+          if (expiringSoon.length === 0) return null;
+          return (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3.5 mb-8 flex gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800 dark:text-amber-300">
+                <p className="font-medium mb-1">
+                  {expiringSoon.length === 1
+                    ? "Your upgrade badge is about to expire"
+                    : "Your upgrade badges are about to expire"}
+                </p>
+                <ul className="space-y-0.5">
+                  {expiringSoon.map(({ entry, subscription }) => {
+                    const days = daysUntil(subscription!.currentPeriodEnd!);
+                    return (
+                      <li key={entry.id}>
+                        <span className="font-medium">{entry.title}</span>'s {subscription!.plan} badge will be
+                        removed{" "}
+                        {days <= 0
+                          ? "today"
+                          : days === 1
+                            ? "tomorrow"
+                            : `in ${days} days`}{" "}
+                        (on {new Date(subscription!.currentPeriodEnd!).toLocaleDateString()}) since the plan was
+                        canceled. Resubscribe from Listing Plans to keep it active.
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          );
+        })()}
 
       <Card className="mb-10">
         <CardHeader>

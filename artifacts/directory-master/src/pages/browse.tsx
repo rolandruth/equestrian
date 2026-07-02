@@ -361,7 +361,7 @@ export default function BrowsePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All States</SelectItem>
-                    {stats?.categoryBreakdown.map((cat) => (
+                    {[...(stats?.categoryBreakdown ?? [])].sort((a, b) => a.category.localeCompare(b.category)).map((cat) => (
                       <SelectItem key={cat.category} value={cat.category}>
                         {cat.category}
                       </SelectItem>

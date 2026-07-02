@@ -24,6 +24,8 @@ function formatEntry(e: typeof entries.$inferSelect) {
     moreDetails: e.moreDetails,
     customFields: e.customFields,
     sourceCsvRow: e.sourceCsvRow,
+    featured: e.featured,
+    premium: e.premium,
     published: e.published,
     slug: e.slug,
     metaTitle: e.metaTitle,

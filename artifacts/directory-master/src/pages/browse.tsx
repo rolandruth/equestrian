@@ -348,68 +348,47 @@ export default function BrowsePage() {
               </div>
 
               <div>
-                <h3 className="font-semibold mb-4 text-lg">Categories</h3>
-                <div className="space-y-1 max-h-56 overflow-y-auto pr-1">
-                  <Link 
-                    href="/browse"
-                    className={`block px-3 py-2 rounded-md text-sm transition-colors ${
-                      !categoryParam 
-                        ? "bg-primary text-primary-foreground font-medium" 
-                        : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
-                    }`}
-                  >
-                    All Categories
-                  </Link>
-                  {stats?.categoryBreakdown.map((cat) => (
-                    <Link 
-                      key={cat.category}
-                      href={`/browse/${encodeURIComponent(cat.category)}`}
-                      className={`flex justify-between items-center px-3 py-2 rounded-md text-sm transition-colors ${
-                        categoryParam === cat.category 
-                          ? "bg-primary text-primary-foreground font-medium" 
-                          : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
-                      }`}
-                    >
-                      <span className="truncate pr-2">{cat.category}</span>
-                      <span className={`text-xs ${categoryParam === cat.category ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                        {cat.count}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
+                <h3 className="font-semibold mb-3 text-lg">State</h3>
+                <Select
+                  value={categoryParam || "all"}
+                  onValueChange={(val) => {
+                    if (val === "all") setLocation("/browse");
+                    else setLocation(`/browse/${encodeURIComponent(val)}`);
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="All States" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All States</SelectItem>
+                    {stats?.categoryBreakdown.map((cat) => (
+                      <SelectItem key={cat.category} value={cat.category}>
+                        {cat.category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {(stats as any)?.ridingTypeBreakdown?.length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-4 text-lg">Riding Type</h3>
-                  <div className="space-y-1">
-                    <button
-                      onClick={() => { setRidingType(""); setPage(1); }}
-                      className={`block w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                        !ridingType
-                          ? "bg-primary text-primary-foreground font-medium"
-                          : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
-                      }`}
-                    >
-                      All Types
-                    </button>
-                    {(stats as any).ridingTypeBreakdown.map((rt: { ridingType: string; count: number }) => (
-                      <button
-                        key={rt.ridingType}
-                        onClick={() => { setRidingType(rt.ridingType); setPage(1); }}
-                        className={`flex justify-between items-center w-full px-3 py-2 rounded-md text-sm transition-colors ${
-                          ridingType === rt.ridingType
-                            ? "bg-primary text-primary-foreground font-medium"
-                            : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
-                        }`}
-                      >
-                        <span className="truncate pr-2 capitalize">{rt.ridingType.replace(/-/g, " ")}</span>
-                        <span className={`text-xs ${ridingType === rt.ridingType ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                          {rt.count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  <h3 className="font-semibold mb-3 text-lg">Riding Type</h3>
+                  <Select
+                    value={ridingType || "all"}
+                    onValueChange={(val) => { setRidingType(val === "all" ? "" : val); setPage(1); }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      {(stats as any).ridingTypeBreakdown.map((rt: { ridingType: string; count: number }) => (
+                        <SelectItem key={rt.ridingType} value={rt.ridingType}>
+                          <span className="capitalize">{rt.ridingType.replace(/-/g, " ")}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 

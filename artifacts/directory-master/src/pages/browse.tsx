@@ -16,6 +16,7 @@ import { FontLoader } from "@/components/template/FontLoader";
 import { mergeTemplateSettings, getFontFamily } from "@/lib/templateTypes";
 import type { SectionProps } from "@/lib/templateTypes";
 import { BrowseMapView } from "@/components/directory/BrowseMapView";
+import { AdSlot } from "@/components/ads/AdSlot";
 
 export default function BrowsePage() {
   const [location, setLocation] = useLocation();
@@ -408,6 +409,8 @@ export default function BrowsePage() {
                   Clear Filters
                 </Button>
               )}
+
+              <AdSlot placement="sidebar" />
             </aside>
           )}
 

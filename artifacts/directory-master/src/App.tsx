@@ -36,6 +36,7 @@ import AdminSettingsPage from "@/pages/admin/settings";
 import AdminUsersPage from "@/pages/admin/users";
 import AdminSeoPage from "@/pages/admin/seo";
 import AdminContactsPage from "@/pages/admin/contacts";
+import AdminAdsPage from "@/pages/admin/ads";
 import BuilderPage from "@/pages/admin/builder";
 
 const queryClient = new QueryClient();
@@ -116,6 +117,13 @@ function Router() {
         <RequireAdmin>
           <AdminLayout>
             <AdminContactsPage />
+          </AdminLayout>
+        </RequireAdmin>
+      </Route>
+      <Route path="/admin/ads">
+        <RequireAdmin>
+          <AdminLayout>
+            <AdminAdsPage />
           </AdminLayout>
         </RequireAdmin>
       </Route>

@@ -124,6 +124,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               >
                 Listing Plans
               </Link>
+              <Link
+                href="/advertise"
+                className={linkClass}
+                style={textStyle}
+              >
+                Advertise
+              </Link>
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -190,6 +197,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 style={navbarText ? textStyle : undefined}
               >
                 Browse All
+              </Link>
+              <Link
+                href="/advertise"
+                onClick={() => setIsMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-base font-medium"
+                style={navbarText ? textStyle : undefined}
+              >
+                Advertise
               </Link>
               {isAdmin && (
                 <Link

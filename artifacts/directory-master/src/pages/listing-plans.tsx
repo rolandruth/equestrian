@@ -69,6 +69,16 @@ const plans: {
 ];
 
 const UPGRADE_SUCCESS_MESSAGE = "saddleup:listing-upgrade-success";
+const UPGRADE_CHANNEL_NAME = "saddleup-listing-upgrades";
+// Stripe Checkout sets Cross-Origin-Opener-Policy: same-origin, which severs
+// window.opener as soon as the popup navigates to checkout.stripe.com — even
+// after it returns to our own origin. window.name, unlike window.opener,
+// survives cross-origin navigation, so we use it (set right after opening the
+// popup) as the reliable way to know "this page load is inside the checkout
+// popup". We pair it with a same-origin BroadcastChannel (instead of
+// postMessage to window.opener) to notify the main tab, since that channel
+// doesn't depend on the opener relationship at all.
+const CHECKOUT_POPUP_WINDOW_NAME = "saddleup-checkout-popup";
 
 export default function ListingPlansPage() {
   const { data: settings } = useGetPublicSettings();
@@ -88,7 +98,7 @@ export default function ListingPlansPage() {
   const successPlan = params.get("success") === "1" ? (params.get("plan") as PlanKey | null) : null;
   const successEntry = params.get("entry");
   const canceled = params.get("canceled") === "1";
-  const isCheckoutPopup = typeof window !== "undefined" && window.opener != null;
+  const isCheckoutPopup = typeof window !== "undefined" && window.name === CHECKOUT_POPUP_WINDOW_NAME;
 
   // This page is also rendered inside the popup tab after Stripe redirects back to
   // the success_url. If we're in that popup, notify the original tab and close
@@ -96,12 +106,11 @@ export default function ListingPlansPage() {
   useEffect(() => {
     if (!successPlan || !isCheckoutPopup) return;
     try {
-      window.opener?.postMessage(
-        { type: UPGRADE_SUCCESS_MESSAGE, plan: successPlan, entry: successEntry },
-        window.location.origin
-      );
+      const channel = new BroadcastChannel(UPGRADE_CHANNEL_NAME);
+      channel.postMessage({ type: UPGRADE_SUCCESS_MESSAGE, plan: successPlan, entry: successEntry });
+      channel.close();
     } catch {
-      // ignore — opener may be unavailable/cross-origin
+      // ignore — BroadcastChannel unsupported in this browser
     }
     const timer = setTimeout(() => window.close(), 1800);
     return () => clearTimeout(timer);
@@ -110,15 +119,19 @@ export default function ListingPlansPage() {
   // Listen for the popup's success notification so the original tab updates
   // itself even though the browser navigated the *popup*, not this page.
   useEffect(() => {
-    function handleMessage(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
-      if (event.data?.type !== UPGRADE_SUCCESS_MESSAGE) return;
-      setConfirmedUpgrade({ plan: event.data.plan, entry: event.data.entry ?? "" });
-      setCheckoutWindowRef(null);
-      closePicker();
+    let channel: BroadcastChannel | undefined;
+    try {
+      channel = new BroadcastChannel(UPGRADE_CHANNEL_NAME);
+      channel.onmessage = (event: MessageEvent) => {
+        if (event.data?.type !== UPGRADE_SUCCESS_MESSAGE) return;
+        setConfirmedUpgrade({ plan: event.data.plan, entry: event.data.entry ?? "" });
+        setCheckoutWindowRef(null);
+        closePicker();
+      };
+    } catch {
+      // ignore — BroadcastChannel unsupported in this browser
     }
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
+    return () => channel?.close();
   }, []);
 
   // If the user closes the checkout tab manually without completing payment,
@@ -178,6 +191,14 @@ export default function ListingPlansPage() {
     // avoids trying to navigate the app's own frame to Stripe, which can silently
     // fail when the app is embedded (e.g. previewed inside an iframe).
     const checkoutWindow = window.open("", "_blank");
+    // Mark it via window.name (survives cross-origin navigation, unlike
+    // window.opener which Stripe's COOP header severs) so the popup can
+    // recognize itself once Stripe redirects back to our success_url.
+    try {
+      if (checkoutWindow) checkoutWindow.name = CHECKOUT_POPUP_WINDOW_NAME;
+    } catch {
+      // ignore
+    }
 
     try {
       const res = await fetch("/api/stripe/checkout-plan", {

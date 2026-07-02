@@ -27,9 +27,10 @@ const AVAILABLE_FIELDS = [
   { value: "eventType",     label: "Event Type",          description: "Type of event (conference, expo, summit…)" },
   { value: "startDate",     label: "Start Date",          description: "Start date of the event or listing" },
   { value: "endDate",       label: "End Date",            description: "End date of the event or listing" },
-  { value: "tags",          label: "Tags / Keywords",     description: "Comma-separated tags" },
-  { value: "moreDetails",   label: "More Details",        description: "Additional information (stored as text)" },
-  { value: "skip",          label: "Skip (don't import)", description: "This column will not be imported" },
+  { value: "tags",              label: "Tags / Keywords",     description: "Comma-separated tags" },
+  { value: "moreDetails",       label: "More Details",        description: "Additional information (stored as text)" },
+  { value: "custom_ridingtype", label: "Riding Type",          description: "Riding school or independent trainer (riding-school / independent-trainer)" },
+  { value: "skip",              label: "Skip (don't import)", description: "This column will not be imported" },
 ];
 
 // Heuristic rules for auto-suggesting mappings from column names
@@ -55,6 +56,7 @@ const HEURISTIC_RULES: Array<{ patterns: RegExp[]; target: string; confidence: n
   { patterns: [/^website$/i, /^url$/i, /^web$/i, /^link$/i, /^homepage$/i, /^site$/i, /website/i, /^web_url$/i, /^site_url$/i], target: "website", confidence: 0.9 },
   { patterns: [/^tags$/i, /^tag$/i, /^keywords$/i, /^keyword$/i, /^labels$/i], target: "tags", confidence: 0.9 },
   { patterns: [/^notes$/i, /^additional$/i, /^extra$/i, /^more_details$/i, /^remarks$/i], target: "moreDetails", confidence: 0.85 },
+  { patterns: [/^riding_type$/i, /^ridingtype$/i, /^riding_style$/i, /^rider_type$/i, /^type_of_riding$/i], target: "custom_ridingtype", confidence: 0.95 },
 ];
 
 function suggestMapping(columnName: string): { target: string; confidence: number } {

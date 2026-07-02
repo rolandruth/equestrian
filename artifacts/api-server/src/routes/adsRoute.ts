@@ -4,7 +4,18 @@ import { ads } from "@workspace/db";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 import { eq, sql } from "drizzle-orm";
 import { writeFile, mkdir } from "fs/promises";
+import { existsSync } from "fs";
 import path from "path";
+
+function findWorkspaceRoot(start: string): string {
+  let dir = start;
+  while (dir !== path.dirname(dir)) {
+    if (existsSync(path.join(dir, "pnpm-workspace.yaml"))) return dir;
+    dir = path.dirname(dir);
+  }
+  return start;
+}
+const WORKSPACE_ROOT = findWorkspaceRoot(process.cwd());
 
 const router = Router();
 
@@ -123,7 +134,7 @@ router.post("/upload-image", requireAdmin, async (req, res) => {
       res.status(400).json({ error: "Ad image must be under 5 MB" });
       return;
     }
-    const publicDir = path.join(process.cwd(), "artifacts", "directory-master", "public", "ads");
+    const publicDir = path.join(WORKSPACE_ROOT, "artifacts", "directory-master", "public", "ads");
     await mkdir(publicDir, { recursive: true });
     const filename = `ad-${Date.now()}${ext}`;
     await writeFile(path.join(publicDir, filename), buffer);

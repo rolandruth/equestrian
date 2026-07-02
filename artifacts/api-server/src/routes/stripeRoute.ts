@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { getUncachableStripeClient } from "../stripeClient.js";
+import { getUncachableStripeClient, getOrCreateBizCustomerId } from "../stripeClient.js";
 import { db, entries } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 
@@ -33,10 +33,12 @@ router.post("/checkout", async (req: Request, res: Response) => {
     }
 
     const stripe = await getUncachableStripeClient();
+    const customerId = await getOrCreateBizCustomerId(req.bizUser!.id);
 
     const origin = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
     const session = await stripe.checkout.sessions.create({
+      customer: customerId,
       payment_method_types: ["card"],
       line_items: [
         {
@@ -95,9 +97,11 @@ router.post("/checkout-plan", async (req: Request, res: Response) => {
     }
 
     const stripe = await getUncachableStripeClient();
+    const customerId = await getOrCreateBizCustomerId(req.bizUser!.id);
     const origin = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
 
     const session = await stripe.checkout.sessions.create({
+      customer: customerId,
       payment_method_types: ["card"],
       line_items: [
         {

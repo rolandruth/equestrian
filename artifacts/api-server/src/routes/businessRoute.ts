@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { db, entries, listingSubscriptions } from "@workspace/db";
+import { db, entries, listingSubscriptions, bizUsers } from "@workspace/db";
 import { and, eq, ilike, isNull, or } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient.js";
 
@@ -158,6 +158,83 @@ router.post("/cancel-plan", async (req: Request, res: Response) => {
   } catch (err: any) {
     req.log.error(err, "Failed to cancel listing subscription");
     res.status(500).json({ error: err.message || "Cancellation failed" });
+  }
+});
+
+// Creates a Stripe-hosted Customer Portal session so owners can view invoice
+// history and update/replace their payment method without contacting support.
+router.post("/billing-portal", async (req: Request, res: Response) => {
+  if (!requireBizAuth(req, res)) return;
+
+  const [bizUser] = await db.select().from(bizUsers).where(eq(bizUsers.id, req.bizUser!.id));
+  if (!bizUser) {
+    res.status(404).json({ error: "Business account not found" });
+    return;
+  }
+
+  try {
+    const stripe = await getUncachableStripeClient();
+    let customerId = bizUser.stripeCustomerId;
+
+    // Backfill path for owners who purchased before we started storing
+    // stripeCustomerId on bizUsers (or whose checkout otherwise didn't
+    // persist it): recover the Stripe Customer from any subscription record
+    // we already have for them so their existing billing history isn't
+    // stranded behind a 404.
+    if (!customerId) {
+      const [subscription] = await db
+        .select()
+        .from(listingSubscriptions)
+        .where(eq(listingSubscriptions.ownerId, bizUser.id))
+        .limit(1);
+
+      if (subscription) {
+        const stripeSubscription = await stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
+        const recoveredCustomerId =
+          typeof stripeSubscription.customer === "string"
+            ? stripeSubscription.customer
+            : stripeSubscription.customer?.id;
+        if (recoveredCustomerId) {
+          customerId = recoveredCustomerId;
+          await db
+            .update(bizUsers)
+            .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+            .where(eq(bizUsers.id, bizUser.id));
+        }
+      }
+    }
+
+    // Last resort: an owner may have a Stripe Customer (e.g. from an ad
+    // checkout) with no local subscription row to recover it from — look it
+    // up by the email on file rather than dead-ending.
+    if (!customerId && bizUser.email) {
+      const matches = await stripe.customers.list({ email: bizUser.email, limit: 1 });
+      if (matches.data[0]) {
+        customerId = matches.data[0].id;
+        await db
+          .update(bizUsers)
+          .set({ stripeCustomerId: customerId, updatedAt: new Date() })
+          .where(eq(bizUsers.id, bizUser.id));
+      }
+    }
+
+    if (!customerId) {
+      res.status(404).json({
+        error: "No billing account yet. Purchase a Featured or Premium plan first to set up billing.",
+      });
+      return;
+    }
+
+    const origin = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${origin}/business/dashboard`,
+    });
+
+    res.json({ url: session.url });
+  } catch (err: any) {
+    req.log.error(err, "Failed to create billing portal session");
+    res.status(500).json({ error: err.message || "Could not open billing portal" });
   }
 });
 

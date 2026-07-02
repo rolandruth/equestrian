@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Star, Zap, Building2, LogOut, ExternalLink, Search, PlusCircle } from "lucide-react";
+import { Loader2, Star, Zap, Building2, LogOut, ExternalLink, Search, PlusCircle, CreditCard } from "lucide-react";
 
 type Entry = {
   id: number;
@@ -41,6 +41,9 @@ export default function BusinessDashboardPage() {
   const [claimSearching, setClaimSearching] = useState(false);
   const [claimingId, setClaimingId] = useState<number | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
+
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -124,6 +127,23 @@ export default function BusinessDashboardPage() {
     }
   }
 
+  async function handleBillingPortal() {
+    setBillingLoading(true);
+    setBillingError(null);
+    try {
+      const res = await fetch("/api/business/billing-portal", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not open billing portal");
+      window.location.href = data.url;
+    } catch (err: any) {
+      setBillingError(err.message || "Something went wrong. Please try again.");
+      setBillingLoading(false);
+    }
+  }
+
   if (bizAuth.isLoading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 flex justify-center">
@@ -159,6 +179,39 @@ export default function BusinessDashboardPage() {
           Sign Out
         </Button>
       </div>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Billing
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {billingError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300 mb-3">
+              {billingError}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <p className="text-sm text-muted-foreground max-w-md">
+              View past invoices and update your payment method through Stripe's secure billing portal.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBillingPortal}
+              disabled={billingLoading}
+            >
+              {billingLoading ? (
+                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Opening…</>
+              ) : (
+                <><CreditCard className="h-3.5 w-3.5 mr-1.5" />Manage Billing</>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 mb-8">

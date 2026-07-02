@@ -1,6 +1,7 @@
 import Stripe from 'stripe';
 import { StripeSync } from 'stripe-replit-sync';
-import { pool } from '@workspace/db';
+import { pool, db, bizUsers } from '@workspace/db';
+import { eq } from 'drizzle-orm';
 
 type StripeCredentials = { secretKey: string; webhookSecret?: string };
 
@@ -100,6 +101,33 @@ async function getStripeCredentials(): Promise<StripeCredentials> {
 export async function getUncachableStripeClient(): Promise<Stripe> {
   const { secretKey } = await getStripeCredentials();
   return new Stripe(secretKey);
+}
+
+// Every owner should have exactly one Stripe Customer backing all of their
+// checkouts, so their invoice history and payment method live in one place
+// and the billing-portal session shows everything they've ever purchased.
+export async function getOrCreateBizCustomerId(bizUserId: string): Promise<string> {
+  const [bizUser] = await db.select().from(bizUsers).where(eq(bizUsers.id, bizUserId));
+  if (!bizUser) {
+    throw new Error('Business user not found');
+  }
+  if (bizUser.stripeCustomerId) {
+    return bizUser.stripeCustomerId;
+  }
+
+  const stripe = await getUncachableStripeClient();
+  const customer = await stripe.customers.create({
+    email: bizUser.email ?? undefined,
+    name: [bizUser.firstName, bizUser.lastName].filter(Boolean).join(' ') || undefined,
+    metadata: { bizUserId },
+  });
+
+  await db
+    .update(bizUsers)
+    .set({ stripeCustomerId: customer.id, updatedAt: new Date() })
+    .where(eq(bizUsers.id, bizUserId));
+
+  return customer.id;
 }
 
 async function getManagedWebhookSecret(): Promise<string | undefined> {

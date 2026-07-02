@@ -329,6 +329,16 @@ export function HomeSearchSection() {
                             {entry.category}
                           </Badge>
                         )}
+                        {(entry.premium || entry.featured) && (
+                          <div className="flex gap-1.5 mb-2">
+                            {entry.premium && (
+                              <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] px-2 py-0.5">⭐ Premium</Badge>
+                            )}
+                            {entry.featured && !entry.premium && (
+                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] px-2 py-0.5">★ Featured</Badge>
+                            )}
+                          </div>
+                        )}
                         <CardTitle className="line-clamp-2 text-base leading-snug">
                           {entry.title}
                         </CardTitle>
@@ -407,6 +417,12 @@ export function HomeSearchSection() {
                               >
                                 {entry.category}
                               </Badge>
+                            )}
+                            {entry.premium && (
+                              <Badge className="bg-violet-600 text-white text-[10px] px-2 py-0.5 shrink-0">⭐ Premium</Badge>
+                            )}
+                            {entry.featured && !entry.premium && (
+                              <Badge className="bg-amber-500 text-white text-[10px] px-2 py-0.5 shrink-0">★ Featured</Badge>
                             )}
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-0.5">

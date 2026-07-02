@@ -279,6 +279,16 @@ export default function BrowsePage() {
           )}
           {isDemo && <Badge variant="outline">Demo</Badge>}
         </div>
+        {(entry.premium || entry.featured) && (
+          <div className="flex gap-1.5 mb-2">
+            {entry.premium && (
+              <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] px-2 py-0.5">⭐ Premium</Badge>
+            )}
+            {entry.featured && !entry.premium && (
+              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] px-2 py-0.5">★ Featured</Badge>
+            )}
+          </div>
+        )}
         <CardTitle className="line-clamp-2 text-xl">{entry.title}</CardTitle>
       </CardHeader>
       {renderCardFields(entry)}

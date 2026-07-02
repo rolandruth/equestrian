@@ -308,12 +308,19 @@ export default function ListingPlansPage() {
       )}
 
       {confirmedUpgrade && (
-        <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800 px-4 py-3 text-sm text-green-800 dark:text-green-300 mb-8 max-w-3xl mx-auto flex items-center gap-2">
-          <PartyPopper className="h-4 w-4 shrink-0" />
-          <span>
-            {confirmedUpgrade.entry ? <strong>{confirmedUpgrade.entry}</strong> : "Your listing"} is now on the{" "}
-            <strong>{plans.find((p) => p.key === confirmedUpgrade.plan)?.name ?? confirmedUpgrade.plan}</strong> plan!
-          </span>
+        <div className="rounded-2xl border-2 border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-950/40 px-6 py-5 mb-10 max-w-3xl mx-auto flex items-center gap-4 shadow-lg shadow-green-500/20 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="shrink-0 h-12 w-12 rounded-full bg-green-500 flex items-center justify-center">
+            <PartyPopper className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <p className="text-lg font-bold text-green-800 dark:text-green-300 leading-tight">
+              Payment successful!
+            </p>
+            <p className="text-sm text-green-700 dark:text-green-400 mt-0.5">
+              {confirmedUpgrade.entry ? <strong>{confirmedUpgrade.entry}</strong> : "Your listing"} is now on the{" "}
+              <strong>{plans.find((p) => p.key === confirmedUpgrade.plan)?.name ?? confirmedUpgrade.plan}</strong> plan.
+            </p>
+          </div>
         </div>
       )}
 

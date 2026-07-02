@@ -2,7 +2,17 @@ import Stripe from 'stripe';
 import { StripeSync } from 'stripe-replit-sync';
 import { pool } from '@workspace/db';
 
-async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecret?: string }> {
+type StripeCredentials = { secretKey: string; webhookSecret?: string };
+
+// A single checkout can fan out into a dozen+ near-simultaneous webhook events
+// (charge, invoice, customer, subscription, payment_intent, checkout.session, ...),
+// each of which used to call the connector API independently and could trip its
+// rate limit (429). Cache credentials in-process for a short TTL to absorb bursts.
+let credentialsCache: { value: StripeCredentials; expiresAt: number } | null = null;
+let inFlightFetch: Promise<StripeCredentials> | null = null;
+const CREDENTIALS_TTL_MS = 5 * 60 * 1000;
+
+async function fetchStripeCredentials(): Promise<StripeCredentials> {
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -17,42 +27,74 @@ async function getStripeCredentials(): Promise<{ secretKey: string; webhookSecre
     );
   }
 
-  const resp = await fetch(
-    `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=stripe`,
-    {
-      headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken },
-      signal: AbortSignal.timeout(10_000),
-    }
-  );
-
-  if (!resp.ok) {
-    throw new Error(`Failed to fetch Stripe credentials: ${resp.status} ${resp.statusText}`);
-  }
-
-  const data = await resp.json() as {
-    items?: Array<{
-      settings?: { secret?: string; webhook_secret?: string };
-      webhook_config?: { secret?: string; signing_secret?: string } | null;
-    }>
-  };
-  const item = data.items?.[0];
-  const settings = item?.settings;
-
-  if (!settings?.secret) {
-    throw new Error(
-      'Stripe integration not connected or missing secret key. ' +
-      'Connect Stripe via the Integrations tab first.'
+  const maxAttempts = 3;
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const resp = await fetch(
+      `https://${hostname}/api/v2/connection?include_secrets=true&connector_names=stripe`,
+      {
+        headers: { Accept: "application/json", X_REPLIT_TOKEN: xReplitToken },
+        signal: AbortSignal.timeout(10_000),
+      }
     );
-  }
 
-  return {
-    secretKey: settings.secret,
-    webhookSecret:
-      settings.webhook_secret ??
-      item?.webhook_config?.secret ??
-      item?.webhook_config?.signing_secret ??
-      process.env.STRIPE_WEBHOOK_SECRET,
-  };
+    if (resp.ok) {
+      const data = await resp.json() as {
+        items?: Array<{
+          settings?: { secret?: string; webhook_secret?: string };
+          webhook_config?: { secret?: string; signing_secret?: string } | null;
+        }>
+      };
+      const item = data.items?.[0];
+      const settings = item?.settings;
+
+      if (!settings?.secret) {
+        throw new Error(
+          'Stripe integration not connected or missing secret key. ' +
+          'Connect Stripe via the Integrations tab first.'
+        );
+      }
+
+      return {
+        secretKey: settings.secret,
+        webhookSecret:
+          settings.webhook_secret ??
+          item?.webhook_config?.secret ??
+          item?.webhook_config?.signing_secret ??
+          process.env.STRIPE_WEBHOOK_SECRET,
+      };
+    }
+
+    lastErr = new Error(`Failed to fetch Stripe credentials: ${resp.status} ${resp.statusText}`);
+    if (resp.status === 429 && attempt < maxAttempts) {
+      const retryAfterHeader = resp.headers.get('retry-after');
+      const retryAfterMs = retryAfterHeader ? Number(retryAfterHeader) * 1000 : NaN;
+      const backoffMs = Number.isFinite(retryAfterMs) ? retryAfterMs : 500 * attempt;
+      await new Promise((r) => setTimeout(r, backoffMs));
+      continue;
+    }
+    break;
+  }
+  throw lastErr;
+}
+
+async function getStripeCredentials(): Promise<StripeCredentials> {
+  const now = Date.now();
+  if (credentialsCache && credentialsCache.expiresAt > now) {
+    return credentialsCache.value;
+  }
+  if (inFlightFetch) {
+    return inFlightFetch;
+  }
+  inFlightFetch = fetchStripeCredentials()
+    .then((value) => {
+      credentialsCache = { value, expiresAt: Date.now() + CREDENTIALS_TTL_MS };
+      return value;
+    })
+    .finally(() => {
+      inFlightFetch = null;
+    });
+  return inFlightFetch;
 }
 
 export async function getUncachableStripeClient(): Promise<Stripe> {

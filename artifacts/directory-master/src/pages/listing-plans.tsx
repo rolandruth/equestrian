@@ -122,6 +122,13 @@ export default function ListingPlansPage() {
     if (!pickerPlan || !selectedEntry) return;
     setCheckingOut(true);
     setError(null);
+
+    // Open the tab synchronously (within the click's event handler) so browsers
+    // don't treat it as a popup-blocked, non-user-initiated navigation. This also
+    // avoids trying to navigate the app's own frame to Stripe, which can silently
+    // fail when the app is embedded (e.g. previewed inside an iframe).
+    const checkoutWindow = window.open("", "_blank");
+
     try {
       const res = await fetch("/api/stripe/checkout-plan", {
         method: "POST",
@@ -130,8 +137,16 @@ export default function ListingPlansPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
-      window.location.href = data.url;
+
+      if (checkoutWindow) {
+        checkoutWindow.location.href = data.url;
+      } else {
+        // Popup was blocked — fall back to a same-tab redirect.
+        window.location.href = data.url;
+      }
+      setCheckingOut(false);
     } catch (err: any) {
+      checkoutWindow?.close();
       setError(err.message || "Something went wrong. Please try again.");
       setCheckingOut(false);
     }

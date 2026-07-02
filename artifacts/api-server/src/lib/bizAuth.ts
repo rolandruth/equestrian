@@ -77,10 +77,15 @@ export async function clearBizSession(
   res.clearCookie(BIZ_SESSION_COOKIE, { path: "/" });
 }
 
+// Business-owner sessions are always resolved from the dedicated `biz_sid`
+// cookie, never from the `Authorization` header. The frontend's shared API
+// client always attaches a Bearer token for staff (admin/editor/viewer)
+// auth whenever one exists in localStorage, completely independent of
+// whether the current user is signed in as a business owner. If this
+// function preferred that header, a browser holding a stale/valid staff
+// token would have its business session hijacked/cleared on every request,
+// breaking the "fully separate" auth requirement. Bearer tokens are simply
+// not part of the business-auth contract.
 export function getBizSessionId(req: Request): string | undefined {
-  const authHeader = req.headers["authorization"];
-  if (authHeader?.startsWith("Bearer ")) {
-    return authHeader.slice(7);
-  }
   return req.cookies?.[BIZ_SESSION_COOKIE];
 }

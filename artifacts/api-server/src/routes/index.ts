@@ -14,12 +14,16 @@ import builderRouter from "./builderRoute.js";
 import contactsRouter from "./contactsRoute.js";
 import adsRouter from "./adsRoute.js";
 import stripeRouter from "./stripeRoute.js";
+import bizAuthRouter from "./bizAuthRoute.js";
+import businessRouter from "./businessRoute.js";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/setup", setupRouter);
 router.use("/auth", authRouter);
+router.use(bizAuthRouter);
+router.use("/business", businessRouter);
 router.use("/entries", entriesRouter);
 router.use("/categories", categoriesRouter);
 router.use("/settings", settingsRouter);

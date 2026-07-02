@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { ScriptInjector } from "./ScriptInjector";
 import { ThemeColorInjector } from "@/components/template/ThemeColorInjector";
 import { useAuth } from "@/hooks/use-auth";
+import { useBusinessAuth } from "@workspace/replit-auth-web";
+import { Building2 } from "lucide-react";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -17,6 +19,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const isLoggedIn = Boolean(token);
   const { data: currentUser } = useGetCurrentUser({ query: { enabled: isLoggedIn } });
   const isAdmin = isLoggedIn && currentUser?.role === "admin";
+  const bizAuth = useBusinessAuth();
 
   useEffect(() => {
     const faviconUrl = (settings as any)?.faviconUrl;
@@ -158,6 +161,25 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Sign In
                 </Link>
               )}
+              {bizAuth.isAuthenticated ? (
+                <Link
+                  href="/business/dashboard"
+                  className={`${linkClass} flex items-center gap-1.5`}
+                  style={textStyle}
+                >
+                  <Building2 className="h-4 w-4" />
+                  My Business
+                </Link>
+              ) : (
+                <button
+                  onClick={() => bizAuth.login("/business/dashboard")}
+                  className={`${linkClass} flex items-center gap-1.5`}
+                  style={textStyle}
+                >
+                  <Building2 className="h-4 w-4" />
+                  Business Login
+                </button>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -234,6 +256,29 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 >
                   Sign In
                 </Link>
+              )}
+              {bizAuth.isAuthenticated ? (
+                <Link
+                  href="/business/dashboard"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium"
+                  style={navbarText ? textStyle : undefined}
+                >
+                  <Building2 className="h-4 w-4" />
+                  My Business
+                </Link>
+              ) : (
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    bizAuth.login("/business/dashboard");
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium w-full text-left"
+                  style={navbarText ? textStyle : undefined}
+                >
+                  <Building2 className="h-4 w-4" />
+                  Business Login
+                </button>
               )}
             </div>
           </div>

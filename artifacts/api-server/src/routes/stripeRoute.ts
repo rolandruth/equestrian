@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { getUncachableStripeClient } from "../stripeClient.js";
 import { db, entries } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
@@ -18,7 +18,11 @@ const LISTING_PLANS: Record<string, { label: string; price: number }> = {
   premium:  { label: "Premium Listing",  price: 15000 },
 };
 
-router.post("/checkout", async (req, res) => {
+router.post("/checkout", async (req: Request, res: Response) => {
+  if (!req.isBizAuthenticated()) {
+    res.status(401).json({ error: "Login required" });
+    return;
+  }
   try {
     const { placement } = req.body as { placement: string };
 
@@ -61,7 +65,11 @@ router.post("/checkout", async (req, res) => {
   }
 });
 
-router.post("/checkout-plan", async (req, res) => {
+router.post("/checkout-plan", async (req: Request, res: Response) => {
+  if (!req.isBizAuthenticated()) {
+    res.status(401).json({ error: "Login required" });
+    return;
+  }
   try {
     const { entryId, plan } = req.body as { entryId: number; plan: string };
 
@@ -78,6 +86,11 @@ router.post("/checkout-plan", async (req, res) => {
     const [entry] = await db.select().from(entries).where(eq(entries.id, entryId));
     if (!entry || !entry.published) {
       res.status(404).json({ error: "Listing not found" });
+      return;
+    }
+
+    if (entry.ownerId !== req.bizUser!.id) {
+      res.status(403).json({ error: "You must claim this listing before purchasing a plan" });
       return;
     }
 
@@ -103,7 +116,7 @@ router.post("/checkout-plan", async (req, res) => {
       mode: "subscription",
       success_url: `${origin}/listing-plans?success=1&plan=${plan}&entry=${encodeURIComponent(entry.title)}`,
       cancel_url:  `${origin}/listing-plans?canceled=1`,
-      metadata: { type: "listing_plan", entryId: String(entryId), plan },
+      metadata: { type: "listing_plan", entryId: String(entryId), plan, ownerId: req.bizUser!.id },
     });
 
     res.json({ url: session.url });

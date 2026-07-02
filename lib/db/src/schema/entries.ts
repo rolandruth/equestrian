@@ -30,6 +30,7 @@ export const entries = pgTable("entries", {
   ogDescription: text("og_description"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  ownerId: text("owner_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

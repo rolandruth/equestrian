@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useGetPublicSettings } from "@workspace/api-client-react";
+import { useBusinessAuth } from "@workspace/replit-auth-web";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Megaphone, ImageIcon, Loader2, PartyPopper } from "lucide-react";
@@ -51,6 +52,7 @@ const BUNDLE_PRICE = 249;
 export default function AdvertisePage() {
   const { data: settings } = useGetPublicSettings();
   const siteName = (settings as any)?.siteTitle || "SaddleUpGuide";
+  const bizAuth = useBusinessAuth();
   const [availability, setAvailability] = useState<Availability[] | null>(null);
   const [loadingPlacement, setLoadingPlacement] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,11 +76,16 @@ export default function AdvertisePage() {
   const allSoldOut = availability !== null && availableCount === 0;
 
   async function handleCheckout(placement: string) {
+    if (!bizAuth.isAuthenticated) {
+      bizAuth.login("/advertise");
+      return;
+    }
     setLoadingPlacement(placement);
     setError(null);
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ placement }),
       });

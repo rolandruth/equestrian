@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGetPublicSettings } from "@workspace/api-client-react";
-import { Check, Star, Zap, Loader2, PartyPopper, Search } from "lucide-react";
+import { useBusinessAuth } from "@workspace/replit-auth-web";
+import { Check, Star, Zap, Loader2, PartyPopper, Search, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -85,7 +86,9 @@ const CHECKOUT_POPUP_WINDOW_NAME = "saddleup-checkout-popup";
 export default function ListingPlansPage() {
   const { data: settings } = useGetPublicSettings();
   const siteName = settings?.siteTitle || "SaddleUpGuide";
+  const bizAuth = useBusinessAuth();
 
+  const [preselectedEntry, setPreselectedEntry] = useState<EntryResult | null>(null);
   const [pickerPlan, setPickerPlan] = useState<PlanKey | null>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<EntryResult[]>([]);
@@ -105,6 +108,30 @@ export default function ListingPlansPage() {
   const successEntry = params.get("entry");
   const canceled = params.get("canceled") === "1";
   const isCheckoutPopup = typeof window !== "undefined" && window.name === CHECKOUT_POPUP_WINDOW_NAME;
+  const preselectedEntryId = params.get("entryId");
+
+  // If we arrived from the "Buy Featured/Premium" buttons on the My Listings
+  // dashboard, preload that entry so the picker can skip the search step.
+  useEffect(() => {
+    if (!preselectedEntryId || !bizAuth.isAuthenticated) return;
+    let cancelled = false;
+    fetch(`/api/public/entries/${preselectedEntryId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((entry) => {
+        if (!cancelled && entry) {
+          setPreselectedEntry({
+            id: entry.id,
+            title: entry.title,
+            category: entry.category,
+            location: entry.location,
+          });
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [preselectedEntryId, bizAuth.isAuthenticated]);
 
   // This page is also rendered inside the popup tab after Stripe redirects back to
   // the success_url. If we're in that popup, just close ourselves — the original
@@ -189,10 +216,14 @@ export default function ListingPlansPage() {
   }, [query, pickerPlan]);
 
   function openPicker(plan: PlanKey) {
+    if (!bizAuth.isAuthenticated) {
+      bizAuth.login(`/listing-plans`);
+      return;
+    }
     setPickerPlan(plan);
     setQuery("");
     setResults([]);
-    setSelectedEntry(null);
+    setSelectedEntry(preselectedEntry ?? null);
     setError(null);
   }
 
@@ -224,8 +255,22 @@ export default function ListingPlansPage() {
     }
 
     try {
+      // Self-serve claim: if this listing isn't owned yet, claim it for the
+      // signed-in business owner before proceeding to checkout. Claiming is a
+      // no-op if the caller already owns it, and fails with a clear error if
+      // someone else already claimed it first.
+      const claimRes = await fetch("/api/business/claim", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entryId: selectedEntry.id }),
+      });
+      const claimData = await claimRes.json();
+      if (!claimRes.ok) throw new Error(claimData.error || "Unable to claim this listing");
+
       const res = await fetch("/api/stripe/checkout-plan", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entryId: selectedEntry.id, plan: pickerPlan }),
       });
@@ -389,7 +434,7 @@ export default function ListingPlansPage() {
               {pickerPlan === "featured" ? "Get Featured" : "Go Premium"}
             </DialogTitle>
             <DialogDescription>
-              Search for your business listing to upgrade it. No account needed.
+              Search for your business listing to claim and upgrade it.
             </DialogDescription>
           </DialogHeader>
 

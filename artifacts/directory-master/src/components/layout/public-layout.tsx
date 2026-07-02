@@ -18,6 +18,18 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { data: currentUser } = useGetCurrentUser({ query: { enabled: isLoggedIn } });
   const isAdmin = isLoggedIn && currentUser?.role === "admin";
 
+  useEffect(() => {
+    const faviconUrl = (settings as any)?.faviconUrl;
+    if (!faviconUrl) return;
+    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = faviconUrl;
+  }, [(settings as any)?.faviconUrl]);
+
   const handleSignOut = async () => {
     setIsMenuOpen(false);
     try {

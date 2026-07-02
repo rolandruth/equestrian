@@ -34,7 +34,7 @@ const settingsSchema = z.object({
   heroSearchButtonText: z.string().optional().nullable(),
   heroSearchButtonColor: z.string().optional().nullable(),
   heroSearchButtonTextColor: z.string().optional().nullable(),
-  faviconUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
+  faviconUrl: z.string().optional().or(z.literal("")).nullable(),
   footerText: z.string().optional().nullable(),
   privacyPolicyUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
   termsUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")).nullable(),
@@ -276,6 +276,37 @@ export default function AdminSettingsPage() {
 
   const [logoUploading, setLogoUploading] = useState(false);
   const logoFileRef = useRef<HTMLInputElement>(null);
+  const [faviconUploading, setFaviconUploading] = useState(false);
+  const faviconFileRef = useRef<HTMLInputElement>(null);
+
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFaviconUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const base64 = (reader.result as string).split(",")[1];
+        const res = await fetch("/api/settings/upload-favicon", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ data: base64, contentType: file.type || "image/x-icon" }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Upload failed");
+        form.setValue("faviconUrl", json.url, { shouldDirty: true });
+        toast({ title: "Favicon uploaded", description: "Click Save to apply it." });
+      };
+      reader.onerror = () => { throw new Error("Failed to read file"); };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setFaviconUploading(false);
+      if (faviconFileRef.current) faviconFileRef.current.value = "";
+    }
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -823,27 +854,29 @@ export default function AdminSettingsPage() {
                 name="faviconUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Favicon URL</FormLabel>
-                    <div className="flex items-center gap-3">
+                    <FormLabel>Favicon</FormLabel>
+                    <div className="flex flex-col gap-2">
                       {field.value && (
-                        <img
-                          src={field.value}
-                          alt="Favicon preview"
-                          className="h-8 w-8 rounded object-contain border bg-muted/30"
-                          onError={e => { (e.target as HTMLImageElement).style.display = "none"; }}
-                        />
+                        <div className="flex items-center gap-3 p-2 border rounded-md bg-gray-50 dark:bg-gray-900">
+                          <img src={field.value} alt="Favicon preview" className="h-8 w-8 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          <span className="text-xs text-muted-foreground truncate flex-1">{field.value}</span>
+                          <Button type="button" variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => field.onChange("")}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       )}
-                      <FormControl>
-                        <Input
-                          type="url"
-                          placeholder="https://yoursite.com/favicon.ico"
-                          {...field}
-                          value={field.value || ""}
-                        />
-                      </FormControl>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input placeholder="https://yoursite.com/favicon.ico or /favicon.ico" {...field} value={field.value || ""} />
+                        </FormControl>
+                        <input ref={faviconFileRef} type="file" accept=".ico,image/x-icon,image/png,image/svg+xml,image/webp" className="hidden" onChange={handleFaviconUpload} />
+                        <Button type="button" variant="outline" size="sm" className="shrink-0" disabled={faviconUploading} onClick={() => faviconFileRef.current?.click()}>
+                          {faviconUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Upload className="h-4 w-4 mr-1.5" />Upload</>}
+                        </Button>
+                      </div>
                     </div>
                     <FormDescription>
-                      Direct URL to a <code className="text-xs bg-muted px-1 rounded">.ico</code>, <code className="text-xs bg-muted px-1 rounded">.png</code>, or <code className="text-xs bg-muted px-1 rounded">.svg</code> file. Recommended size: 32×32 px or 64×64 px. Changes take effect immediately after saving.
+                      Upload an <code className="text-xs bg-muted px-1 rounded">.ico</code>, <code className="text-xs bg-muted px-1 rounded">.png</code>, or <code className="text-xs bg-muted px-1 rounded">.svg</code> file. Recommended: 32×32 px. Max 2 MB.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

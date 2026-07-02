@@ -99,6 +99,42 @@ router.patch("/", requireAdmin, async (req, res) => {
   }
 });
 
+const ALLOWED_FAVICON_TYPES: Record<string, string> = {
+  "image/x-icon": ".ico",
+  "image/vnd.microsoft.icon": ".ico",
+  "image/png": ".png",
+  "image/svg+xml": ".svg",
+  "image/webp": ".webp",
+};
+
+router.post("/upload-favicon", requireAdmin, async (req, res) => {
+  try {
+    const { data, contentType } = req.body as { data?: string; contentType?: string };
+    if (!data || !contentType) {
+      res.status(400).json({ error: "Missing data or contentType" });
+      return;
+    }
+    const ext = ALLOWED_FAVICON_TYPES[contentType] ?? (contentType.startsWith("image/") ? ".png" : null);
+    if (!ext) {
+      res.status(400).json({ error: "Unsupported image type" });
+      return;
+    }
+    const buffer = Buffer.from(data, "base64");
+    if (buffer.length > 2 * 1024 * 1024) {
+      res.status(400).json({ error: "Favicon must be under 2 MB" });
+      return;
+    }
+    const publicDir = path.join(process.cwd(), "artifacts", "directory-master", "public");
+    await mkdir(publicDir, { recursive: true });
+    const filename = `favicon${ext}`;
+    await writeFile(path.join(publicDir, filename), buffer);
+    res.json({ url: `/${filename}` });
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to upload favicon" });
+  }
+});
+
 const ALLOWED_LOGO_TYPES: Record<string, string> = {
   "image/png": ".png",
   "image/jpeg": ".jpg",

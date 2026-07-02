@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGetPublicSettings } from "@workspace/api-client-react";
 import { Check, Star, Zap, Loader2, PartyPopper, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -68,16 +68,18 @@ const plans: {
   },
 ];
 
-const UPGRADE_SUCCESS_MESSAGE = "saddleup:listing-upgrade-success";
-const UPGRADE_CHANNEL_NAME = "saddleup-listing-upgrades";
 // Stripe Checkout sets Cross-Origin-Opener-Policy: same-origin, which severs
 // window.opener as soon as the popup navigates to checkout.stripe.com — even
-// after it returns to our own origin. window.name, unlike window.opener,
-// survives cross-origin navigation, so we use it (set right after opening the
-// popup) as the reliable way to know "this page load is inside the checkout
-// popup". We pair it with a same-origin BroadcastChannel (instead of
-// postMessage to window.opener) to notify the main tab, since that channel
-// doesn't depend on the opener relationship at all.
+// after it returns to our own origin. Worse, that COOP header can move the
+// popup into an isolated browsing context group/agent cluster, which also
+// breaks same-origin BroadcastChannel and storage-event delivery back to the
+// original tab. So we don't rely on ANY window-to-window messaging: the main
+// tab instead polls the entry's actual featured/premium status from the
+// server while checkout is in progress, which is 100% reliable since it's
+// the same signal the webhook itself writes. window.name (unlike
+// window.opener) survives cross-origin navigation, so we still use it purely
+// so the popup can recognize itself and self-close — no data needs to flow
+// back through it.
 const CHECKOUT_POPUP_WINDOW_NAME = "saddleup-checkout-popup";
 
 export default function ListingPlansPage() {
@@ -92,7 +94,11 @@ export default function ListingPlansPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmedUpgrade, setConfirmedUpgrade] = useState<{ plan: PlanKey; entry: string } | null>(null);
-  const [checkoutWindowRef, setCheckoutWindowRef] = useState<Window | null>(null);
+  // What we're waiting to see flip in the database. This drives polling and is
+  // intentionally independent from the popup window/dialog lifecycle so the
+  // banner can still appear even if the user closes the popup right after paying.
+  const [pendingUpgrade, setPendingUpgrade] = useState<{ entryId: number; plan: PlanKey; entryTitle: string } | null>(null);
+  const checkoutWindowRef = useRef<Window | null>(null);
 
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
   const successPlan = params.get("success") === "1" ? (params.get("plan") as PlanKey | null) : null;
@@ -101,52 +107,69 @@ export default function ListingPlansPage() {
   const isCheckoutPopup = typeof window !== "undefined" && window.name === CHECKOUT_POPUP_WINDOW_NAME;
 
   // This page is also rendered inside the popup tab after Stripe redirects back to
-  // the success_url. If we're in that popup, notify the original tab and close
-  // ourselves instead of leaving the user stranded on an orphaned tab.
+  // the success_url. If we're in that popup, just close ourselves — the original
+  // tab confirms success on its own by polling the entry's status, so no
+  // cross-window messaging is needed here at all.
   useEffect(() => {
     if (!successPlan || !isCheckoutPopup) return;
-    try {
-      const channel = new BroadcastChannel(UPGRADE_CHANNEL_NAME);
-      channel.postMessage({ type: UPGRADE_SUCCESS_MESSAGE, plan: successPlan, entry: successEntry });
-      channel.close();
-    } catch {
-      // ignore — BroadcastChannel unsupported in this browser
-    }
     const timer = setTimeout(() => window.close(), 1800);
     return () => clearTimeout(timer);
-  }, [successPlan, isCheckoutPopup, successEntry]);
+  }, [successPlan, isCheckoutPopup]);
 
-  // Listen for the popup's success notification so the original tab updates
-  // itself even though the browser navigated the *popup*, not this page.
+  // While an upgrade is pending, poll the entry's actual featured/premium status
+  // from the server — this is the same field the webhook writes, so it's a
+  // reliable success signal regardless of what happens to the popup window.
   useEffect(() => {
-    let channel: BroadcastChannel | undefined;
-    try {
-      channel = new BroadcastChannel(UPGRADE_CHANNEL_NAME);
-      channel.onmessage = (event: MessageEvent) => {
-        if (event.data?.type !== UPGRADE_SUCCESS_MESSAGE) return;
-        setConfirmedUpgrade({ plan: event.data.plan, entry: event.data.entry ?? "" });
-        setCheckoutWindowRef(null);
-        closePicker();
-      };
-    } catch {
-      // ignore — BroadcastChannel unsupported in this browser
-    }
-    return () => channel?.close();
-  }, []);
+    if (!pendingUpgrade) return;
+    let cancelled = false;
 
-  // If the user closes the checkout tab manually without completing payment,
-  // stop showing the "processing" state on this tab so they aren't stuck.
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/public/entries/${pendingUpgrade.entryId}`);
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const upgraded = pendingUpgrade.plan === "premium" ? data.premium : data.featured;
+        if (upgraded && !cancelled) {
+          setConfirmedUpgrade({ plan: pendingUpgrade.plan, entry: pendingUpgrade.entryTitle });
+          setPendingUpgrade(null);
+          setCheckingOut(false);
+          checkoutWindowRef.current?.close();
+          checkoutWindowRef.current = null;
+          closePicker();
+        }
+      } catch {
+        // transient network error — keep polling
+      }
+    };
+
+    check();
+    const interval = setInterval(check, 2000);
+    // Give up after a while so we don't poll forever if the user abandoned checkout.
+    const giveUp = setTimeout(() => {
+      cancelled = true;
+      clearInterval(interval);
+    }, 5 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+      clearTimeout(giveUp);
+    };
+  }, [pendingUpgrade]);
+
+  // If the user closes the checkout tab manually, stop showing the "processing"
+  // dialog state — the upgrade poll above keeps running in the background in
+  // case the webhook lands a moment later.
   useEffect(() => {
-    if (!checkoutWindowRef) return;
     const interval = setInterval(() => {
-      if (checkoutWindowRef.closed) {
+      if (checkoutWindowRef.current?.closed) {
+        checkoutWindowRef.current = null;
         setCheckingOut(false);
-        setCheckoutWindowRef(null);
-        clearInterval(interval);
+        closePicker();
       }
     }, 500);
     return () => clearInterval(interval);
-  }, [checkoutWindowRef]);
+  }, []);
 
   useEffect(() => {
     if (!pickerPlan) return;
@@ -209,11 +232,15 @@ export default function ListingPlansPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Checkout failed");
 
+      // Start polling for the actual DB flip regardless of what happens to the
+      // popup window — this is what ultimately drives the success banner.
+      setPendingUpgrade({ entryId: selectedEntry.id, plan: pickerPlan, entryTitle: selectedEntry.title });
+
       if (checkoutWindow) {
         checkoutWindow.location.href = data.url;
-        // Keep a reference so we can detect when the tab closes/completes and
+        // Keep a reference so we can detect when the tab closes and
         // stop showing "processing" on this tab — the user stays here the whole time.
-        setCheckoutWindowRef(checkoutWindow);
+        checkoutWindowRef.current = checkoutWindow;
       } else {
         // Popup was blocked — fall back to a same-tab redirect.
         window.location.href = data.url;
@@ -229,9 +256,9 @@ export default function ListingPlansPage() {
   if (successPlan) {
     const item = plans.find((p) => p.key === successPlan);
 
-    // This is the checkout popup tab landing on the Stripe success_url — we've
-    // already notified the original tab and are about to auto-close, so show a
-    // brief "you're done, closing" state instead of the full success screen.
+    // This is the checkout popup tab landing on the Stripe success_url — it's
+    // about to auto-close itself, so show a brief "you're done, closing" state.
+    // The original tab confirms success independently via polling.
     if (isCheckoutPopup) {
       return (
         <div className="max-w-2xl mx-auto px-4 py-24 text-center">

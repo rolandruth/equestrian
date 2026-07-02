@@ -55,6 +55,11 @@ router.post("/", requireAdmin, async (req, res) => {
       res.status(400).json({ error: "title, imageUrl, linkUrl, and placement are required" });
       return;
     }
+    const [existing] = await db.select({ id: ads.id }).from(ads).where(eq(ads.placement, placement)).limit(1);
+    if (existing) {
+      res.status(409).json({ error: `The "${placement}" placement is already sold. Delete or edit the existing ad first.` });
+      return;
+    }
     const [row] = await db.insert(ads).values({
       title,
       advertiser: advertiser ?? null,

@@ -75,7 +75,13 @@ export default function AdminAdsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  // Placements already used by other ads (not the one being edited)
+  const takenPlacements = adsList
+    .filter((a) => !editingAd || a.id !== editingAd.id)
+    .map((a) => a.placement);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
@@ -96,11 +102,13 @@ export default function AdminAdsPage() {
   const openCreate = () => {
     setEditingAd(null);
     setForm(EMPTY_FORM);
+    setSaveError(null);
     setDialogOpen(true);
   };
 
   const openEdit = (ad: Ad) => {
     setEditingAd(ad);
+    setSaveError(null);
     setForm({
       title: ad.title,
       advertiser: ad.advertiser ?? "",
@@ -138,6 +146,7 @@ export default function AdminAdsPage() {
   const handleSave = async () => {
     if (!form.title || !form.imageUrl || !form.linkUrl || !form.placement) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const body = {
         title: form.title,
@@ -151,7 +160,12 @@ export default function AdminAdsPage() {
       };
       const url = editingAd ? `/api/ads/${editingAd.id}` : "/api/ads";
       const method = editingAd ? "PATCH" : "POST";
-      await fetch(url, { method, headers, body: JSON.stringify(body) });
+      const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
+      if (!res.ok) {
+        const data = await res.json();
+        setSaveError(data.error ?? "Failed to save ad.");
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["ads"] });
       setDialogOpen(false);
     } finally {
@@ -296,12 +310,21 @@ export default function AdminAdsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {PLACEMENTS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                  ))}
+                  {PLACEMENTS.map((p) => {
+                    const taken = takenPlacements.includes(p.value);
+                    return (
+                      <SelectItem key={p.value} value={p.value} disabled={taken}>
+                        {p.label}{taken ? " — sold" : ""}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>
+
+            {saveError && (
+              <p className="text-sm text-destructive bg-destructive/10 rounded-md px-3 py-2">{saveError}</p>
+            )}
 
             <div className="space-y-1.5">
               <Label>Ad Image</Label>

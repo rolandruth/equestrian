@@ -16,7 +16,20 @@
   "pnpm": {
     "overrides": {
       "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react-dom": "19.1.0",
+      "uuid": "11.1.1",
+      "fast-uri": "3.1.2",
+      "form-data": "2.5.6",
+      "linkify-it": "5.0.1",
+      "protobufjs": "7.6.5",
+      "ws": "8.21.0",
+      "qs": "6.15.2",
+      "fast-xml-builder": "1.1.9",
+      "@tootallnate/once": "2.0.1",
+      "esbuild": "0.28.1",
+      "js-yaml": "4.2.0",
+      "markdown-it": "14.2.0",
+      "@babel/core": "7.29.6"
     }
   },
   "dependencies": {

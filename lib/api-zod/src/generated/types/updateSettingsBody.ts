@@ -5,6 +5,7 @@
  * Directory Master API
  * OpenAPI spec version: 0.1.0
  */
+import type { UpdateSettingsBodyNavLinks } from "./updateSettingsBodyNavLinks";
 
 export interface UpdateSettingsBody {
   /** @nullable */
@@ -27,6 +28,11 @@ export interface UpdateSettingsBody {
   homepageMetaDescription?: string | null;
   /** @nullable */
   homepageOgImageUrl?: string | null;
+  /**
+   * Per-link visibility toggles for the public header nav. Missing keys default to visible.
+   * @nullable
+   */
+  navLinks?: UpdateSettingsBodyNavLinks;
   /** @nullable */
   geminiApiKey?: string | null;
   /** @nullable */

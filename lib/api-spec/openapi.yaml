@@ -1308,6 +1308,11 @@ components:
           type: ["string", "null"]
         homepageOgImageUrl:
           type: ["string", "null"]
+        navLinks:
+          description: Per-link visibility toggles for the public header nav. Missing keys default to visible.
+          type: ["object", "null"]
+          additionalProperties:
+            type: boolean
         installed:
           type: boolean
         updatedAt:
@@ -1369,6 +1374,11 @@ components:
           type: ["string", "null"]
         homepageOgImageUrl:
           type: ["string", "null"]
+        navLinks:
+          description: Per-link visibility toggles for the public header nav. Missing keys default to visible.
+          type: ["object", "null"]
+          additionalProperties:
+            type: boolean
         geminiApiKey:
           type: ["string", "null"]
         smtpHost:

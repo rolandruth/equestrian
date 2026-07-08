@@ -28,6 +28,10 @@ export const directorySettings = pgTable("directory_settings", {
   homepageMetaDescription: text("homepage_meta_description"),
   homepageOgImageUrl: text("homepage_og_image_url"),
   templateSettings: jsonb("template_settings"),
+  // Per-link visibility toggles for the public site header nav, e.g.
+  // { home: true, browse: true, listingPlans: false, ... }. Missing keys
+  // default to visible (true) so existing rows/links keep working.
+  navLinks: jsonb("nav_links").$type<Record<string, boolean>>(),
   geminiApiKey: text("gemini_api_key"),
   // SMTP config for outbound transactional email (e.g. the upgrade-badge
   // expiry reminder). Configured from the admin Settings page rather than

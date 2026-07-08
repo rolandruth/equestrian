@@ -554,6 +554,12 @@ export const GetSettingsResponse = zod.object({
   homepageMetaTitle: zod.string().nullish(),
   homepageMetaDescription: zod.string().nullish(),
   homepageOgImageUrl: zod.string().nullish(),
+  navLinks: zod
+    .record(zod.string(), zod.boolean())
+    .nullish()
+    .describe(
+      "Per-link visibility toggles for the public header nav. Missing keys default to visible.",
+    ),
   installed: zod.boolean(),
   updatedAt: zod.string(),
   geminiApiKeySet: zod.boolean().optional(),
@@ -580,6 +586,12 @@ export const UpdateSettingsBody = zod.object({
   homepageMetaTitle: zod.string().nullish(),
   homepageMetaDescription: zod.string().nullish(),
   homepageOgImageUrl: zod.string().nullish(),
+  navLinks: zod
+    .record(zod.string(), zod.boolean())
+    .nullish()
+    .describe(
+      "Per-link visibility toggles for the public header nav. Missing keys default to visible.",
+    ),
   geminiApiKey: zod.string().nullish(),
   smtpHost: zod.string().nullish(),
   smtpPort: zod.union([zod.string(), zod.number()]).nullish(),
@@ -600,6 +612,12 @@ export const UpdateSettingsResponse = zod.object({
   homepageMetaTitle: zod.string().nullish(),
   homepageMetaDescription: zod.string().nullish(),
   homepageOgImageUrl: zod.string().nullish(),
+  navLinks: zod
+    .record(zod.string(), zod.boolean())
+    .nullish()
+    .describe(
+      "Per-link visibility toggles for the public header nav. Missing keys default to visible.",
+    ),
   installed: zod.boolean(),
   updatedAt: zod.string(),
   geminiApiKeySet: zod.boolean().optional(),
@@ -992,6 +1010,12 @@ export const GetPublicSettingsResponse = zod.object({
   homepageMetaTitle: zod.string().nullish(),
   homepageMetaDescription: zod.string().nullish(),
   homepageOgImageUrl: zod.string().nullish(),
+  navLinks: zod
+    .record(zod.string(), zod.boolean())
+    .nullish()
+    .describe(
+      "Per-link visibility toggles for the public header nav. Missing keys default to visible.",
+    ),
   installed: zod.boolean(),
   updatedAt: zod.string(),
   geminiApiKeySet: zod.boolean().optional(),

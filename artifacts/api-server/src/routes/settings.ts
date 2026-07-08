@@ -36,6 +36,7 @@ function formatSettings(s: typeof directorySettings.$inferSelect) {
     homepageMetaDescription: s.homepageMetaDescription,
     homepageOgImageUrl: s.homepageOgImageUrl,
     templateSettings: s.templateSettings ?? null,
+    navLinks: s.navLinks ?? null,
     installed: s.installed,
     updatedAt: s.updatedAt.toISOString(),
     // Never expose the raw key — return only whether it is set and a masked hint
@@ -99,6 +100,7 @@ router.patch("/", requireAdmin, async (req, res) => {
     if (req.body.homepageMetaDescription !== undefined)     dbUpdates.homepageMetaDescription = req.body.homepageMetaDescription || null;
     if (req.body.homepageOgImageUrl !== undefined)          dbUpdates.homepageOgImageUrl = req.body.homepageOgImageUrl || null;
     if (req.body.templateSettings !== undefined)            dbUpdates.templateSettings = req.body.templateSettings;
+    if (req.body.navLinks !== undefined)                    dbUpdates.navLinks = req.body.navLinks;
     // geminiApiKey: null/empty clears the key; non-empty string stores it
     if (req.body.geminiApiKey !== undefined) {
       dbUpdates.geminiApiKey = req.body.geminiApiKey || null;

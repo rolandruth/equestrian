@@ -293,6 +293,12 @@ export interface UpdateCategoryBody {
   description?: string | null;
 }
 
+/**
+ * Per-link visibility toggles for the public header nav. Missing keys default to visible.
+ * @nullable
+ */
+export type DirectorySettingsNavLinks = { [key: string]: boolean } | null;
+
 export interface DirectorySettings {
   id: number;
   siteTitle: string;
@@ -314,6 +320,11 @@ export interface DirectorySettings {
   homepageMetaDescription?: string | null;
   /** @nullable */
   homepageOgImageUrl?: string | null;
+  /**
+   * Per-link visibility toggles for the public header nav. Missing keys default to visible.
+   * @nullable
+   */
+  navLinks?: DirectorySettingsNavLinks;
   installed: boolean;
   updatedAt: string;
   geminiApiKeySet?: boolean;
@@ -345,6 +356,12 @@ export interface SmtpTestResult {
   message: string;
 }
 
+/**
+ * Per-link visibility toggles for the public header nav. Missing keys default to visible.
+ * @nullable
+ */
+export type UpdateSettingsBodyNavLinks = { [key: string]: boolean } | null;
+
 export interface UpdateSettingsBody {
   /** @nullable */
   siteTitle?: string | null;
@@ -366,6 +383,11 @@ export interface UpdateSettingsBody {
   homepageMetaDescription?: string | null;
   /** @nullable */
   homepageOgImageUrl?: string | null;
+  /**
+   * Per-link visibility toggles for the public header nav. Missing keys default to visible.
+   * @nullable
+   */
+  navLinks?: UpdateSettingsBodyNavLinks;
   /** @nullable */
   geminiApiKey?: string | null;
   /** @nullable */

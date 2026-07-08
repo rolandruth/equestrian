@@ -19,9 +19,27 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail, Send, Images, Plus, Eye, EyeOff, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail, Send, Images, Plus, Eye, EyeOff, Image as ImageIcon, Menu } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
 import { mergeTemplateSettings, type TemplateSettings, type SectionConfig } from "@/lib/templateTypes";
+
+const NAV_LINK_ITEMS: { key: string; label: string; description: string }[] = [
+  { key: "home", label: "Home", description: "Link to the homepage." },
+  { key: "browse", label: "Browse All", description: "Link to the category browse page." },
+  { key: "listingPlans", label: "Listing Plans", description: "Link to the pricing/upgrade page." },
+  { key: "advertise", label: "Advertise", description: "Link to the advertise-with-us page." },
+  { key: "signIn", label: "Sign In", description: "Admin/editor staff login link." },
+  { key: "businessLogin", label: "Business Login", description: "Business-owner login/signup link." },
+];
+
+function getNavLinksWithDefaults(navLinks: Record<string, boolean> | null | undefined) {
+  const result: Record<string, boolean> = {};
+  for (const item of NAV_LINK_ITEMS) {
+    result[item.key] = navLinks?.[item.key] !== false;
+  }
+  return result;
+}
 
 const settingsSchema = z.object({
   siteTitle: z.string().min(2, "Site title is required"),
@@ -611,6 +629,7 @@ export default function AdminSettingsPage() {
   const [templateSettings, setTemplateSettings] = useState<TemplateSettings>(
     mergeTemplateSettings(null)
   );
+  const [navLinks, setNavLinks] = useState<Record<string, boolean>>(getNavLinksWithDefaults(null));
 
   const [logoUploading, setLogoUploading] = useState(false);
   const logoFileRef = useRef<HTMLInputElement>(null);
@@ -726,6 +745,7 @@ export default function AdminSettingsPage() {
         calloutSections: settings.calloutSections || "",
       });
       setTemplateSettings(mergeTemplateSettings((settings as any).templateSettings));
+      setNavLinks(getNavLinksWithDefaults((settings as any).navLinks));
     }
   }, [settings, form]);
 
@@ -735,7 +755,7 @@ export default function AdminSettingsPage() {
     ) as any;
 
     try {
-      await updateMutation.mutateAsync({ data: { ...cleanData, templateSettings } });
+      await updateMutation.mutateAsync({ data: { ...cleanData, templateSettings, navLinks } });
       toast({ title: "Settings saved successfully" });
       queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
       queryClient.invalidateQueries({ queryKey: getGetPublicSettingsQueryKey() });
@@ -925,6 +945,35 @@ export default function AdminSettingsPage() {
                     <span className="opacity-70">Sign In</span>
                   </div>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Header Navigation Links */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Menu className="h-5 w-5 text-primary" />
+                Header Navigation
+              </CardTitle>
+              <CardDescription>Choose which links appear in the public site header (desktop and mobile menu).</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="divide-y">
+                {NAV_LINK_ITEMS.map((item) => (
+                  <div key={item.key} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                    <div>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-sm text-muted-foreground">{item.description}</p>
+                    </div>
+                    <Switch
+                      checked={navLinks[item.key] !== false}
+                      onCheckedChange={(checked) =>
+                        setNavLinks((prev) => ({ ...prev, [item.key]: checked }))
+                      }
+                    />
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

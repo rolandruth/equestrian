@@ -227,6 +227,7 @@ router.get("/settings", async (req, res) => {
         themeColor: null,
         calloutSections: null,
         templateSettings: null,
+        navLinks: null,
         installed: false,
         updatedAt: new Date().toISOString(),
       });
@@ -258,6 +259,7 @@ router.get("/settings", async (req, res) => {
       homepageMetaDescription: settings.homepageMetaDescription,
       homepageOgImageUrl: settings.homepageOgImageUrl,
       templateSettings: settings.templateSettings ?? null,
+      navLinks: settings.navLinks ?? null,
       installed: settings.installed,
       updatedAt: settings.updatedAt.toISOString(),
     });

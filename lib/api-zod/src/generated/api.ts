@@ -165,34 +165,62 @@ export const GetCurrentAuthUserResponse = zod.object({
 });
 
 /**
- * @summary Start the browser OIDC login flow
+ * @summary Create a new business-owner account on this site
  */
-export const BeginBrowserLoginQueryParams = zod.object({
-  returnTo: zod.coerce
-    .string()
-    .optional()
-    .describe(
-      "Relative path to redirect to after login (must start with `\/`). Defaults to `\/`.",
-    ),
+export const BusinessSignupBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string(),
+  firstName: zod.string().nullish(),
+  lastName: zod.string().nullish(),
+});
+
+export const BusinessSignupResponse = zod.object({
+  user: zod.union([
+    zod.object({
+      id: zod.string(),
+      email: zod.string().email().nullable(),
+      firstName: zod.string().nullable(),
+      lastName: zod.string().nullable(),
+      profileImageUrl: zod.string().nullable(),
+    }),
+    zod.null(),
+  ]),
 });
 
 /**
- * @summary Complete the browser OIDC login flow
+ * @summary Log in to a business-owner account on this site
  */
-export const HandleBrowserLoginCallbackQueryParams = zod.object({
-  code: zod.coerce.string().optional(),
-  state: zod.coerce.string().optional(),
-  iss: zod.coerce.string().url().optional(),
+export const BusinessLoginBody = zod.object({
+  email: zod.string().email(),
+  password: zod.string(),
+});
+
+export const BusinessLoginResponse = zod.object({
+  user: zod.union([
+    zod.object({
+      id: zod.string(),
+      email: zod.string().email().nullable(),
+      firstName: zod.string().nullable(),
+      lastName: zod.string().nullable(),
+      profileImageUrl: zod.string().nullable(),
+    }),
+    zod.null(),
+  ]),
 });
 
 /**
- * @summary Clear the business-owner session and begin OIDC logout
+ * @summary Clear the current business-owner session
  */
-export const LogoutBrowserSessionHeader = zod.object({
+export const BusinessLogoutHeader = zod.object({
   Authorization: zod
     .string()
     .optional()
     .describe("Opaque business-owner session token — `Bearer <sid>`."),
+});
+
+export const BusinessLogoutResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().nullish(),
 });
 
 /**

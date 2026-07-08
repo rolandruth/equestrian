@@ -26,6 +26,7 @@ import ContactPage from "@/pages/contact";
 import AdvertisePage from "@/pages/advertise";
 import ListingPlansPage from "@/pages/listing-plans";
 import BusinessDashboardPage from "@/pages/business/dashboard";
+import BusinessLoginPage from "@/pages/business/login";
 // Admin
 import LoginPage from "@/pages/admin/login";
 import DashboardPage from "@/pages/admin/dashboard";
@@ -191,6 +192,7 @@ function Router() {
           </PublicLayout>
         </SetupGuard>
       </Route>
+      <Route path="/business/login" component={BusinessLoginPage} />
       <Route path="/privacy-policy">
         <SetupGuard>
           <PublicLayout>

@@ -1,11 +1,13 @@
 import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
 
-// Business-owner authentication (Replit Auth / OIDC), kept fully separate from
-// the staff admin/editor/viewer tables ("users" / "sessions") to avoid any
-// name or ID-space collisions between the two auth systems.
+// Business-owner authentication (local email/password, hosted on this site's
+// own login page), kept fully separate from the staff admin/editor/viewer
+// tables ("users" / "sessions") to avoid any name or ID-space collisions
+// between the two auth systems.
 export const bizUsers = pgTable("biz_users", {
   id: text("id").primaryKey(),
-  email: text("email"),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
   firstName: text("first_name"),
   lastName: text("last_name"),
   profileImageUrl: text("profile_image_url"),

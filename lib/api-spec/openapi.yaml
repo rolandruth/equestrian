@@ -254,57 +254,69 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthUserEnvelope'
-  /login:
-    get:
+  /business/signup:
+    post:
       tags: [Business Auth]
-      operationId: beginBrowserLogin
-      summary: Start the browser OIDC login flow
-      parameters:
-        - name: returnTo
-          in: query
-          required: false
-          description: Relative path to redirect to after login (must start with `/`). Defaults to `/`.
-          schema:
-            type: string
+      operationId: businessSignup
+      summary: Create a new business-owner account on this site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessSignupBody'
       responses:
-        '302':
-          description: Redirect to the OIDC authorization endpoint.
-  /callback:
-    get:
+        '200':
+          description: Account created and signed in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+        '400':
+          description: Invalid input or email already registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /business/login:
+    post:
       tags: [Business Auth]
-      operationId: handleBrowserLoginCallback
-      summary: Complete the browser OIDC login flow
-      parameters:
-        - name: code
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: state
-          in: query
-          required: false
-          schema:
-            type: string
-        - name: iss
-          in: query
-          required: false
-          schema:
-            type: string
-            format: uri
+      operationId: businessLogin
+      summary: Log in to a business-owner account on this site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessLoginBody'
       responses:
-        '302':
-          description: Redirect to the `returnTo` path on success (defaults to `/`) or `/api/login` on failure.
-  /logout:
-    get:
+        '200':
+          description: Signed in.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+        '401':
+          description: Invalid credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /business/logout:
+    post:
       tags: [Business Auth]
-      operationId: logoutBrowserSession
-      summary: Clear the business-owner session and begin OIDC logout
+      operationId: businessLogout
+      summary: Clear the current business-owner session
       parameters:
         - $ref: '#/components/parameters/AuthorizationSessionHeader'
         - $ref: '#/components/parameters/SessionCookie'
       responses:
-        '302':
-          description: Redirect to the OIDC provider logout URL.
+        '200':
+          description: Logged out.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
 
   /entries:
     get:
@@ -939,6 +951,30 @@ components:
           oneOf:
             - $ref: '#/components/schemas/AuthUser'
             - type: 'null'
+
+    BusinessSignupBody:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        firstName:
+          type: ['string', 'null']
+        lastName:
+          type: ['string', 'null']
+
+    BusinessLoginBody:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
     HealthStatus:
       type: object
       properties:

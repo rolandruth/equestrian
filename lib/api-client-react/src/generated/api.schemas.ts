@@ -21,6 +21,20 @@ export interface AuthUserEnvelope {
   user: AuthUser | null;
 }
 
+export interface BusinessSignupBody {
+  email: string;
+  password: string;
+  /** @nullable */
+  firstName?: string | null;
+  /** @nullable */
+  lastName?: string | null;
+}
+
+export interface BusinessLoginBody {
+  email: string;
+  password: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -508,19 +522,6 @@ export interface RequestUploadUrlResponse {
  * Opaque business-owner session token — `Bearer <sid>`.
  */
 export type AuthorizationSessionHeaderParameter = string;
-
-export type BeginBrowserLoginParams = {
-  /**
-   * Relative path to redirect to after login (must start with `/`). Defaults to `/`.
-   */
-  returnTo?: string;
-};
-
-export type HandleBrowserLoginCallbackParams = {
-  code?: string;
-  state?: string;
-  iss?: string;
-};
 
 export type ListEntriesParams = {
   /**

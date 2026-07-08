@@ -1,31 +1,14 @@
-import * as client from "openid-client";
 import crypto from "crypto";
 import { type Request, type Response } from "express";
 import { db, bizSessions } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import type { AuthUser } from "@workspace/api-zod";
 
-export const ISSUER_URL = process.env.ISSUER_URL ?? "https://replit.com/oidc";
 export const BIZ_SESSION_COOKIE = "biz_sid";
 export const BIZ_SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
 
 export interface BizSessionData {
   user: AuthUser;
-  access_token: string;
-  refresh_token?: string;
-  expires_at?: number;
-}
-
-let oidcConfig: client.Configuration | null = null;
-
-export async function getBizOidcConfig(): Promise<client.Configuration> {
-  if (!oidcConfig) {
-    oidcConfig = await client.discovery(
-      new URL(ISSUER_URL),
-      process.env.REPL_ID!,
-    );
-  }
-  return oidcConfig;
 }
 
 export async function createBizSession(data: BizSessionData): Promise<string> {
@@ -52,19 +35,6 @@ export async function getBizSession(sid: string): Promise<BizSessionData | null>
   return row.sess as unknown as BizSessionData;
 }
 
-export async function updateBizSession(
-  sid: string,
-  data: BizSessionData,
-): Promise<void> {
-  await db
-    .update(bizSessions)
-    .set({
-      sess: data as unknown as Record<string, unknown>,
-      expire: new Date(Date.now() + BIZ_SESSION_TTL),
-    })
-    .where(eq(bizSessions.sid, sid));
-}
-
 export async function deleteBizSession(sid: string): Promise<void> {
   await db.delete(bizSessions).where(eq(bizSessions.sid, sid));
 }
@@ -88,4 +58,27 @@ export async function clearBizSession(
 // not part of the business-auth contract.
 export function getBizSessionId(req: Request): string | undefined {
   return req.cookies?.[BIZ_SESSION_COOKIE];
+}
+
+export function hashBizPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+export function verifyBizPassword(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split(":");
+  if (!salt || !hash) return false;
+  const inputHash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return hash === inputHash;
+}
+
+export function setBizSessionCookie(res: Response, sid: string) {
+  res.cookie(BIZ_SESSION_COOKIE, sid, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: BIZ_SESSION_TTL,
+  });
 }

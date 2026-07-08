@@ -169,7 +169,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     className={linkClass}
                     style={textStyle}
                   >
-                    Sign In
+                    Admin Sign In
                   </Link>
                 )
               )}
@@ -285,7 +285,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     className="block px-3 py-2 rounded-md text-base font-medium"
                     style={navbarText ? textStyle : undefined}
                   >
-                    Sign In
+                    Admin Sign In
                   </Link>
                 )
               )}
@@ -333,12 +333,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <nav className="flex items-center gap-5">
               <a href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Contact Us
-              </a>
-              <a href="/listing-plans" className="hover:text-gray-900 dark:hover:text-white transition-colors">
-                Listing Plans
-              </a>
-              <a href="/advertise" className="hover:text-gray-900 dark:hover:text-white transition-colors">
-                Advertise with Us
               </a>
               <a href="/privacy-policy" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Privacy Policy

@@ -978,7 +978,7 @@ export default function HomePage() {
     const cardImage = getCardImage(entry);
     return (
       <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
-        {cardImage && <CardImage src={cardImage} alt={entry.title} />}
+        <CardImage src={cardImage} alt={entry.title} />
         <CardHeader>
           <div className="flex justify-between items-start mb-2">
             {showField("category") && entry.category && (

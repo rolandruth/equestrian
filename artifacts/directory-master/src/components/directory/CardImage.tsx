@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import genericHorseFallback from "@/assets/generic-horse-fallback.jpg";
 
 // In-memory cache so we only hit the Street View metadata endpoint once per URL,
 // even though the same entry image can appear on multiple pages (home + browse).
@@ -55,7 +56,7 @@ function useImageAvailability(url: string | null): boolean | null {
 }
 
 interface CardImageProps {
-  src: string;
+  src: string | null | undefined;
   alt: string;
   wrapperClassName?: string;
   imgClassName?: string;
@@ -104,7 +105,7 @@ export function SafeImage({ src, alt, className }: SafeImageProps) {
 export function ImageWithFallback({ src, alt, fallbackSrc, className }: ImageWithFallbackProps) {
   const [broken, setBroken] = useState(false);
   const available = useImageAvailability(src ?? null);
-  const useFallback = !src || broken || available === false;
+  const useFallback = !src || broken || available !== true;
 
   return (
     <img
@@ -117,21 +118,21 @@ export function ImageWithFallback({ src, alt, fallbackSrc, className }: ImageWit
 }
 
 /**
- * Renders an entry's card image, hiding it entirely (no broken image, no
- * "no imagery" placeholder) when the source is unavailable. While a Street
- * View availability check is in flight, nothing is rendered to avoid a
- * flash of the placeholder graphic.
+ * Renders an entry's card image, falling back to a generic horse image
+ * (instead of a broken image or Street View's "no imagery" placeholder)
+ * when the source is unavailable. Also shows the fallback while a Street
+ * View availability check is in flight, to avoid a flash of the placeholder
+ * graphic.
  */
 export function CardImage({ src, alt, wrapperClassName, imgClassName }: CardImageProps) {
   const [broken, setBroken] = useState(false);
-  const available = useImageAvailability(src);
-
-  if (broken || available === false || available === null) return null;
+  const available = useImageAvailability(src ?? null);
+  const useFallback = !src || broken || available !== true;
 
   return (
     <div className={wrapperClassName ?? "aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800"}>
       <img
-        src={src}
+        src={useFallback ? genericHorseFallback : (src as string)}
         alt={alt}
         className={imgClassName ?? "h-full w-full object-cover"}
         onError={() => setBroken(true)}

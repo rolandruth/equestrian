@@ -28,8 +28,8 @@ export function useBusinessAuth(): BusinessAuthState {
 
   const login = useCallback((returnTo?: string) => {
     const baseUrl = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
-    const base = baseUrl.replace(/\/+$/, "") || "/";
-    const target = returnTo ?? base;
+    const base = baseUrl.replace(/\/+$/, "");
+    const target = returnTo ?? (base || "/");
     window.location.href = `${base}/business/login?returnTo=${encodeURIComponent(target)}`;
   }, []);
 

@@ -1563,7 +1563,7 @@ export default function EntryPage() {
                     {buttonText || label}
                   </a>
                 ) : (
-                  <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{strVal}</div>
+                  <div className={`whitespace-pre-wrap text-gray-700 dark:text-gray-300${/^q\d+$/i.test(key) ? " font-semibold" : ""}`}>{strVal}</div>
                 )}
               </div>
             );

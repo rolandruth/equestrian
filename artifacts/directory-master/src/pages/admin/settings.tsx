@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type Dispatch, type SetStateAction } from "react";
 import { Link } from "wouter";
 import { 
   useGetSettings, 
@@ -19,9 +19,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail, Send } from "lucide-react";
+import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail, Send, Images, Plus, Eye, EyeOff, Image as ImageIcon } from "lucide-react";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
-import { mergeTemplateSettings, type TemplateSettings } from "@/lib/templateTypes";
+import { mergeTemplateSettings, type TemplateSettings, type SectionConfig } from "@/lib/templateTypes";
 
 const settingsSchema = z.object({
   siteTitle: z.string().min(2, "Site title is required"),
@@ -492,6 +492,111 @@ function SmtpSettingsCard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </Card>
+  );
+}
+
+function HomepageGalleryCard({
+  templateSettings,
+  setTemplateSettings,
+}: {
+  templateSettings: TemplateSettings;
+  setTemplateSettings: Dispatch<SetStateAction<TemplateSettings>>;
+}) {
+  const section = templateSettings.homepage.sections.find(s => (s.type ?? s.id) === "custom-image-row");
+  const urls: string[] = section?.props?.imageUrls?.length ? section.props.imageUrls : [""];
+  const enabled = section?.enabled ?? false;
+
+  const updateSection = (patch: Partial<SectionConfig> & { props?: Partial<SectionConfig["props"]> }) => {
+    setTemplateSettings(prev => {
+      const exists = prev.homepage.sections.some(s => (s.type ?? s.id) === "custom-image-row");
+      const nextSections = exists
+        ? prev.homepage.sections.map(s =>
+            (s.type ?? s.id) === "custom-image-row"
+              ? { ...s, ...patch, props: { ...s.props, ...patch.props } }
+              : s
+          )
+        : [
+            ...prev.homepage.sections,
+            {
+              id: "custom-image-row",
+              type: "custom-image-row",
+              label: "Image Row",
+              enabled: true,
+              props: { imageUrls: [], aspectRatio: "4/3" },
+              ...patch,
+            } as SectionConfig,
+          ];
+      return { ...prev, homepage: { ...prev.homepage, sections: nextSections } };
+    });
+  };
+
+  const setUrls = (next: string[]) => updateSection({ props: { imageUrls: next } });
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Images className="h-5 w-5 text-primary" />
+              Homepage Photo Gallery
+            </CardTitle>
+            <CardDescription className="mt-1.5">
+              Manage the row of photos shown near the bottom of your homepage.
+            </CardDescription>
+          </div>
+          <button
+            type="button"
+            onClick={() => updateSection({ enabled: !enabled })}
+            title={enabled ? "Hide this section on the homepage" : "Show this section on the homepage"}
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-full border transition-colors ${
+              enabled
+                ? "bg-green-50 text-green-700 border-green-200 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900"
+                : "bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700"
+            }`}
+          >
+            {enabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            {enabled ? "Visible" : "Hidden"}
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {urls.map((url, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded border overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
+              {url ? (
+                <img src={url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <Input
+              value={url}
+              onChange={(e) => {
+                const next = [...urls];
+                next[idx] = e.target.value;
+                setUrls(next);
+              }}
+              placeholder="https://example.com/photo.jpg"
+              className="flex-1"
+            />
+            <button
+              type="button"
+              onClick={() => setUrls(urls.filter((_, i) => i !== idx))}
+              disabled={urls.length <= 1}
+              title="Remove photo"
+              className="p-2 rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground transition-colors flex-shrink-0"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+        <Button type="button" variant="outline" size="sm" onClick={() => setUrls([...urls, ""])} className="w-full">
+          <Plus className="h-3.5 w-3.5 mr-1.5" />
+          Add Photo
+        </Button>
+      </CardContent>
     </Card>
   );
 }
@@ -1014,6 +1119,8 @@ export default function AdminSettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          <HomepageGalleryCard templateSettings={templateSettings} setTemplateSettings={setTemplateSettings} />
 
           {/* Visual Page Builder */}
           <Card>

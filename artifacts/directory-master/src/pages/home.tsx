@@ -176,6 +176,7 @@ function SortableHomeSectionWrapper({
   const blockDef = HOMEPAGE_BLOCK_DEFS.find(d => d.type === (section.type ?? section.id));
   const label = blockDef?.label ?? section.label;
   const isSingleton = !["custom-text", "custom-image", "custom-image-row", "custom-cta"].includes(section.type ?? section.id);
+  const isImageRow = (section.type ?? section.id) === "custom-image-row";
 
   return (
     <div
@@ -210,13 +211,15 @@ function SortableHomeSectionWrapper({
           >
             {section.enabled ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
           </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            title="Edit section"
-            className="p-1 rounded hover:bg-blue-400 transition-colors"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </button>
+          {!isImageRow && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              title="Edit section"
+              className="p-1 rounded hover:bg-blue-400 transition-colors"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+          )}
           {!isSingleton && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -262,7 +265,6 @@ function EditSectionDialog({
   });
   const [imageUrl, setImageUrl] = useState(section.props?.imageUrl ?? "");
   const [imageCaption, setImageCaption] = useState(section.props?.imageCaption ?? "");
-  const [imageUrls, setImageUrls] = useState<string[]>(section.props?.imageUrls?.length ? section.props.imageUrls : [""]);
   // Text block / CTA color controls
   const [bgColor, setBgColor] = useState(section.props?.backgroundColor ?? "");
   const [headingColor, setHeadingColor] = useState(section.props?.headingColor ?? "");
@@ -295,7 +297,6 @@ function EditSectionDialog({
         textAlignment: alignment,
       } : {}),
       ...(type === "custom-image" ? { imageUrl, imageCaption } : {}),
-      ...(type === "custom-image-row" ? { imageUrls: imageUrls.map(u => u.trim()).filter(Boolean) } : {}),
       ...(type === "custom-cta" ? {
         buttonText: ctaButtonText,
         buttonUrl: ctaButtonUrl,
@@ -335,7 +336,7 @@ function EditSectionDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2 overflow-y-auto flex-1 pr-1">
-          {type !== "hero" && type !== "custom-image-row" && (
+          {type !== "hero" && (
             <div className="space-y-1.5">
               <Label>Section Heading</Label>
               <Input
@@ -343,56 +344,6 @@ function EditSectionDialog({
                 onChange={(e) => setHeading(e.target.value)}
                 placeholder="Section heading..."
               />
-            </div>
-          )}
-          {type === "custom-image-row" && (
-            <div className="space-y-3">
-              <Label>Photos</Label>
-              <p className="text-xs text-muted-foreground -mt-1">
-                Add the image URLs to display side by side, in order.
-              </p>
-              <div className="space-y-2">
-                {imageUrls.map((url, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <div className="h-9 w-9 rounded border overflow-hidden flex-shrink-0 bg-muted flex items-center justify-center">
-                      {url ? (
-                        <img src={url} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <Input
-                      value={url}
-                      onChange={(e) => {
-                        const next = [...imageUrls];
-                        next[idx] = e.target.value;
-                        setImageUrls(next);
-                      }}
-                      placeholder="https://example.com/photo.jpg"
-                      className="flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setImageUrls(imageUrls.filter((_, i) => i !== idx))}
-                      disabled={imageUrls.length <= 1}
-                      title="Remove photo"
-                      className="p-2 rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-muted-foreground transition-colors flex-shrink-0"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setImageUrls([...imageUrls, ""])}
-                className="w-full"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Add Photo
-              </Button>
             </div>
           )}
           {type === "custom-text" && (

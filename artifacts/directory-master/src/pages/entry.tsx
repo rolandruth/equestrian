@@ -1666,59 +1666,162 @@ export default function EntryPage() {
             </div>
           );
 
+          // Detect header image fields so we can co-locate the sidebar beside them
+          const headerImageCfds = cfForSection(allCfds, "header").filter(({ key, displayAsImage }) => {
+            const value = (displayEntry as any)?.customFields?.[key];
+            return value && (displayAsImage || isImageUrl(String(value)));
+          });
+          const hasHeaderImage = headerImageCfds.length > 0;
+
+          // Non-image header custom fields (text, buttons)
+          const headerNonImageCfds = cfForSection(allCfds, "header").filter(({ key, displayAsImage }) => {
+            const value = (displayEntry as any)?.customFields?.[key];
+            return value && !(displayAsImage || isImageUrl(String(value)));
+          });
+
+          const renderHeaderCf = ({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }: typeof allCfds[0], isInline = false) => {
+            const value = (displayEntry as any)?.customFields?.[key];
+            if (!value) return null;
+            const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+            const strVal = String(value);
+            const showAsImage = displayAsImage || isImageUrl(strVal);
+            const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
+            return (
+              <div key={key} className={isInline ? "" : "px-8 md:px-10 pb-6"}>
+                {showTitle && (
+                  <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+                    <DynIcon name={icon} className="h-3.5 w-3.5 flex-shrink-0" />
+                    {label}
+                  </div>
+                )}
+                {showAsImage ? (
+                  <SafeImage src={strVal} alt={label} className="w-full rounded-lg object-cover" />
+                ) : displayAsButton ? (
+                  <a href={href} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
+                    <ExternalLink className="h-4 w-4 flex-shrink-0" />
+                    {buttonText || label}
+                  </a>
+                ) : (
+                  <div className="text-sm text-gray-700 dark:text-gray-300">{strVal}</div>
+                )}
+              </div>
+            );
+          };
+
           return (
             <div className="bg-white dark:bg-gray-900 border rounded-xl overflow-hidden shadow-sm">
-              {/* Header */}
+              {/* Header title row */}
               {getSectionEnabled("header") && (
-                <div className="border-b" style={{ backgroundColor: headerProps.backgroundColor || undefined, fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined }}>
+                <div style={{ backgroundColor: headerProps.backgroundColor || undefined, fontFamily: headerProps.fontFamily ? getFontFamily(headerProps.fontFamily) : undefined }}>
                   {renderHeaderContent(headerProps)}
-                  {/* Custom fields assigned to the Title & Summary section */}
-                  {cfForSection(allCfds, "header").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
-                    const value = (displayEntry as any)?.customFields?.[key];
-                    if (!value) return null;
-                    const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-                    const strVal = String(value);
-                    const showAsImage = displayAsImage || isImageUrl(strVal);
-                    const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
-                    return (
-                      <div key={key} className="px-8 md:px-10 pb-6">
-                        {showTitle && (
-                          <div className="text-sm font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
-                            <DynIcon name={icon} className="h-3.5 w-3.5 flex-shrink-0" />
-                            {label}
-                          </div>
-                        )}
-                        {showAsImage ? (
-                          <SafeImage src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" />
-                        ) : displayAsButton ? (
-                          <a href={href} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
-                            <ExternalLink className="h-4 w-4 flex-shrink-0" />
-                            {buttonText || label}
-                          </a>
-                        ) : (
-                          <div className="text-sm text-gray-700 dark:text-gray-300">{strVal}</div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {/* Non-image header custom fields stay here */}
+                  {headerNonImageCfds.map((cfd) => renderHeaderCf(cfd))}
                 </div>
               )}
 
-              {/* Content + Sidebar — order respects saved template */}
-              {(descEnabled || sidebarEnabled) && (
-                <div className="flex flex-col md:flex-row">
-                  {savedDescOnLeft ? (
-                    <>
-                      {descEnabled && descCol}
-                      {sidebarEnabled && sidebarCol}
-                    </>
-                  ) : (
-                    <>
-                      {sidebarEnabled && sidebarCol}
-                      {descEnabled && descCol}
-                    </>
+              {/* Image + Sidebar side-by-side row (when a header image exists and sidebar is enabled) */}
+              {hasHeaderImage && sidebarEnabled ? (
+                <div className="flex flex-col md:flex-row border-t">
+                  {/* Image column */}
+                  <div className="flex-1 min-w-0">
+                    {headerImageCfds.map((cfd) => renderHeaderCf(cfd, true))}
+                  </div>
+                  {/* Contact & Details sidebar */}
+                  <div
+                    className="w-full md:w-80 flex-shrink-0 border-t md:border-t-0 md:border-l p-8"
+                    style={{ backgroundColor: sidebarProps.backgroundColor || undefined, fontFamily: sidebarProps.fontFamily ? getFontFamily(sidebarProps.fontFamily) : undefined }}
+                  >
+                    <h3 className="font-semibold text-lg mb-6" style={{ color: sidebarProps.headingColor || undefined }}>
+                      {getEntrySection("sidebar")?.props?.sidebarTitle || "Contact & Details"}
+                    </h3>
+                    <div className="space-y-5">
+                      {sidebarFields.map((fieldId) => renderSidebarField(fieldId)).filter(Boolean)}
+                      {cfForSection(allCfds, "sidebar").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
+                        const value = (displayEntry as any)?.customFields?.[key];
+                        if (!value) return null;
+                        const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+                        const strVal = String(value);
+                        const showAsImage = displayAsImage || isImageUrl(strVal);
+                        const href = strVal.startsWith("http") ? strVal : `https://${strVal}`;
+                        return (
+                          <div key={key} className="flex items-start">
+                            <div className="flex-1 min-w-0">
+                              {showTitle && (
+                                <div className="text-sm font-medium mb-1 flex items-center gap-1.5">
+                                  <DynIcon name={icon} className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                  {label}
+                                </div>
+                              )}
+                              {showAsImage ? (
+                                <SafeImage src={strVal} alt={label} className="max-w-full rounded border object-contain" />
+                              ) : displayAsButton ? (
+                                <a href={href} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm w-full justify-center">
+                                  <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+                                  {buttonText || label}
+                                </a>
+                              ) : (
+                                <div className="text-sm text-gray-600 dark:text-gray-300">{strVal}</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* Map widget */}
+                    {(() => {
+                      const lat = (displayEntry as any)?.latitude;
+                      const lng = (displayEntry as any)?.longitude;
+                      if (!lat || !lng || isDemo) return null;
+                      return (
+                        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+                          <EntryMapWidget latitude={lat} longitude={lng} title={displayEntry.title} address={displayEntry.location ?? undefined} />
+                        </div>
+                      );
+                    })()}
+                    {/* Claim form */}
+                    {getSectionEnabled("claim") && (() => {
+                      const claimSection = getEntrySection("claim");
+                      const p = claimSection?.props ?? {};
+                      return (
+                        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
+                          {claimSection?.heading && (
+                            <p className="font-semibold text-base mb-4" style={{ color: sidebarProps.headingColor || undefined }}>{claimSection.heading}</p>
+                          )}
+                          {p.bodyText && <p className="text-sm text-muted-foreground mb-4">{p.bodyText}</p>}
+                          <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                /* No header image — render original layout */
+                <>
+                  {sidebarEnabled && !hasHeaderImage && <div className="border-t" />}
+                  {(descEnabled || sidebarEnabled) && (
+                    <div className="flex flex-col md:flex-row border-t">
+                      {savedDescOnLeft ? (
+                        <>
+                          {descEnabled && descCol}
+                          {sidebarEnabled && sidebarCol}
+                        </>
+                      ) : (
+                        <>
+                          {sidebarEnabled && sidebarCol}
+                          {descEnabled && descCol}
+                        </>
+                      )}
+                    </div>
                   )}
+                </>
+              )}
+
+              {/* Description row — shown below image+sidebar when header image is present */}
+              {hasHeaderImage && descEnabled && (
+                <div className="border-t">
+                  {descCol}
                 </div>
               )}
             </div>

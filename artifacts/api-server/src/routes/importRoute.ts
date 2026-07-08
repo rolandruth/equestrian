@@ -30,6 +30,7 @@ const AVAILABLE_FIELDS = [
   { value: "tags",              label: "Tags / Keywords",     description: "Comma-separated tags" },
   { value: "moreDetails",       label: "More Details",        description: "Additional information (stored as text)" },
   { value: "custom_ridingtype", label: "Riding Type",          description: "Riding school or independent trainer (riding-school / independent-trainer)" },
+  { value: "custom_listingimage", label: "Listing Image",      description: "Cover image URL shown on cards and the entry page" },
   { value: "skip",              label: "Skip (don't import)", description: "This column will not be imported" },
 ];
 
@@ -57,6 +58,7 @@ const HEURISTIC_RULES: Array<{ patterns: RegExp[]; target: string; confidence: n
   { patterns: [/^tags$/i, /^tag$/i, /^keywords$/i, /^keyword$/i, /^labels$/i], target: "tags", confidence: 0.9 },
   { patterns: [/^notes$/i, /^additional$/i, /^extra$/i, /^more_details$/i, /^remarks$/i], target: "moreDetails", confidence: 0.85 },
   { patterns: [/^riding_type$/i, /^ridingtype$/i, /^riding_style$/i, /^rider_type$/i, /^type_of_riding$/i], target: "custom_ridingtype", confidence: 0.95 },
+  { patterns: [/^listing_?image$/i, /^listing_?img$/i, /^cover_?image$/i, /^cover_?photo$/i, /^photo_?url$/i, /^image_?url$/i, /^picture_?url$/i, /^street_?view$/i, /^streetview_?url$/i, /^avatar_?url$/i, /^main_?image$/i, /^thumbnail(_?url)?$/i], target: "custom_listingimage", confidence: 0.9 },
 ];
 
 function suggestMapping(columnName: string): { target: string; confidence: number } {

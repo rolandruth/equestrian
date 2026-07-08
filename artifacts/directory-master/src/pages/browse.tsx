@@ -265,44 +265,67 @@ export default function BrowsePage() {
         })()}
       </div>
       {/* Remaining template-configured fields (excluding location/website/phone already shown) */}
-      {cardFields.filter(id => !["category","location","website","contactPhone"].includes(id)).map(fid => renderCardField(entry, fid))}
+      {cardFields.filter(id => !["category","location","website","contactPhone"].includes(id) && !cardImageFields.includes(id)).map(fid => renderCardField(entry, fid))}
     </CardContent>
   );
 
-  const renderEntryCard = (entry: any, isDemo = false) => (
-    <Card key={entry.id} className="h-full flex flex-col hover:border-primary/50 transition-colors">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start mb-2">
-          {showField("category") && entry.category && (
-            <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-              {entry.category}
-            </Badge>
-          )}
-          {isDemo && <Badge variant="outline">Demo</Badge>}
-        </div>
-        {(entry.premium || entry.featured) && (
-          <div className="flex gap-1.5 mb-2">
-            {entry.premium && (
-              <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] px-2 py-0.5">⭐ Premium</Badge>
-            )}
-            {entry.featured && !entry.premium && (
-              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] px-2 py-0.5">★ Featured</Badge>
-            )}
+  const getCardImage = (entry: any): string | null => {
+    for (const fid of cardImageFields) {
+      const val = fid.startsWith("custom:")
+        ? (entry?.customFields && typeof entry.customFields === "object" ? (entry.customFields as any)[fid.slice(7)] : null)
+        : (entry as any)[fid];
+      if (val) return String(val);
+    }
+    return null;
+  };
+
+  const renderEntryCard = (entry: any, isDemo = false) => {
+    const cardImage = getCardImage(entry);
+    return (
+      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
+        {cardImage && (
+          <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <img
+              src={cardImage}
+              alt={entry.title}
+              className="h-full w-full object-cover"
+              onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+            />
           </div>
         )}
-        <CardTitle className="line-clamp-2 text-xl">{entry.title}</CardTitle>
-      </CardHeader>
-      {renderCardFields(entry)}
-      <CardFooter className="pt-4 border-t">
-        <Link href={`/entry/${(entry as any).slug || entry.id}`} className="w-full">
-          <Button variant="ghost" className="w-full group">
-            View Details
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
-        </Link>
-      </CardFooter>
-    </Card>
-  );
+        <CardHeader className="pb-2">
+          <div className="flex justify-between items-start mb-2">
+            {showField("category") && entry.category && (
+              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                {entry.category}
+              </Badge>
+            )}
+            {isDemo && <Badge variant="outline">Demo</Badge>}
+          </div>
+          {(entry.premium || entry.featured) && (
+            <div className="flex gap-1.5 mb-2">
+              {entry.premium && (
+                <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] px-2 py-0.5">⭐ Premium</Badge>
+              )}
+              {entry.featured && !entry.premium && (
+                <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] px-2 py-0.5">★ Featured</Badge>
+              )}
+            </div>
+          )}
+          <CardTitle className="line-clamp-2 text-xl">{entry.title}</CardTitle>
+        </CardHeader>
+        {renderCardFields(entry)}
+        <CardFooter className="pt-4 border-t">
+          <Link href={`/entry/${(entry as any).slug || entry.id}`} className="w-full">
+            <Button variant="ghost" className="w-full group">
+              View Details
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Button>
+          </Link>
+        </CardFooter>
+      </Card>
+    );
+  };
 
   return (
     <div style={{ fontFamily: browseFont }}>

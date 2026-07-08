@@ -80,7 +80,17 @@ export function HomeSearchSection() {
   const isFiltered = !!combinedSearch || !!selectedCategory || !!selectedRidingType;
 
   const cardFields = ts.browse.cardFields;
+  const cardImageFields = ts.browse.cardImageFields;
   const showField = (id: string) => cardFields.includes(id);
+  const getCardImage = (entry: any): string | null => {
+    for (const fid of cardImageFields) {
+      const val = fid.startsWith("custom:")
+        ? (entry?.customFields && typeof entry.customFields === "object" ? (entry.customFields as any)[fid.slice(7)] : null)
+        : (entry as any)[fid];
+      if (val) return String(val);
+    }
+    return null;
+  };
 
   // Lazy-load react-leaflet only when map view is activated
   useEffect(() => {
@@ -317,8 +327,20 @@ export function HomeSearchSection() {
               {/* ── GRID VIEW ── */}
               {viewMode === "grid" && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {entries.map((entry: any) => (
-                    <Card key={entry.id} className="flex flex-col hover:border-primary/50 transition-colors">
+                  {entries.map((entry: any) => {
+                    const cardImage = getCardImage(entry);
+                    return (
+                    <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
+                      {cardImage && (
+                        <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                          <img
+                            src={cardImage}
+                            alt={entry.title}
+                            className="h-full w-full object-cover"
+                            onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                          />
+                        </div>
+                      )}
                       <CardHeader className="pb-2">
                         {showField("category") && entry.category && (
                           <Badge
@@ -394,7 +416,8 @@ export function HomeSearchSection() {
                         </Link>
                       </CardFooter>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 

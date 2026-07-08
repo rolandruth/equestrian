@@ -16,6 +16,7 @@ import { FontLoader } from "@/components/template/FontLoader";
 import { mergeTemplateSettings, getFontFamily } from "@/lib/templateTypes";
 import type { SectionProps } from "@/lib/templateTypes";
 import { BrowseMapView } from "@/components/directory/BrowseMapView";
+import { CardImage } from "@/components/directory/CardImage";
 import { AdSlot } from "@/components/ads/AdSlot";
 
 export default function BrowsePage() {
@@ -283,16 +284,7 @@ export default function BrowsePage() {
     const cardImage = getCardImage(entry);
     return (
       <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
-        {cardImage && (
-          <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-            <img
-              src={cardImage}
-              alt={entry.title}
-              className="h-full w-full object-cover"
-              onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
-            />
-          </div>
-        )}
+        {cardImage && <CardImage src={cardImage} alt={entry.title} />}
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start mb-2">
             {showField("category") && entry.category && (

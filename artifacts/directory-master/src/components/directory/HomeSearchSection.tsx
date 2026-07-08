@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, MapPin, ArrowRight, Loader2, X, LayoutGrid, List, Map, Phone, Globe } from "lucide-react";
 import { mergeTemplateSettings } from "@/lib/templateTypes";
+import { CardImage } from "@/components/directory/CardImage";
 
 // Fix Leaflet default marker icons when bundled with Vite
 import L from "leaflet";
@@ -331,16 +332,7 @@ export function HomeSearchSection() {
                     const cardImage = getCardImage(entry);
                     return (
                     <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
-                      {cardImage && (
-                        <div className="aspect-video w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                          <img
-                            src={cardImage}
-                            alt={entry.title}
-                            className="h-full w-full object-cover"
-                            onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
-                          />
-                        </div>
-                      )}
+                      {cardImage && <CardImage src={cardImage} alt={entry.title} />}
                       <CardHeader className="pb-2">
                         {showField("category") && entry.category && (
                           <Badge

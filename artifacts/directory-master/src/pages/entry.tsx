@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReviewsSection } from "@/components/directory/ReviewsSection";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
-import { SafeImage, CardImage } from "@/components/directory/CardImage";
+import { SafeImage, CardImage, ImageWithFallback } from "@/components/directory/CardImage";
+import genericHorseFallback from "@/assets/generic-horse-fallback.jpg";
 import {
   useGetPublicEntry,
   useListPublicEntries,
@@ -1722,12 +1723,17 @@ export default function EntryPage() {
                 </div>
               )}
 
-              {/* Image + Sidebar side-by-side row (when a header image exists and sidebar is enabled) */}
-              {hasHeaderImage && sidebarEnabled ? (
+              {/* Image + Sidebar side-by-side row (sidebar always paired with an image — real or a generic fallback) */}
+              {sidebarEnabled ? (
                 <div className="flex flex-col md:flex-row border-t">
-                  {/* Image column */}
+                  {/* Image column — real listing image, or a generic fallback if missing/broken/unavailable */}
                   <div className="flex-1 min-w-0">
-                    {headerImageCfds.map((cfd) => renderHeaderCf(cfd, true))}
+                    <ImageWithFallback
+                      src={hasHeaderImage ? String((displayEntry as any)?.customFields?.[headerImageCfds[0].key]) : null}
+                      alt={displayEntry.title}
+                      fallbackSrc={genericHorseFallback}
+                      className="w-full h-full max-h-96 object-cover"
+                    />
                   </div>
                   {/* Contact & Details sidebar */}
                   <div
@@ -1799,29 +1805,16 @@ export default function EntryPage() {
                   </div>
                 </div>
               ) : (
-                /* No header image — render original layout */
-                <>
-                  {sidebarEnabled && !hasHeaderImage && <div className="border-t" />}
-                  {(descEnabled || sidebarEnabled) && (
-                    <div className="flex flex-col md:flex-row border-t">
-                      {savedDescOnLeft ? (
-                        <>
-                          {descEnabled && descCol}
-                          {sidebarEnabled && sidebarCol}
-                        </>
-                      ) : (
-                        <>
-                          {sidebarEnabled && sidebarCol}
-                          {descEnabled && descCol}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </>
+                /* No sidebar — render description-only layout */
+                descEnabled && (
+                  <div className="flex flex-col md:flex-row border-t">
+                    {descCol}
+                  </div>
+                )
               )}
 
-              {/* Description row — shown below image+sidebar when header image is present */}
-              {hasHeaderImage && descEnabled && (
+              {/* Description row — shown below the image+sidebar row */}
+              {sidebarEnabled && descEnabled && (
                 <div className="border-t">
                   {descCol}
                 </div>

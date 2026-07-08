@@ -67,6 +67,13 @@ interface SafeImageProps {
   className?: string;
 }
 
+interface ImageWithFallbackProps {
+  src: string | null | undefined;
+  alt: string;
+  fallbackSrc: string;
+  className?: string;
+}
+
 /**
  * Renders a bare <img> (no wrapper div), hiding it entirely when the source
  * is unavailable — used for custom-field images on the entry detail page,
@@ -81,6 +88,27 @@ export function SafeImage({ src, alt, className }: SafeImageProps) {
   return (
     <img
       src={src}
+      alt={alt}
+      className={className}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
+/**
+ * Renders an image that falls back to a generic image when the entry has no
+ * image source, the source fails to load, or (for Street View URLs) there's
+ * no imagery coverage at the location — used on the entry detail page so a
+ * relevant visual is always shown next to the sidebar.
+ */
+export function ImageWithFallback({ src, alt, fallbackSrc, className }: ImageWithFallbackProps) {
+  const [broken, setBroken] = useState(false);
+  const available = useImageAvailability(src ?? null);
+  const useFallback = !src || broken || available === false;
+
+  return (
+    <img
+      src={useFallback ? fallbackSrc : src}
       alt={alt}
       className={className}
       onError={() => setBroken(true)}

@@ -91,6 +91,9 @@ router.get("/entries", async (req, res) => {
     if (ridingType && ridingType !== "null") conditions.push(sql`${entries.customFields}->>'ridingtype' = ${ridingType}`);
 
     const where = and(...conditions);
+    // Premium listings always rank first, then featured, then the
+    // requested sort within each tier.
+    const priority = sql`CASE WHEN ${entries.premium} THEN 0 WHEN ${entries.featured} THEN 1 ELSE 2 END`;
     const orderBy =
       sort === "a-z" ? asc(entries.title) :
       sort === "z-a" ? desc(entries.title) :
@@ -98,7 +101,7 @@ router.get("/entries", async (req, res) => {
       desc(entries.createdAt);
 
     const [total] = await db.select({ count: count() }).from(entries).where(where);
-    const rows = await db.select().from(entries).where(where).orderBy(orderBy).limit(limit).offset(offset);
+    const rows = await db.select().from(entries).where(where).orderBy(priority, orderBy).limit(limit).offset(offset);
 
     res.json({
       entries: rows.map(formatEntry),
@@ -202,7 +205,7 @@ router.get("/recent", async (req, res) => {
   try {
     const rows = await db.select().from(entries)
       .where(eq(entries.published, true))
-      .orderBy(desc(entries.createdAt))
+      .orderBy(sql`CASE WHEN ${entries.premium} THEN 0 WHEN ${entries.featured} THEN 1 ELSE 2 END`, desc(entries.createdAt))
       .limit(8);
     res.json(rows.map(formatEntry));
   } catch (err) {

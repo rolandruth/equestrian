@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReviewsSection } from "@/components/directory/ReviewsSection";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
-import { SafeImage } from "@/components/directory/CardImage";
+import { SafeImage, CardImage } from "@/components/directory/CardImage";
 import {
   useGetPublicEntry,
   useListPublicEntries,
@@ -681,6 +681,16 @@ export default function EntryPage() {
   const getSectionEnabled = (id: string) => getEntrySection(id)?.enabled ?? true;
   const getSectionProps = (id: string): SectionProps => getEntrySection(id)?.props ?? {};
 
+  const getCardImage = (e: any): string | null => {
+    for (const fid of ts.browse.cardImageFields) {
+      const val = fid.startsWith("custom:")
+        ? (e?.customFields && typeof e.customFields === "object" ? (e.customFields as any)[fid.slice(7)] : null)
+        : (e as any)?.[fid];
+      if (val) return String(val);
+    }
+    return null;
+  };
+
   const sidebarFields = ts.entry.sidebarFields;
   const siteTitle = (settings as any)?.siteTitle || "Directory Master";
 
@@ -1257,14 +1267,18 @@ export default function EntryPage() {
               {editRelatedSec?.heading || `Similar in ${displayEntry.category}`}
             </h2>
             <div className={`grid ${gridCols} gap-6`}>
-              {relatedEntries.slice(0, maxItems).map((related) => (
-                <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
-                  <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
-                    <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
-                  </Card>
-                </Link>
-              ))}
+              {relatedEntries.slice(0, maxItems).map((related) => {
+                const relatedImage = getCardImage(related);
+                return (
+                  <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+                    <Card className="h-full overflow-hidden hover:border-primary/50 transition-colors cursor-pointer">
+                      {relatedImage && <CardImage src={relatedImage} alt={related.title} />}
+                      <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
+                      <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
           </>
         ) : (
@@ -1734,14 +1748,18 @@ export default function EntryPage() {
                   {getEntrySection("related")?.heading || `Similar in ${displayEntry.category}`}
                 </h2>
                 <div className={`grid ${relatedGridCols} gap-6`}>
-                  {filtered.slice(0, relatedMax).map((related) => (
-                    <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
-                      <Card className="h-full hover:border-primary/50 transition-colors cursor-pointer">
-                        <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
-                        <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
-                      </Card>
-                    </Link>
-                  ))}
+                  {filtered.slice(0, relatedMax).map((related) => {
+                    const relatedImage = getCardImage(related);
+                    return (
+                      <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+                        <Card className="h-full overflow-hidden hover:border-primary/50 transition-colors cursor-pointer">
+                          {relatedImage && <CardImage src={relatedImage} alt={related.title} />}
+                          <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
+                          <CardContent><p className="text-sm text-muted-foreground line-clamp-2">{related.summary}</p></CardContent>
+                        </Card>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             );

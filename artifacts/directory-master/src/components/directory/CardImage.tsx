@@ -61,6 +61,33 @@ interface CardImageProps {
   imgClassName?: string;
 }
 
+interface SafeImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+}
+
+/**
+ * Renders a bare <img> (no wrapper div), hiding it entirely when the source
+ * is unavailable — used for custom-field images on the entry detail page,
+ * where the surrounding layout doesn't expect a card-style wrapper.
+ */
+export function SafeImage({ src, alt, className }: SafeImageProps) {
+  const [broken, setBroken] = useState(false);
+  const available = useImageAvailability(src);
+
+  if (broken || available === false || available === null) return null;
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 /**
  * Renders an entry's card image, hiding it entirely (no broken image, no
  * "no imagery" placeholder) when the source is unavailable. While a Street

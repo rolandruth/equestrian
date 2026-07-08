@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReviewsSection } from "@/components/directory/ReviewsSection";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
+import { SafeImage } from "@/components/directory/CardImage";
 import {
   useGetPublicEntry,
   useListPublicEntries,
@@ -1017,7 +1018,7 @@ export default function EntryPage() {
                 </h3>
               )}
               {showAsImage ? (
-                <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                <SafeImage src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" />
               ) : displayAsButton ? (
                 <a href={href} target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
@@ -1540,7 +1541,7 @@ export default function EntryPage() {
                   </h3>
                 )}
                 {showAsImage ? (
-                  <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  <SafeImage src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" />
                 ) : displayAsButton ? (
                   <a href={href} target="_blank" rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">
@@ -1599,7 +1600,7 @@ export default function EntryPage() {
                           </div>
                         )}
                         {showAsImage ? (
-                          <img src={strVal} alt={label} className="max-w-full rounded border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          <SafeImage src={strVal} alt={label} className="max-w-full rounded border object-contain" />
                         ) : displayAsButton ? (
                           <a href={href} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors shadow-sm w-full justify-center">
@@ -1674,7 +1675,7 @@ export default function EntryPage() {
                           </div>
                         )}
                         {showAsImage ? (
-                          <img src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                          <SafeImage src={strVal} alt={label} className="max-w-xs rounded-lg border object-contain" />
                         ) : displayAsButton ? (
                           <a href={href} target="_blank" rel="noopener noreferrer"
                             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm">

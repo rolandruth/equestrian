@@ -1577,11 +1577,13 @@ export default function EntryPage() {
               {getSectionEnabled("moreDetails") && (displayEntry as any).moreDetails && (
                 <>
                   <Separator className="my-8" />
-                  <h3 className="text-xl font-bold">Additional Information</h3>
                   <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
                 </>
               )}
-              {/* Only render custom fields assigned to the description section */}
+              {/* Section heading + custom fields assigned to the description section */}
+              {cfForSection(allCfds, "description").length > 0 && (
+                <h3 className="text-xl font-bold mb-2">Additional Information</h3>
+              )}
               {cfForSection(allCfds, "description").map(renderCf)}
             </div>
           );

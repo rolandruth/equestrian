@@ -69,3 +69,4 @@ The short version:
 ## License
 
 MIT — free to use, modify, and distribute.
+# equestrian

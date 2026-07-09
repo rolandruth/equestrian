@@ -199,7 +199,17 @@ export default function BusinessLoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="text" autoComplete="off" placeholder="you@example.com" {...field} />
+                        <Input
+                          type="text"
+                          id="signup-email-address"
+                          name="signup-email-address"
+                          autoComplete="off"
+                          placeholder="you@example.com"
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

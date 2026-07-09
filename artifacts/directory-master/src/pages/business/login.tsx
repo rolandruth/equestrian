@@ -136,7 +136,7 @@ export default function BusinessLoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
+                        <Input type="text" inputMode="email" autoComplete="email" placeholder="you@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -199,7 +199,7 @@ export default function BusinessLoginPage() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
+                        <Input type="text" inputMode="email" autoComplete="email" placeholder="you@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

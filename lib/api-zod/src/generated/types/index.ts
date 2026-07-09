@@ -10,6 +10,8 @@ export * from "./authorizationSessionHeaderParameter";
 export * from "./authResult";
 export * from "./authUser";
 export * from "./authUserEnvelope";
+export * from "./bizUser";
+export * from "./bizUserListResponse";
 export * from "./businessLoginBody";
 export * from "./businessSignupBody";
 export * from "./category";

@@ -16,6 +16,7 @@ import adsRouter from "./adsRoute.js";
 import stripeRouter from "./stripeRoute.js";
 import bizAuthRouter from "./bizAuthRoute.js";
 import businessRouter from "./businessRoute.js";
+import adminBizUsersRouter from "./adminBizUsersRoute.js";
 
 const router: IRouter = Router();
 
@@ -34,6 +35,7 @@ router.use("/seo", seoRouter);
 router.use(storageRouter);
 router.use("/builder", builderRouter);
 router.use("/contacts", contactsRouter);
+router.use(adminBizUsersRouter);
 router.use("/ads", adsRouter);
 router.use("/stripe", stripeRouter);
 

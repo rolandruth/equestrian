@@ -44,6 +44,34 @@ export const DeleteContactResponse = zod.object({
 });
 
 /**
+ * @summary List all business accounts (admin)
+ */
+export const ListBizUsersResponse = zod.object({
+  bizUsers: zod.array(
+    zod.object({
+      id: zod.string(),
+      email: zod.string(),
+      firstName: zod.string().nullish(),
+      lastName: zod.string().nullish(),
+      stripeCustomerId: zod.string().nullish(),
+      createdAt: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Delete a business account (admin)
+ */
+export const DeleteBizUserParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteBizUserResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().nullish(),
+});
+
+/**
  * @summary Request a presigned upload URL
  */
 export const RequestUploadUrlBody = zod.object({

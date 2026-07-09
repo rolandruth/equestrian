@@ -504,6 +504,19 @@ export interface CreateReviewBody {
   body?: string;
 }
 
+export interface BizUser {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  stripeCustomerId?: string | null;
+  createdAt: string;
+}
+
+export interface BizUserListResponse {
+  bizUsers: BizUser[];
+}
+
 export interface ContactSubmitBody {
   fullName: string;
   phone: string;

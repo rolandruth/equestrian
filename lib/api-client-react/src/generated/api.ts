@@ -19,6 +19,7 @@ import type {
 import type {
   AuthResult,
   AuthUserEnvelope,
+  BizUserListResponse,
   BusinessLoginBody,
   BusinessSignupBody,
   Category,
@@ -312,6 +313,165 @@ export const useDeleteContact = <
   TContext
 > => {
   return useMutation(getDeleteContactMutationOptions(options));
+};
+
+/**
+ * @summary List all business accounts (admin)
+ */
+export const getListBizUsersUrl = () => {
+  return `/api/admin/biz-users`;
+};
+
+export const listBizUsers = async (
+  options?: RequestInit,
+): Promise<BizUserListResponse> => {
+  return customFetch<BizUserListResponse>(getListBizUsersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBizUsersQueryKey = () => {
+  return [`/api/admin/biz-users`] as const;
+};
+
+export const getListBizUsersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBizUsers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBizUsers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBizUsersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBizUsers>>> = ({
+    signal,
+  }) => listBizUsers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBizUsers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBizUsersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBizUsers>>
+>;
+export type ListBizUsersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all business accounts (admin)
+ */
+
+export function useListBizUsers<
+  TData = Awaited<ReturnType<typeof listBizUsers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBizUsers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBizUsersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Delete a business account (admin)
+ */
+export const getDeleteBizUserUrl = (id: string) => {
+  return `/api/admin/biz-users/${id}`;
+};
+
+export const deleteBizUser = async (
+  id: string,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getDeleteBizUserUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBizUserMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBizUser>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBizUser>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteBizUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBizUser>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteBizUser(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBizUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBizUser>>
+>;
+
+export type DeleteBizUserMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Delete a business account (admin)
+ */
+export const useDeleteBizUser = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBizUser>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBizUser>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteBizUserMutationOptions(options));
 };
 
 /**

@@ -346,6 +346,56 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /business/forgot-password:
+    post:
+      tags: [Business Auth]
+      operationId: bizForgotPassword
+      summary: Request a password reset token for a business-owner account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BizForgotPasswordBody'
+      responses:
+        '200':
+          description: Reset token generated (token returned directly since no email service is configured).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BizForgotPasswordResponse'
+        '400':
+          description: Invalid input.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /business/reset-password:
+    post:
+      tags: [Business Auth]
+      operationId: bizResetPassword
+      summary: Reset a business-owner password using a valid token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BizResetPasswordBody'
+      responses:
+        '200':
+          description: Password updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid or expired token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /business/logout:
     post:
       tags: [Business Auth]
@@ -1669,6 +1719,29 @@ components:
           items:
             $ref: "#/components/schemas/Contact"
       required: [contacts]
+
+    BizForgotPasswordBody:
+      type: object
+      properties:
+        email:
+          type: string
+      required: [email]
+
+    BizForgotPasswordResponse:
+      type: object
+      properties:
+        resetToken:
+          type: string
+      required: [resetToken]
+
+    BizResetPasswordBody:
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+      required: [token, newPassword]
 
     RequestUploadUrlBody:
       type: object

@@ -16,6 +16,8 @@ export const bizUsers = pgTable("biz_users", {
   // customer-portal session so all their subscriptions/invoices live under
   // one Stripe Customer.
   stripeCustomerId: text("stripe_customer_id"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpiry: timestamp("password_reset_expiry", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

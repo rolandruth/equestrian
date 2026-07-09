@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useBusinessLogin, useBusinessSignup, useGetCurrentAuthUser } from "@workspace/api-client-react";
+import { useBusinessLogin, useBusinessSignup, useGetCurrentAuthUser, useBizForgotPassword } from "@workspace/api-client-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Building2 } from "lucide-react";
+import { Loader2, Building2, ArrowLeft, Copy, CheckCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
@@ -33,7 +33,105 @@ function getReturnTo(): string {
   return value;
 }
 
-function LoginForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
+const forgotSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+type ForgotFormValues = z.infer<typeof forgotSchema>;
+
+function ForgotPasswordView({ onBack }: { onBack: () => void }) {
+  const { toast } = useToast();
+  const forgotMutation = useBizForgotPassword();
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const form = useForm<ForgotFormValues>({
+    resolver: zodResolver(forgotSchema),
+    defaultValues: { email: "" },
+  });
+
+  const onSubmit = async (data: ForgotFormValues) => {
+    try {
+      const result = await forgotMutation.mutateAsync({ data });
+      const link = `${window.location.origin}/business/reset-password?token=${result.resetToken}`;
+      setResetLink(link);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Could not generate reset link.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCopy = () => {
+    if (!resetLink) return;
+    navigator.clipboard.writeText(resetLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (resetLink) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Your password reset link is ready. Click it now to set a new password, or copy it to share.
+        </p>
+        <a
+          href={resetLink}
+          className="block w-full rounded-lg border bg-muted/50 px-3 py-2 text-xs font-mono break-all text-primary hover:underline"
+        >
+          {resetLink}
+        </a>
+        <div className="flex gap-2">
+          <Button asChild className="flex-1">
+            <a href={resetLink}>Reset Password</a>
+          </Button>
+          <Button type="button" variant="outline" onClick={handleCopy} className="gap-1.5">
+            {copied ? <CheckCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
+        <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mt-2">
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to login
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Enter your account email and we'll generate a reset link for you.
+      </p>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="you@example.com" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full" disabled={forgotMutation.isPending}>
+            {forgotMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Generate Reset Link
+          </Button>
+        </form>
+      </Form>
+      <button type="button" onClick={onBack} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ArrowLeft className="h-3.5 w-3.5" /> Back to login
+      </button>
+    </div>
+  );
+}
+
+function LoginForm({ onSuccess, onForgot }: { onSuccess: () => Promise<void>; onForgot: () => void }) {
   const { toast } = useToast();
   const loginMutation = useBusinessLogin();
 
@@ -77,7 +175,16 @@ function LoginForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Password</FormLabel>
+                <button
+                  type="button"
+                  onClick={onForgot}
+                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <FormControl>
                 <Input type="password" placeholder="••••••••" {...field} />
               </FormControl>
@@ -192,13 +299,15 @@ function SignupForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
 
 export default function BusinessLoginPage() {
   const [, setLocation] = useLocation();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const { refetch } = useGetCurrentAuthUser({ query: { enabled: false } });
 
   const afterAuth = async () => {
     await refetch();
     setLocation(getReturnTo());
   };
+
+  const isForgot = mode === "forgot";
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
@@ -211,31 +320,37 @@ export default function BusinessLoginPage() {
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight">Business Account</CardTitle>
           <CardDescription>
-            {mode === "login"
+            {isForgot
+              ? "Reset your password"
+              : mode === "login"
               ? "Log in to manage your listing and plans"
               : "Create an account to claim your listing"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 rounded-lg bg-muted p-1 mb-6">
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className={`rounded-md py-1.5 text-sm font-medium transition-all ${mode === "login" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Log In
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("signup")}
-              className={`rounded-md py-1.5 text-sm font-medium transition-all ${mode === "signup" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              Sign Up
-            </button>
-          </div>
+          {!isForgot && (
+            <div className="grid grid-cols-2 rounded-lg bg-muted p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => setMode("login")}
+                className={`rounded-md py-1.5 text-sm font-medium transition-all ${mode === "login" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Log In
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("signup")}
+                className={`rounded-md py-1.5 text-sm font-medium transition-all ${mode === "signup" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Sign Up
+              </button>
+            </div>
+          )}
 
-          {mode === "login"
-            ? <LoginForm onSuccess={afterAuth} />
+          {isForgot
+            ? <ForgotPasswordView onBack={() => setMode("login")} />
+            : mode === "login"
+            ? <LoginForm onSuccess={afterAuth} onForgot={() => setMode("forgot")} />
             : <SignupForm onSuccess={afterAuth} />
           }
         </CardContent>

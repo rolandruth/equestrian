@@ -4,6 +4,8 @@ import {
   GetCurrentAuthUserResponse,
   BusinessSignupBody,
   BusinessLoginBody,
+  BizForgotPasswordBody,
+  BizResetPasswordBody,
 } from "@workspace/api-zod";
 import { db, bizUsers } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -99,6 +101,66 @@ router.post("/business/login", async (req: Request, res: Response) => {
   const sid = await createBizSession(sessionData);
   setBizSessionCookie(res, sid);
   res.json(GetCurrentAuthUserResponse.parse({ user: sessionData.user }));
+});
+
+router.post("/business/forgot-password", async (req: Request, res: Response) => {
+  const parsed = BizForgotPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request" });
+    return;
+  }
+  const normalizedEmail = parsed.data.email.trim().toLowerCase();
+  const [user] = await db.select().from(bizUsers).where(eq(bizUsers.email, normalizedEmail));
+
+  if (!user) {
+    res.status(400).json({ error: "No account found with that email address" });
+    return;
+  }
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  const resetExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+  await db
+    .update(bizUsers)
+    .set({ passwordResetToken: resetToken, passwordResetExpiry: resetExpiry })
+    .where(eq(bizUsers.id, user.id));
+
+  res.json({ resetToken });
+});
+
+router.post("/business/reset-password", async (req: Request, res: Response) => {
+  const parsed = BizResetPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request" });
+    return;
+  }
+  const { token, newPassword } = parsed.data;
+
+  if (newPassword.length < 8) {
+    res.status(400).json({ error: "Password must be at least 8 characters" });
+    return;
+  }
+
+  const [user] = await db
+    .select()
+    .from(bizUsers)
+    .where(eq(bizUsers.passwordResetToken, token));
+
+  if (!user || !user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+    res.status(400).json({ error: "Reset link is invalid or has expired" });
+    return;
+  }
+
+  await db
+    .update(bizUsers)
+    .set({
+      passwordHash: hashBizPassword(newPassword),
+      passwordResetToken: null,
+      passwordResetExpiry: null,
+    })
+    .where(eq(bizUsers.id, user.id));
+
+  res.json({ success: true, message: "Password updated successfully" });
 });
 
 router.post("/business/logout", async (req: Request, res: Response) => {

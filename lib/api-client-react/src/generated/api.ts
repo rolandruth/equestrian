@@ -19,6 +19,9 @@ import type {
 import type {
   AuthResult,
   AuthUserEnvelope,
+  BizForgotPasswordBody,
+  BizForgotPasswordResponse,
+  BizResetPasswordBody,
   BizUserListResponse,
   BusinessLoginBody,
   BusinessSignupBody,
@@ -1370,6 +1373,178 @@ export const useBusinessLogin = <
   TContext
 > => {
   return useMutation(getBusinessLoginMutationOptions(options));
+};
+
+/**
+ * @summary Request a password reset token for a business-owner account
+ */
+export const getBizForgotPasswordUrl = () => {
+  return `/api/business/forgot-password`;
+};
+
+export const bizForgotPassword = async (
+  bizForgotPasswordBody: BizForgotPasswordBody,
+  options?: RequestInit,
+): Promise<BizForgotPasswordResponse> => {
+  return customFetch<BizForgotPasswordResponse>(getBizForgotPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bizForgotPasswordBody),
+  });
+};
+
+export const getBizForgotPasswordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bizForgotPassword>>,
+    TError,
+    { data: BodyType<BizForgotPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bizForgotPassword>>,
+  TError,
+  { data: BodyType<BizForgotPasswordBody> },
+  TContext
+> => {
+  const mutationKey = ["bizForgotPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bizForgotPassword>>,
+    { data: BodyType<BizForgotPasswordBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bizForgotPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BizForgotPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bizForgotPassword>>
+>;
+export type BizForgotPasswordMutationBody = BodyType<BizForgotPasswordBody>;
+export type BizForgotPasswordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Request a password reset token for a business-owner account
+ */
+export const useBizForgotPassword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bizForgotPassword>>,
+    TError,
+    { data: BodyType<BizForgotPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bizForgotPassword>>,
+  TError,
+  { data: BodyType<BizForgotPasswordBody> },
+  TContext
+> => {
+  return useMutation(getBizForgotPasswordMutationOptions(options));
+};
+
+/**
+ * @summary Reset a business-owner password using a valid token
+ */
+export const getBizResetPasswordUrl = () => {
+  return `/api/business/reset-password`;
+};
+
+export const bizResetPassword = async (
+  bizResetPasswordBody: BizResetPasswordBody,
+  options?: RequestInit,
+): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getBizResetPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(bizResetPasswordBody),
+  });
+};
+
+export const getBizResetPasswordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bizResetPassword>>,
+    TError,
+    { data: BodyType<BizResetPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bizResetPassword>>,
+  TError,
+  { data: BodyType<BizResetPasswordBody> },
+  TContext
+> => {
+  const mutationKey = ["bizResetPassword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bizResetPassword>>,
+    { data: BodyType<BizResetPasswordBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bizResetPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BizResetPasswordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bizResetPassword>>
+>;
+export type BizResetPasswordMutationBody = BodyType<BizResetPasswordBody>;
+export type BizResetPasswordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Reset a business-owner password using a valid token
+ */
+export const useBizResetPassword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bizResetPassword>>,
+    TError,
+    { data: BodyType<BizResetPasswordBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof bizResetPassword>>,
+  TError,
+  { data: BodyType<BizResetPasswordBody> },
+  TContext
+> => {
+  return useMutation(getBizResetPasswordMutationOptions(options));
 };
 
 /**

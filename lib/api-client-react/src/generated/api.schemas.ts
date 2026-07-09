@@ -535,6 +535,19 @@ export interface ContactListResponse {
   contacts: Contact[];
 }
 
+export interface BizForgotPasswordBody {
+  email: string;
+}
+
+export interface BizForgotPasswordResponse {
+  resetToken: string;
+}
+
+export interface BizResetPasswordBody {
+  token: string;
+  newPassword: string;
+}
+
 export interface RequestUploadUrlBody {
   name: string;
   size: number;

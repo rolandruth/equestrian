@@ -237,6 +237,30 @@ export const BusinessLoginResponse = zod.object({
 });
 
 /**
+ * @summary Request a password reset token for a business-owner account
+ */
+export const BizForgotPasswordBody = zod.object({
+  email: zod.string(),
+});
+
+export const BizForgotPasswordResponse = zod.object({
+  resetToken: zod.string(),
+});
+
+/**
+ * @summary Reset a business-owner password using a valid token
+ */
+export const BizResetPasswordBody = zod.object({
+  token: zod.string(),
+  newPassword: zod.string(),
+});
+
+export const BizResetPasswordResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().nullish(),
+});
+
+/**
  * @summary Clear the current business-owner session
  */
 export const BusinessLogoutHeader = zod.object({

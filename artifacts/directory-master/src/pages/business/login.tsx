@@ -33,35 +33,20 @@ function getReturnTo(): string {
   return value;
 }
 
-export default function BusinessLoginPage() {
-  const [, setLocation] = useLocation();
-  const [mode, setMode] = useState<"login" | "signup">("login");
+function LoginForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
   const { toast } = useToast();
-  const { refetch } = useGetCurrentAuthUser({ query: { enabled: false } });
-
   const loginMutation = useBusinessLogin();
-  const signupMutation = useBusinessSignup();
 
-  const loginForm = useForm<LoginFormValues>({
+  const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
   });
 
-  const signupForm = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", password: "" },
-  });
-
-  const afterAuth = async () => {
-    await refetch();
-    setLocation(getReturnTo());
-  };
-
-  const onLogin = async (data: LoginFormValues) => {
+  const onSubmit = async (data: LoginFormValues) => {
     try {
       await loginMutation.mutateAsync({ data });
       toast({ title: "Welcome back", description: "You have successfully logged in." });
-      await afterAuth();
+      await onSuccess();
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -71,7 +56,54 @@ export default function BusinessLoginPage() {
     }
   };
 
-  const onSignup = async (data: SignupFormValues) => {
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="you@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="••••••••" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full mt-6" disabled={loginMutation.isPending}>
+          {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Log In
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
+function SignupForm({ onSuccess }: { onSuccess: () => Promise<void> }) {
+  const { toast } = useToast();
+  const signupMutation = useBusinessSignup();
+
+  const form = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { firstName: "", lastName: "", email: "", password: "" },
+  });
+
+  const onSubmit = async (data: SignupFormValues) => {
     try {
       await signupMutation.mutateAsync({
         data: {
@@ -82,7 +114,7 @@ export default function BusinessLoginPage() {
         },
       });
       toast({ title: "Account created", description: "Welcome to the directory." });
-      await afterAuth();
+      await onSuccess();
     } catch (error: any) {
       toast({
         title: "Sign up failed",
@@ -90,6 +122,82 @@ export default function BusinessLoginPage() {
         variant: "destructive",
       });
     }
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Jane" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Doe" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="you@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="At least 8 characters" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full mt-6" disabled={signupMutation.isPending}>
+          {signupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Create Account
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
+export default function BusinessLoginPage() {
+  const [, setLocation] = useLocation();
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const { refetch } = useGetCurrentAuthUser({ query: { enabled: false } });
+
+  const afterAuth = async () => {
+    await refetch();
+    setLocation(getReturnTo());
   };
 
   return (
@@ -126,115 +234,10 @@ export default function BusinessLoginPage() {
             </button>
           </div>
 
-          {mode === "login" ? (
-            <Form {...loginForm}>
-              <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
-                <FormField
-                  control={loginForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="text" autoComplete="off" placeholder="you@example.com" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={loginForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" autoComplete="current-password" placeholder="••••••••" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full mt-6" disabled={loginMutation.isPending}>
-                  {loginMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Log In
-                </Button>
-              </form>
-            </Form>
-          ) : (
-            <Form {...signupForm}>
-              <form onSubmit={signupForm.handleSubmit(onSignup)} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <FormField
-                    control={signupForm.control}
-                    name="firstName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>First name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Jane" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={signupForm.control}
-                    name="lastName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Last name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Doe" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={signupForm.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="text"
-                          id="signup-email-address"
-                          name="signup-email-address"
-                          autoComplete="off"
-                          placeholder="you@example.com"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={signupForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="At least 8 characters" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full mt-6" disabled={signupMutation.isPending}>
-                  {signupMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Account
-                </Button>
-              </form>
-            </Form>
-          )}
+          {mode === "login"
+            ? <LoginForm onSuccess={afterAuth} />
+            : <SignupForm onSuccess={afterAuth} />
+          }
         </CardContent>
       </Card>
     </div>

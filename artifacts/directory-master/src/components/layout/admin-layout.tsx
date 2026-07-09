@@ -57,7 +57,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/admin/categories", label: "Categories", icon: Tags },
     { href: "/admin/import", label: "Import CSV", icon: Upload },
     { href: "/admin/seo", label: "SEO", icon: Search },
-    ...(isAdmin ? [{ href: "/admin/contacts", label: "Contacts", icon: ClipboardCheck }] : []),
+    ...(isAdmin ? [{ href: "/admin/contacts", label: "Business", icon: ClipboardCheck }] : []),
     ...(isAdmin ? [{ href: "/admin/ads", label: "Ads", icon: Megaphone }] : []),
     { href: "/admin/users", label: "Users", icon: Users },
     { href: "/admin/settings", label: "Settings", icon: Settings },

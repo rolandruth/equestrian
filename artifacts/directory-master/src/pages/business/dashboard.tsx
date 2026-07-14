@@ -417,7 +417,10 @@ export default function BusinessDashboardPage() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <p className="text-sm text-muted-foreground">No active upgrade on this listing.</p>
+                    <div>
+                      <p className="text-sm text-muted-foreground">No active upgrade on this listing.</p>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">Plans are recurring monthly subscriptions · Cancel anytime</p>
+                    </div>
                     <div className="flex gap-2">
                       <Button
                         size="sm"

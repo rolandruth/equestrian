@@ -384,10 +384,11 @@ export default function ListingPlansPage() {
             {/* Plan name & price */}
             <div className="mb-6">
               <h2 className="text-lg font-semibold mb-1">{plan.name}</h2>
-              <div className="flex items-baseline gap-1 mb-3">
+              <div className="flex items-baseline gap-1 mb-1">
                 <span className="font-bold text-3xl">{plan.price}</span>
                 <span className="text-sm text-muted-foreground">/mo</span>
               </div>
+              <p className="text-xs text-muted-foreground mb-3">Recurring monthly subscription · Cancel anytime</p>
               <p className="text-sm text-muted-foreground leading-relaxed">{plan.description}</p>
             </div>
 
@@ -421,7 +422,7 @@ export default function ListingPlansPage() {
               {pickerPlan === "featured" ? "Get Featured" : "Go Premium"}
             </DialogTitle>
             <DialogDescription>
-              Choose which of your claimed listings to upgrade.
+              Choose which listing to upgrade. This starts a recurring monthly subscription — you can cancel anytime from your dashboard.
             </DialogDescription>
           </DialogHeader>
 

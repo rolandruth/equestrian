@@ -144,7 +144,7 @@ export default function BusinessDashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not open billing portal");
-      window.location.href = data.url;
+      window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (err: any) {
       setBillingError(err.message || "Something went wrong. Please try again.");
       setBillingLoading(false);

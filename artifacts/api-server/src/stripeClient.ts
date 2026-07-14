@@ -14,6 +14,15 @@ let inFlightFetch: Promise<StripeCredentials> | null = null;
 const CREDENTIALS_TTL_MS = 5 * 60 * 1000;
 
 async function fetchStripeCredentials(): Promise<StripeCredentials> {
+  // Direct env var takes priority — useful when the Replit connector proxy
+  // isn't serving secrets for this Repl (binding staleness, test vs live, etc.)
+  if (process.env.STRIPE_SECRET_KEY) {
+    return {
+      secretKey: process.env.STRIPE_SECRET_KEY,
+      webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+    };
+  }
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY

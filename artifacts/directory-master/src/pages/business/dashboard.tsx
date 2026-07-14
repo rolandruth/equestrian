@@ -422,14 +422,14 @@ export default function BusinessDashboardPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => setLocation(`/listing-plans?entryId=${entry.id}`)}
+                        onClick={() => setLocation(`/listing-plans?entryId=${entry.id}&plan=featured`)}
                       >
                         <Zap className="h-3.5 w-3.5 mr-1.5" />
                         Buy Featured
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => setLocation(`/listing-plans?entryId=${entry.id}`)}
+                        onClick={() => setLocation(`/listing-plans?entryId=${entry.id}&plan=premium`)}
                       >
                         <Star className="h-3.5 w-3.5 mr-1.5" />
                         Buy Premium

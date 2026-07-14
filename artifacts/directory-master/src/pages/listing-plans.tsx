@@ -101,6 +101,7 @@ export default function ListingPlansPage() {
   const canceled = params.get("canceled") === "1";
   const isCheckoutPopup = typeof window !== "undefined" && window.name === CHECKOUT_POPUP_WINDOW_NAME;
   const preselectedEntryId = params.get("entryId");
+  const autoOpenPlan = params.get("plan") as PlanKey | null;
 
   // Plan purchases only flow through listings the signed-in owner has already
   // claimed — load their claimed listings once logged in so the picker can
@@ -134,6 +135,15 @@ export default function ListingPlansPage() {
       cancelled = true;
     };
   }, [bizAuth.isAuthenticated]);
+
+  // When arriving from the dashboard with ?entryId=X&plan=featured/premium,
+  // auto-open the picker for that plan once listings have loaded.
+  useEffect(() => {
+    if (!autoOpenPlan || !preselectedEntryId || myListings === null || pickerPlan) return;
+    if (!["featured", "premium"].includes(autoOpenPlan)) return;
+    openPicker(autoOpenPlan);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenPlan, preselectedEntryId, myListings]);
 
   // This page is also rendered inside the popup tab after Stripe redirects back to
   // the success_url. If we're in that popup, just close ourselves — the original

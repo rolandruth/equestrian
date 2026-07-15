@@ -69,8 +69,10 @@ function suggestMapping(columnName: string): { target: string; confidence: numbe
       }
     }
   }
-  // Default to moreDetails with low confidence for unrecognized columns
-  return { target: "moreDetails", confidence: 0.3 };
+  // Default: save unrecognized columns as custom fields so no data is lost.
+  // Each column gets its own key (custom_<slug>) rather than all overwriting
+  // the single moreDetails field.
+  return { target: `custom_${slugify(columnName)}`, confidence: 0.3 };
 }
 
 // Full CSV parser that correctly handles quoted fields containing embedded newlines and commas.
@@ -563,16 +565,31 @@ router.post("/analyze", requireEditor, async (req, res) => {
         .map(row => (row[i] ?? "").trim())
         .filter(Boolean);
 
+      // For auto-generated custom_ fields, attach the original column name as
+      // the display label so the UI can show a human-readable name.
+      const isAutoCustom = target.startsWith("custom_") && !AVAILABLE_FIELDS.find(f => f.value === target);
       return {
         csvColumn: col,
         targetField: target,
         sampleValues,
         confidence,
         approved: target !== "skip",
+        customLabel: isAutoCustom ? col : null,
       };
     });
 
-    res.json({ mappings, availableFields: AVAILABLE_FIELDS });
+    // Extend availableFields with any auto-generated custom_ entries so the
+    // mapping dropdown can display them.
+    const extraFields = mappings
+      .filter(m => m.customLabel)
+      .reduce<typeof AVAILABLE_FIELDS>((acc, m) => {
+        if (!acc.find(f => f.value === m.targetField) && !AVAILABLE_FIELDS.find(f => f.value === m.targetField)) {
+          acc.push({ value: m.targetField, label: m.customLabel!, description: `Custom field: ${m.customLabel}` });
+        }
+        return acc;
+      }, []);
+
+    res.json({ mappings, availableFields: [...AVAILABLE_FIELDS, ...extraFields] });
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to analyze CSV" });

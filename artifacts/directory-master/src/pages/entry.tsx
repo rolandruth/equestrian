@@ -1855,7 +1855,7 @@ export default function EntryPage() {
               {(() => {
                 const cf = (displayEntry as any)?.customFields ?? {};
                 const mainImageUrl = cf.listingimage ? String(cf.listingimage) : null;
-                const extraImages = ["image2", "image3", "image4"]
+                const extraImages = ["image3", "image4"]
                   .map((k) => cf[k] ? String(cf[k]) : null)
                   .filter((url): url is string => !!url && url !== mainImageUrl);
                 if (!extraImages.length) return null;

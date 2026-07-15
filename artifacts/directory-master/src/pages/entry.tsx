@@ -1582,9 +1582,9 @@ export default function EntryPage() {
                 </>
               )}
               {/* Section heading + custom fields assigned to the description section */}
-              {cfForSection(allCfds, "description").length > 0 && (
+              {cfForSection(allCfds, "description").length > 0 ? (
                 <h3 className="text-xl font-bold mb-2">Additional Information</h3>
-              )}
+              ) : null}
               {cfForSection(allCfds, "description").map(renderCf)}
             </div>
           );

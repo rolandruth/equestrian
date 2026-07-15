@@ -498,6 +498,10 @@ const HOURS_BANNER_KEYS = new Set([
   "hoursofoperation", "hours_of_operation", "hours", "hours-of-operation",
   "googlerating", "google_rating", "google-rating",
   "googlereviewcount", "google_review_count", "google-review-count",
+  // Google review fields 1–3
+  "googlereview1author", "googlereview1rating", "googlereview1text",
+  "googlereview2author", "googlereview2rating", "googlereview2text",
+  "googlereview3author", "googlereview3rating", "googlereview3text",
 ]);
 
 // ─── Sortable row for individual custom fields in edit mode ───────────────────
@@ -1879,6 +1883,36 @@ export default function EntryPage() {
                     <span className="text-2xl font-bold">{String(count)}</span>
                   </div>
                 )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Google Reviews section */}
+        {(() => {
+          const cf = (displayEntry as any)?.customFields ?? {};
+          const reviews = [1, 2, 3].map(n => ({
+            author: cf[`googlereview${n}author`],
+            rating: cf[`googlereview${n}rating`],
+            text:   cf[`googlereview${n}text`],
+          })).filter(r => r.author || r.rating || r.text);
+          if (reviews.length === 0) return null;
+          return (
+            <div className="rounded-xl border bg-card p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                Google Reviews
+              </h2>
+              <div className="space-y-4">
+                {reviews.map((r, i) => (
+                  <div key={i} className={`p-4 rounded-lg bg-muted/40 ${i > 0 ? "border-t border-border" : ""}`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      {r.author && <span className="font-semibold text-sm">{String(r.author)}</span>}
+                      {r.rating && <span className="text-sm text-muted-foreground flex items-center gap-1"><Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />{String(r.rating)}</span>}
+                    </div>
+                    {r.text && <p className="text-sm text-muted-foreground leading-relaxed">{String(r.text)}</p>}
+                  </div>
+                ))}
               </div>
             </div>
           );

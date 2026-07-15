@@ -499,9 +499,9 @@ const HOURS_BANNER_KEYS = new Set([
   "googlerating", "google_rating", "google-rating",
   "googlereviewcount", "google_review_count", "google-review-count",
   // Google review fields 1–3
-  "googlereview1author", "googlereview1rating", "googlereview1text",
-  "googlereview2author", "googlereview2rating", "googlereview2text",
-  "googlereview3author", "googlereview3rating", "googlereview3text",
+  "review1_author", "review1_rating", "review1_text",
+  "review2_author", "review2_rating", "review2_text",
+  "review3_author", "review3_rating", "review3_text",
 ]);
 
 // ─── Sortable row for individual custom fields in edit mode ───────────────────
@@ -1889,9 +1889,9 @@ export default function EntryPage() {
         {(() => {
           const cf = (displayEntry as any)?.customFields ?? {};
           const reviews = [1, 2, 3].map(n => ({
-            author: cf[`googlereview${n}author`],
-            rating: cf[`googlereview${n}rating`],
-            text:   cf[`googlereview${n}text`],
+            author: cf[`review${n}_author`],
+            rating: cf[`review${n}_rating`],
+            text:   cf[`review${n}_text`],
           })).filter(r => r.author || r.rating || r.text);
           if (reviews.length === 0) return null;
           return (

@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { useGetFeaturedEntries, useGetPublicSettings } from "@workspace/api-client-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,7 @@ import { Star, MapPin, ArrowRight, Zap } from "lucide-react";
 import { mergeTemplateSettings } from "@/lib/templateTypes";
 
 export function FeaturedSpotlightSection() {
+  const [, setLocation] = useLocation();
   const { data: featured, isLoading } = useGetFeaturedEntries();
   const { data: settings } = useGetPublicSettings();
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
@@ -41,7 +42,8 @@ export function FeaturedSpotlightSection() {
         {featured.slice(0, 4).map((entry: any) => (
           <Card
             key={entry.id}
-            className="flex flex-col border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-900/10 hover:border-amber-400 dark:hover:border-amber-700 transition-colors relative overflow-hidden"
+            className="flex flex-col border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-900/10 hover:border-amber-400 dark:hover:border-amber-700 transition-colors relative overflow-hidden cursor-pointer"
+            onClick={() => setLocation(`/entry/${entry.slug || entry.id}`)}
           >
             {/* Featured ribbon */}
             <div className="absolute top-3 right-3">
@@ -77,16 +79,14 @@ export function FeaturedSpotlightSection() {
             </CardContent>
 
             <CardFooter className="pt-3 border-t border-amber-200 dark:border-amber-800/40">
-              <Link href={`/entry/${entry.slug || entry.id}`} className="w-full">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full group text-xs hover:bg-amber-100 dark:hover:bg-amber-900/30"
-                >
-                  View Details
-                  <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full group text-xs hover:bg-amber-100 dark:hover:bg-amber-900/30"
+              >
+                View Details
+                <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover:translate-x-1" />
+              </Button>
             </CardFooter>
           </Card>
         ))}

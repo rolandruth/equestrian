@@ -977,7 +977,7 @@ export default function HomePage() {
   const renderEntryCard = (entry: any, demo = false) => {
     const cardImage = getCardImage(entry);
     return (
-      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
+      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setLocation(`/entry/${(entry as any).slug || entry.id}`)}>
         <CardImage src={cardImage} alt={entry.title} />
         <CardHeader>
           <div className="flex justify-between items-start mb-2">
@@ -997,12 +997,10 @@ export default function HomePage() {
           {cardFields.filter(id => id !== "category" && !cardImageFields.includes(id)).map(fid => renderCardField(entry, fid))}
         </CardContent>
         <CardFooter className="pt-4 border-t">
-          <Link href={`/entry/${(entry as any).slug || entry.id}`} className="w-full">
-            <Button variant="ghost" className="w-full group">
-              View Details
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </Link>
+          <Button variant="ghost" className="w-full group">
+            View Details
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
         </CardFooter>
       </Card>
     );

@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Crown, MapPin, ArrowRight, Sparkles } from "lucide-react";
@@ -7,6 +7,7 @@ import { useGetPublicSettings } from "@workspace/api-client-react";
 import { useState, useEffect } from "react";
 
 export function PremiumSpotlightSection() {
+  const [, setLocation] = useLocation();
   const { data: settings } = useGetPublicSettings();
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const cardFields = ts.browse.cardFields;
@@ -61,7 +62,8 @@ export function PremiumSpotlightSection() {
         {premium.map((entry: any) => (
           <div
             key={entry.id}
-            className="group flex flex-col rounded-xl border border-amber-100 bg-white hover:border-amber-300 hover:shadow-lg hover:shadow-amber-900/10 transition-all duration-200 overflow-hidden"
+            className="group flex flex-col rounded-xl border border-amber-100 bg-white hover:border-amber-300 hover:shadow-lg hover:shadow-amber-900/10 transition-all duration-200 overflow-hidden cursor-pointer"
+            onClick={() => setLocation(`/entry/${entry.slug || entry.id}`)}
           >
             {/* Top accent line */}
             <div className="h-0.5 w-full bg-gradient-to-r from-amber-500 via-amber-300 to-amber-500" />
@@ -94,16 +96,14 @@ export function PremiumSpotlightSection() {
                 </div>
               )}
 
-              <Link href={`/entry/${entry.slug || entry.id}`} className="mt-auto">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full group/btn text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all"
-                >
-                  View Details
-                  <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover/btn:translate-x-1" />
-                </Button>
-              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full group/btn text-xs text-amber-700 hover:text-amber-800 hover:bg-amber-50 border border-transparent hover:border-amber-200 transition-all mt-auto"
+              >
+                View Details
+                <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover/btn:translate-x-1" />
+              </Button>
             </div>
           </div>
         ))}

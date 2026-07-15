@@ -283,7 +283,7 @@ export default function BrowsePage() {
   const renderEntryCard = (entry: any, isDemo = false) => {
     const cardImage = getCardImage(entry);
     return (
-      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
+      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setLocation(`/entry/${(entry as any).slug || entry.id}`)}>
         <CardImage src={cardImage} alt={entry.title} />
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start mb-2">
@@ -308,12 +308,10 @@ export default function BrowsePage() {
         </CardHeader>
         {renderCardFields(entry)}
         <CardFooter className="pt-4 border-t">
-          <Link href={`/entry/${(entry as any).slug || entry.id}`} className="w-full">
-            <Button variant="ghost" className="w-full group">
-              View Details
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Button>
-          </Link>
+          <Button variant="ghost" className="w-full group">
+            View Details
+            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+          </Button>
         </CardFooter>
       </Card>
     );

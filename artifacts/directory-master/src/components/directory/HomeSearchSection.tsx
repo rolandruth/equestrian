@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   useListPublicEntries,
   useGetPublicStats,
@@ -33,6 +33,7 @@ type ViewMode = "grid" | "list" | "map";
 type SortMode = "newest" | "oldest" | "az" | "za";
 
 export function HomeSearchSection() {
+  const [, setLocation] = useLocation();
   const [keyword, setKeyword] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
@@ -331,7 +332,7 @@ export function HomeSearchSection() {
                   {entries.map((entry: any) => {
                     const cardImage = getCardImage(entry);
                     return (
-                    <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
+                    <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setLocation(`/entry/${entry.slug || entry.id}`)}>
                       <CardImage src={cardImage} alt={entry.title} />
                       <CardHeader className="pb-2">
                         {showField("category") && entry.category && (
@@ -400,12 +401,10 @@ export function HomeSearchSection() {
                         </div>
                       </CardContent>
                       <CardFooter className="pt-3 border-t">
-                        <Link href={`/entry/${entry.slug || entry.id}`} className="w-full">
-                          <Button variant="ghost" size="sm" className="w-full group">
-                            View Details
-                            <ArrowRight className="ml-2 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                          </Button>
-                        </Link>
+                        <Button variant="ghost" size="sm" className="w-full group">
+                          View Details
+                          <ArrowRight className="ml-2 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                        </Button>
                       </CardFooter>
                     </Card>
                     );

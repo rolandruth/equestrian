@@ -1813,6 +1813,24 @@ export default function EntryPage() {
                 )
               )}
 
+              {/* Hours of operation — shown right under the picture if present */}
+              {(() => {
+                const hours = (displayEntry as any)?.customFields?.hoursofoperation
+                  ?? (displayEntry as any)?.customFields?.hours_of_operation
+                  ?? (displayEntry as any)?.customFields?.hours
+                  ?? (displayEntry as any)?.customFields?.["hours-of-operation"];
+                if (!hours) return null;
+                return (
+                  <div className="border-t px-8 py-4 flex items-start gap-3 bg-muted/30">
+                    <Clock className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mr-2">Hours of Operation</span>
+                      <span className="text-sm">{String(hours)}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Description row — shown below the image+sidebar row */}
               {sidebarEnabled && descEnabled && (
                 <div className="border-t">

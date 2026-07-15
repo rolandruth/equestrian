@@ -1550,13 +1550,10 @@ export default function EntryPage() {
             (displayEntry as any)?.customFields ?? {}
           );
 
-          // Keys rendered in the dedicated Hours of Operation banner — skip in all custom-field sections (also defined at module level)
-          const HOURS_KEYS = HOURS_BANNER_KEYS;
-
           // Helper: render a custom field value inline (description body / header contexts)
           const renderCf = ({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }: CustomFieldDisplay) => {
             const value = (displayEntry as any)?.customFields?.[key];
-            if (!value || HOURS_KEYS.has(key)) return null;
+            if (!value || HOURS_BANNER_KEYS.has(key)) return null;
             const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
             const strVal = String(value);
             const showAsImage = displayAsImage || isImageUrl(strVal);

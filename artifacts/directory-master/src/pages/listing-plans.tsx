@@ -415,6 +415,10 @@ export default function ListingPlansPage() {
         ))}
       </div>
 
+      <p className="text-center text-sm text-muted-foreground mt-6">
+        You must be logged in via Ad login to order these features.
+      </p>
+
       {/* Business picker dialog */}
       <Dialog open={pickerPlan !== null} onOpenChange={(open) => !open && closePicker()}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">

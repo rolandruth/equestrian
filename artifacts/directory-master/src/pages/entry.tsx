@@ -1880,6 +1880,23 @@ export default function EntryPage() {
                 );
               })()}
 
+              {/* Map — shown right under hours if coordinates are available */}
+              {(() => {
+                const lat = (displayEntry as any)?.latitude;
+                const lng = (displayEntry as any)?.longitude;
+                if (!lat || !lng) return null;
+                return (
+                  <div className="border-t px-8 py-5">
+                    <EntryMapWidget
+                      latitude={lat}
+                      longitude={lng}
+                      title={displayEntry.title}
+                      address={displayEntry.location ?? undefined}
+                    />
+                  </div>
+                );
+              })()}
+
               {/* Description row — shown below the image+sidebar row */}
               {sidebarEnabled && descEnabled && (
                 <div className="border-t">

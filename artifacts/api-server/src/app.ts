@@ -1,7 +1,8 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
+import http from "http";
 import router from "./routes";
 import sitemapRouter from "./routes/sitemapRoute";
 import { logger } from "./lib/logger";
@@ -74,5 +75,28 @@ app.use("/api", bizAuthMiddleware);
 app.use(sitemapRouter);
 
 app.use("/api", router);
+
+// Dev-only: proxy all non-API requests to the Vite frontend (port 19179).
+// This makes the canvas iframe work when it hits the API server directly.
+if (process.env.NODE_ENV !== "production") {
+  const VITE_PORT = 19179;
+  app.use((req: Request, res: Response) => {
+    const options = {
+      hostname: "127.0.0.1",
+      port: VITE_PORT,
+      path: req.url,
+      method: req.method,
+      headers: { ...req.headers, host: `127.0.0.1:${VITE_PORT}` },
+    };
+    const proxy = http.request(options, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode ?? 200, proxyRes.headers);
+      proxyRes.pipe(res, { end: true });
+    });
+    proxy.on("error", () => {
+      res.status(502).send("Vite server unavailable");
+    });
+    req.pipe(proxy, { end: true });
+  });
+}
 
 export default app;

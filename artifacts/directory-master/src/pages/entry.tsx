@@ -1005,7 +1005,7 @@ export default function EntryPage() {
         {displayEntry.description && (
           <div className="whitespace-pre-wrap">{displayEntry.description}</div>
         )}
-        {(displayEntry as any).moreDetails && (
+        {((displayEntry as any).moreDetails?.trim() || "").length > 1 && (
           <>
             <Separator className="my-8" />
             <h3 className="text-xl font-bold">Additional Information</h3>
@@ -1575,7 +1575,7 @@ export default function EntryPage() {
               {getSectionEnabled("description") && displayEntry.description && (
                 <div className="whitespace-pre-wrap">{displayEntry.description}</div>
               )}
-              {getSectionEnabled("moreDetails") && (displayEntry as any).moreDetails && (
+              {getSectionEnabled("moreDetails") && ((displayEntry as any).moreDetails?.trim() || "").length > 1 && (
                 <>
                   <Separator className="my-8" />
                   <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>

@@ -39,9 +39,10 @@ const plans: {
     badge: "Most Popular",
     highlight: true,
     features: [
-      "Up to 5 pictures on detail page",
+      "Up to 2 pictures on detail page",
       "Website link",
       '"Featured" badge on listing',
+      "More additional information on your listing",
     ],
     cta: "Get Featured",
   },

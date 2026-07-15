@@ -1826,17 +1826,6 @@ export default function EntryPage() {
                         );
                       })}
                     </div>
-                    {/* Map widget */}
-                    {(() => {
-                      const lat = (displayEntry as any)?.latitude;
-                      const lng = (displayEntry as any)?.longitude;
-                      if (!lat || !lng || isDemo) return null;
-                      return (
-                        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
-                          <EntryMapWidget latitude={lat} longitude={lng} title={displayEntry.title} address={displayEntry.location ?? undefined} />
-                        </div>
-                      );
-                    })()}
                     {/* Claim form */}
                     {getSectionEnabled("claim") && (() => {
                       const claimSection = getEntrySection("claim");

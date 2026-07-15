@@ -492,9 +492,13 @@ function cfForSection(
   return fields.filter((f) => (f.section ?? "description") === section);
 }
 
-// Custom-field keys that are already rendered in the Hours of Operation banner.
-// Exclude them from every other custom-field section so they don't appear twice.
-const HOURS_BANNER_KEYS = new Set(["hoursofoperation", "hours_of_operation", "hours", "hours-of-operation"]);
+// Custom-field keys rendered in dedicated banner/section blocks.
+// Exclude them from the generic custom-field sections so they don't appear twice.
+const HOURS_BANNER_KEYS = new Set([
+  "hoursofoperation", "hours_of_operation", "hours", "hours-of-operation",
+  "googlerating", "google_rating", "google-rating",
+  "googlereviewcount", "google_review_count", "google-review-count",
+]);
 
 // ─── Sortable row for individual custom fields in edit mode ───────────────────
 const CF_SECTION_OPTIONS: Array<{ s: "header" | "description" | "sidebar"; label: string }> = [
@@ -1849,6 +1853,36 @@ export default function EntryPage() {
         })()}
 
         <AdSlot placement="entry_page" className="my-6" />
+
+        {/* Google Rating section */}
+        {(() => {
+          const cf = (displayEntry as any)?.customFields ?? {};
+          const rating = cf.googlerating ?? cf.google_rating ?? cf["google-rating"];
+          const count  = cf.googlereviewcount ?? cf.google_review_count ?? cf["google-review-count"];
+          if (!rating && !count) return null;
+          return (
+            <div className="rounded-xl border bg-card p-6 mb-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                Google Rating
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                {rating != null && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Google Stars</span>
+                    <span className="text-2xl font-bold">{String(rating)}</span>
+                  </div>
+                )}
+                {count != null && (
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Google Count</span>
+                    <span className="text-2xl font-bold">{String(count)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Reviews section */}
         {!isDemo && entryNumericId && (

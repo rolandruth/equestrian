@@ -39,7 +39,7 @@ const plans: {
     badge: "Most Popular",
     highlight: true,
     features: [
-      "Up to 2 pictures on detail page",
+      "All pictures on detail page",
       "Website link",
       '"Featured" badge on listing',
       "More additional information on your listing",

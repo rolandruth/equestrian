@@ -1851,8 +1851,9 @@ export default function EntryPage() {
                 )
               )}
 
-              {/* Additional photos gallery (image2, image3, image4) */}
+              {/* Additional photos gallery — featured/premium listings only */}
               {(() => {
+                if (!displayEntry.featured && !displayEntry.premium) return null;
                 const cf = (displayEntry as any)?.customFields ?? {};
                 const mainImageUrl = cf.listingimage ? String(cf.listingimage) : null;
                 const extraImages = ["image3", "image4"]

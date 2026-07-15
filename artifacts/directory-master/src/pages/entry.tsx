@@ -492,6 +492,10 @@ function cfForSection(
   return fields.filter((f) => (f.section ?? "description") === section);
 }
 
+// Custom-field keys that are already rendered in the Hours of Operation banner.
+// Exclude them from every other custom-field section so they don't appear twice.
+const HOURS_BANNER_KEYS = new Set(["hoursofoperation", "hours_of_operation", "hours", "hours-of-operation"]);
+
 // ─── Sortable row for individual custom fields in edit mode ───────────────────
 const CF_SECTION_OPTIONS: Array<{ s: "header" | "description" | "sidebar"; label: string }> = [
   { s: "header",      label: "Title" },
@@ -1014,7 +1018,7 @@ export default function EntryPage() {
         )}
         {cfds.map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
           const value = customFields[key];
-          if (!value) return null;
+          if (!value || HOURS_BANNER_KEYS.has(key)) return null;
           const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
           const strVal = String(value);
           const showAsImage = displayAsImage || isImageUrl(strVal);
@@ -1538,10 +1542,13 @@ export default function EntryPage() {
             (displayEntry as any)?.customFields ?? {}
           );
 
+          // Keys rendered in the dedicated Hours of Operation banner — skip in all custom-field sections (also defined at module level)
+          const HOURS_KEYS = HOURS_BANNER_KEYS;
+
           // Helper: render a custom field value inline (description body / header contexts)
           const renderCf = ({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }: CustomFieldDisplay) => {
             const value = (displayEntry as any)?.customFields?.[key];
-            if (!value) return null;
+            if (!value || HOURS_KEYS.has(key)) return null;
             const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
             const strVal = String(value);
             const showAsImage = displayAsImage || isImageUrl(strVal);
@@ -1602,7 +1609,7 @@ export default function EntryPage() {
                 {/* Custom fields assigned to the sidebar section */}
                 {cfForSection(allCfds, "sidebar").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
                   const value = (displayEntry as any)?.customFields?.[key];
-                  if (!value) return null;
+                  if (!value || HOURS_BANNER_KEYS.has(key)) return null;
                   const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                   const strVal = String(value);
                   const showAsImage = displayAsImage || isImageUrl(strVal);
@@ -1747,7 +1754,7 @@ export default function EntryPage() {
                       {sidebarFields.map((fieldId) => renderSidebarField(fieldId)).filter(Boolean)}
                       {cfForSection(allCfds, "sidebar").map(({ key, showTitle, displayAsImage, displayAsButton, buttonText, icon }) => {
                         const value = (displayEntry as any)?.customFields?.[key];
-                        if (!value) return null;
+                        if (!value || HOURS_BANNER_KEYS.has(key)) return null;
                         const label = key.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
                         const strVal = String(value);
                         const showAsImage = displayAsImage || isImageUrl(strVal);

@@ -55,7 +55,8 @@ const plans: {
     highlight: false,
     features: [
       "Everything in Featured",
-      "Additional 5 pictures on detail page",
+      "Up to 4 pictures on detail page",
+      "All additional information",
       "Homepage placement",
       '"Premium" badge on listing',
     ],

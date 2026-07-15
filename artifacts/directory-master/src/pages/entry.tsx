@@ -1862,11 +1862,11 @@ export default function EntryPage() {
                 return (
                   <div className="border-t grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(extraImages.length, 3)}, 1fr)` }}>
                     {extraImages.map((src, i) => (
-                      <div key={i} className="overflow-hidden" style={{ maxHeight: 260 }}>
+                      <div key={i}>
                         <img
                           src={src}
                           alt={`${displayEntry.title} photo ${i + 2}`}
-                          className="w-full h-full object-cover"
+                          className="w-full object-contain"
                           onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                         />
                       </div>

@@ -415,7 +415,7 @@ export default function ListingPlansPage() {
         ))}
       </div>
 
-      <p className="text-center text-sm text-muted-foreground mt-6">
+      <p className="text-center text-sm text-muted-foreground mt-6 font-bold">
         You must be logged in via Ad login to order these features.
       </p>
 

@@ -382,9 +382,7 @@ export function HomeSearchSection() {
                           {entry.contactPhone && (
                             <div className="flex items-center text-xs text-muted-foreground">
                               <Phone className="h-3 w-3 mr-1.5 shrink-0" />
-                              <a href={`tel:${entry.contactPhone}`} className="hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
-                                {entry.contactPhone}
-                              </a>
+                              <span>{entry.contactPhone}</span>
                             </div>
                           )}
                           {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {
@@ -459,9 +457,7 @@ export function HomeSearchSection() {
                             {entry.contactPhone && (
                               <div className="flex items-center text-xs text-muted-foreground">
                                 <Phone className="h-3 w-3 mr-1 shrink-0" />
-                                <a href={`tel:${entry.contactPhone}`} className="hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
-                                  {entry.contactPhone}
-                                </a>
+                                <span>{entry.contactPhone}</span>
                               </div>
                             )}
                             {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {

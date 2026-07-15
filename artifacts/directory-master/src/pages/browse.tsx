@@ -248,9 +248,7 @@ export default function BrowsePage() {
         {entry.contactPhone && (
           <div className="flex items-center text-sm text-muted-foreground">
             <Phone className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
-            <a href={`tel:${entry.contactPhone}`} className="hover:text-primary transition-colors" onClick={e => e.stopPropagation()}>
-              {entry.contactPhone}
-            </a>
+            <span>{entry.contactPhone}</span>
           </div>
         )}
         {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {

@@ -903,7 +903,7 @@ export default function EntryPage() {
   );
 
   // ── Scroll to top on entry change ──────────────────────────────────────────
-  useEffect(() => { window.scrollTo(0, 0); }, [id]);
+  useEffect(() => { window.scrollTo(0, 0); }, [idOrSlug]);
 
   // ── SEO meta tags ──────────────────────────────────────────────────────────
   useEffect(() => {

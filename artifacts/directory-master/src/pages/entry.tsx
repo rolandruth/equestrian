@@ -902,6 +902,9 @@ export default function EntryPage() {
     { query: { enabled: !!displayEntry?.category && !isDemo } }
   );
 
+  // ── Scroll to top on entry change ──────────────────────────────────────────
+  useEffect(() => { window.scrollTo(0, 0); }, [id]);
+
   // ── SEO meta tags ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!displayEntry) return;

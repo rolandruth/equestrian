@@ -1851,6 +1851,29 @@ export default function EntryPage() {
                 )
               )}
 
+              {/* Additional photos gallery (image2, image3, image4) */}
+              {(() => {
+                const cf = (displayEntry as any)?.customFields ?? {};
+                const extraImages = ["image2", "image3", "image4"]
+                  .map((k) => cf[k] ? String(cf[k]) : null)
+                  .filter(Boolean) as string[];
+                if (!extraImages.length) return null;
+                return (
+                  <div className="border-t grid gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(extraImages.length, 3)}, 1fr)` }}>
+                    {extraImages.map((src, i) => (
+                      <div key={i} className="overflow-hidden" style={{ maxHeight: 260 }}>
+                        <img
+                          src={src}
+                          alt={`${displayEntry.title} photo ${i + 2}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
               {/* Hours of operation — shown right under the picture if present */}
               {(() => {
                 const hours = (displayEntry as any)?.customFields?.hoursofoperation

@@ -712,7 +712,21 @@ export default function EntryPage() {
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const entryFont = getFontFamily(ts.entry.font);
 
-  const getEntrySection = (id: string) => ts.entry.sections.find((s) => s.id === id);
+  // ── Preview-mode section overrides (sent via postMessage from admin settings) ──
+  const [previewSections, setPreviewSections] = useState<SectionConfig[] | null>(null);
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "DETAIL_PAGE_PREVIEW" && Array.isArray(e.data.sections)) {
+        setPreviewSections(e.data.sections as SectionConfig[]);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  const activeSections = previewSections ?? ts.entry.sections;
+  const getEntrySection = (id: string) => activeSections.find((s) => s.id === id);
   const getSectionEnabled = (id: string) => getEntrySection(id)?.enabled ?? true;
   const getSectionProps = (id: string): SectionProps => getEntrySection(id)?.props ?? {};
 
@@ -1992,7 +2006,7 @@ export default function EntryPage() {
         )}
 
         {/* Outside-card sections (Related) — rendered in saved template order */}
-        {ts.entry.sections
+        {activeSections
           .filter(s => s.id === "related")
           .map(s => {
             if (s.id !== "related") return null;

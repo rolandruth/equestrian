@@ -651,6 +651,7 @@ function DetailPageTab({
       <div>
         <div className="space-y-2">
           {templateSettings.entry.sections.map((section, i) => {
+            if (["header", "description", "claim", "sidebar"].includes(section.id)) return null;
             const def = ENTRY_BLOCK_DEFS.find(d => d.type === section.id);
             return (
               <div

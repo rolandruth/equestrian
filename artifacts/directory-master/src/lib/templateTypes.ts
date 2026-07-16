@@ -98,6 +98,9 @@ export const ENTRY_BLOCK_DEFS: BlockDefinition[] = [
   { type: "description", label: "Description",            description: "Full description body text" },
   { type: "moreDetails", label: "Additional Information", description: "Extended details section" },
   { type: "sidebar",     label: "Details Sidebar",        description: "Contact info and metadata in a side panel", defaultProps: { sidebarTitle: "Contact & Details" } },
+  { type: "map",           label: "Google Maps",    description: "Map showing the entry location" },
+  { type: "googleRating",  label: "Google Rating",  description: "Google star rating and review count" },
+  { type: "googleReviews", label: "Google Reviews", description: "Individual Google review cards" },
   { type: "related",     label: "Related Entries",        description: "Grid of similar entries in the same category", defaultHeading: "Related Entries", defaultProps: { maxItems: 3 } },
   { type: "claim",       label: "Claim Yours Now",        description: "Opt-in form to capture name, phone, and email for this listing", defaultHeading: "Claim Yours Now", defaultProps: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
 ];
@@ -165,6 +168,9 @@ export const DEFAULT_ENTRY_SECTIONS: SectionConfig[] = [
   { id: "description", label: "Description",            enabled: true },
   { id: "moreDetails", label: "Additional Information", enabled: true },
   { id: "sidebar",     label: "Details Sidebar",        enabled: true },
+  { id: "map",           label: "Google Maps",    enabled: true },
+  { id: "googleRating",  label: "Google Rating",  enabled: true },
+  { id: "googleReviews", label: "Google Reviews", enabled: true },
   { id: "claim",       label: "Claim Yours Now",        enabled: true, heading: "Claim Yours Now", props: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
   { id: "related",     label: "Related Entries",        enabled: true },
 ];

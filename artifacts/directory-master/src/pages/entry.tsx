@@ -1701,6 +1701,7 @@ export default function EntryPage() {
               </div>
               {/* Map widget — shown when entry has coordinates */}
               {(() => {
+                if (!getSectionEnabled("map")) return null;
                 const lat = (displayEntry as any)?.latitude;
                 const lng = (displayEntry as any)?.longitude;
                 if (!lat || !lng || isDemo) return null;
@@ -1914,6 +1915,7 @@ export default function EntryPage() {
 
               {/* Map — shown right under hours if coordinates are available */}
               {(() => {
+                if (!getSectionEnabled("map")) return null;
                 const lat = (displayEntry as any)?.latitude;
                 const lng = (displayEntry as any)?.longitude;
                 if (!lat || !lng) return null;
@@ -1943,6 +1945,7 @@ export default function EntryPage() {
 
         {/* Google Rating section */}
         {(() => {
+          if (!getSectionEnabled("googleRating")) return null;
           const cf = (displayEntry as any)?.customFields ?? {};
           const rating = cf.googlerating ?? cf.google_rating ?? cf["google-rating"];
           const count  = cf.googlereviewcount ?? cf.google_review_count ?? cf["google-review-count"];
@@ -1973,6 +1976,7 @@ export default function EntryPage() {
 
         {/* Google Reviews section */}
         {(() => {
+          if (!getSectionEnabled("googleReviews")) return null;
           const cf = (displayEntry as any)?.customFields ?? {};
           const reviews = [1, 2, 3].map(n => ({
             author: cf[`review${n}_author`],

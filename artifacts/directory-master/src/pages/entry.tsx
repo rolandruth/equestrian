@@ -1716,24 +1716,6 @@ export default function EntryPage() {
                   </div>
                 );
               })()}
-              {/* Claim Yours Now — embedded at bottom of sidebar */}
-              {getSectionEnabled("claim") && (() => {
-                const claimSection = getEntrySection("claim");
-                const p = claimSection?.props ?? {};
-                return (
-                  <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
-                    {claimSection?.heading && (
-                      <p className="font-semibold text-base mb-4" style={{ color: sidebarProps.headingColor || undefined }}>
-                        {claimSection.heading}
-                      </p>
-                    )}
-                    {p.bodyText && (
-                      <p className="text-sm text-muted-foreground mb-4">{p.bodyText}</p>
-                    )}
-                    <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
-                  </div>
-                );
-              })()}
             </div>
           );
 
@@ -1845,20 +1827,6 @@ export default function EntryPage() {
                         );
                       })}
                     </div>
-                    {/* Claim form */}
-                    {getSectionEnabled("claim") && (() => {
-                      const claimSection = getEntrySection("claim");
-                      const p = claimSection?.props ?? {};
-                      return (
-                        <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
-                          {claimSection?.heading && (
-                            <p className="font-semibold text-base mb-4" style={{ color: sidebarProps.headingColor || undefined }}>{claimSection.heading}</p>
-                          )}
-                          {p.bodyText && <p className="text-sm text-muted-foreground mb-4">{p.bodyText}</p>}
-                          <EntryClaimFormBlock section={claimSection ?? { id: "claim", label: "Claim Yours Now", enabled: true }} />
-                        </div>
-                      );
-                    })()}
                   </div>
                 </div>
               ) : (

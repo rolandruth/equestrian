@@ -1524,9 +1524,7 @@ export default function HomePage() {
             <HomeSearchSection />
             <AdSlot placement="homepage" className="mt-8" />
           </div>
-          <div className="w-full md:w-64 flex-shrink-0">
-            <AdSlot placement="sidebar" />
-          </div>
+          <AdSlot placement="sidebar" className="w-full md:w-64 flex-shrink-0" />
         </div>
         {nonHeroSections.map(s => renderSection(s))}
       </div>

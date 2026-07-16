@@ -22,7 +22,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Save, Layout, Home, Search, FileText, ArrowRight, Paintbrush, KeyRound, Pencil, Trash2, Check, X, Copy, Map, Upload, Mail, Send, Images, Plus, Eye, EyeOff, Image as ImageIcon, Menu } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplateEditor } from "@/components/template/TemplateEditor";
-import { mergeTemplateSettings, type TemplateSettings, type SectionConfig } from "@/lib/templateTypes";
+import { mergeTemplateSettings, type TemplateSettings, type SectionConfig, ENTRY_BLOCK_DEFS } from "@/lib/templateTypes";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const NAV_LINK_ITEMS: { key: string; label: string; description: string }[] = [
   { key: "home", label: "Home", description: "Link to the homepage." },
@@ -776,8 +777,18 @@ export default function AdminSettingsPage() {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Tabs defaultValue="general" className="space-y-6">
+            <TabsList className="h-auto p-1">
+              <TabsTrigger value="general" className="gap-2">
+                <Layout className="h-4 w-4" /> General
+              </TabsTrigger>
+              <TabsTrigger value="detail" className="gap-2">
+                <FileText className="h-4 w-4" /> Detail Page
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="general" className="space-y-8 mt-0">
           {/* Brand Identity */}
           <Card>
             <CardHeader>
@@ -1429,6 +1440,73 @@ export default function AdminSettingsPage() {
               />
             </CardContent>
           </Card>
+
+            </TabsContent>
+
+            {/* DETAIL PAGE TAB */}
+            <TabsContent value="detail" className="space-y-6 mt-0">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Detail Page Sections
+                  </CardTitle>
+                  <CardDescription>
+                    Toggle each section of the listing detail page on or off. Sections you hide will not appear to visitors.
+                    Click <strong>Save Settings</strong> below to apply your changes.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {templateSettings.entry.sections.map((section, i) => {
+                      const def = ENTRY_BLOCK_DEFS.find(d => d.type === section.id);
+                      return (
+                        <div
+                          key={section.id}
+                          className={`flex items-center justify-between gap-4 p-4 rounded-lg border transition-colors ${
+                            section.enabled
+                              ? "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+                              : "border-dashed border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${section.enabled ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+                            <div className="min-w-0">
+                              <p className={`text-sm font-medium ${!section.enabled ? "opacity-50" : ""}`}>{section.label}</p>
+                              {def && (
+                                <p className="text-xs text-muted-foreground">{def.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              section.enabled
+                                ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400"
+                                : "bg-gray-100 dark:bg-gray-800 text-gray-400"
+                            }`}>
+                              {section.enabled ? "Visible" : "Hidden"}
+                            </span>
+                            <Switch
+                              checked={section.enabled}
+                              onCheckedChange={(checked) => {
+                                const updated = templateSettings.entry.sections.map((s, idx) =>
+                                  idx === i ? { ...s, enabled: checked } : s
+                                );
+                                setTemplateSettings({
+                                  ...templateSettings,
+                                  entry: { ...templateSettings.entry, sections: updated },
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
 
           <div className="flex justify-end">
             <Button type="submit" disabled={updateMutation.isPending} size="lg">

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useState, useRef, type Dispatch, type SetStateAction } from "react";
 import { Link, useSearch } from "wouter";
 import { 
   useGetSettings, 
@@ -7,7 +7,6 @@ import {
   getGetPublicSettingsQueryKey,
   useSendSmtpTestEmail,
   useGetCurrentUser,
-  useListPublicEntries,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -628,30 +627,6 @@ function DetailPageTab({
   templateSettings: TemplateSettings;
   setTemplateSettings: Dispatch<SetStateAction<TemplateSettings>>;
 }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const { data: entriesData } = useListPublicEntries({ limit: 1, page: 1 });
-  const firstEntry = (entriesData as any)?.entries?.[0];
-  const previewPath = firstEntry
-    ? `/entry/${(firstEntry as any).slug || firstEntry.id}`
-    : "/entry/demo1";
-
-  const sendPreview = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe?.contentWindow) return;
-    iframe.contentWindow.postMessage(
-      { type: "DETAIL_PAGE_PREVIEW", sections: templateSettings.entry.sections },
-      window.location.origin
-    );
-  }, [templateSettings.entry.sections]);
-
-  useEffect(() => {
-    sendPreview();
-  }, [sendPreview]);
-
-  const handleIframeLoad = () => {
-    sendPreview();
-  };
-
   const toggleSection = (i: number, checked: boolean) => {
     const updated = templateSettings.entry.sections.map((s, idx) =>
       idx === i ? { ...s, enabled: checked } : s
@@ -663,19 +638,17 @@ function DetailPageTab({
   };
 
   return (
-    <div className="flex gap-6 items-start min-h-[600px]">
-      {/* ── Left pane: toggles ── */}
-      <div className="w-80 flex-shrink-0 space-y-4">
-        <div>
-          <h3 className="text-base font-semibold flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" />
-            Detail Page Sections
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Toggle sections on or off. The preview updates instantly.
-            Click <strong>Save Settings</strong> below to apply.
-          </p>
-        </div>
+    <div className="max-w-2xl space-y-4">
+      <div>
+        <h3 className="text-base font-semibold flex items-center gap-2">
+          <FileText className="h-4 w-4 text-primary" />
+          Detail Page Sections
+        </h3>
+        <p className="text-sm text-muted-foreground mt-1">
+          Toggle sections on or off, then click <strong>Save Settings</strong> below to apply.
+        </p>
+      </div>
+      <div>
         <div className="space-y-2">
           {templateSettings.entry.sections.map((section, i) => {
             const def = ENTRY_BLOCK_DEFS.find(d => d.type === section.id);
@@ -706,37 +679,6 @@ function DetailPageTab({
             );
           })}
         </div>
-      </div>
-
-      {/* ── Right pane: iframe preview ── */}
-      <div className="flex-1 min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-950 shadow-sm" style={{ height: "700px" }}>
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-400/60" />
-            <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
-            <div className="w-3 h-3 rounded-full bg-green-400/60" />
-          </div>
-          <span className="text-xs text-muted-foreground font-mono truncate flex-1 text-center">
-            {firstEntry ? firstEntry.title : "Sample Entry"} — live preview
-          </span>
-          <a
-            href={previewPath}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
-            title="Open in new tab"
-          >
-            <Eye className="h-3.5 w-3.5" />
-          </a>
-        </div>
-        <iframe
-          ref={iframeRef}
-          src={previewPath}
-          onLoad={handleIframeLoad}
-          className="w-full h-full border-0"
-          style={{ height: "calc(100% - 41px)" }}
-          title="Entry detail page preview"
-        />
       </div>
     </div>
   );

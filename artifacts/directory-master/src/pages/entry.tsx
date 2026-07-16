@@ -1636,8 +1636,9 @@ export default function EntryPage() {
                   <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
                 </>
               )}
-              {/* Section heading + custom fields assigned to the description section */}
-              {(() => {
+              {/* Section heading + custom fields assigned to the description section —
+                  gated by the "Additional Information" (moreDetails) section toggle */}
+              {getSectionEnabled("moreDetails") && (() => {
                 const descCfds = applyQaLimit(
                   cfForSection(allCfds, "description"),
                   (displayEntry as any)?.customFields ?? {},

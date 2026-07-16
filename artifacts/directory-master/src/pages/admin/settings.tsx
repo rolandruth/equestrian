@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { 
   useGetSettings, 
   useUpdateSettings,
@@ -887,6 +887,13 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const search = useSearch();
+  const tabFromUrl = new URLSearchParams(search).get("tab") === "detail" ? "detail" : "general";
+  const [activeTab, setActiveTab] = useState(tabFromUrl);
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
+
   if (isLoading) {
     return <div className="flex justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   }
@@ -900,7 +907,7 @@ export default function AdminSettingsPage() {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Tabs defaultValue="general" className="space-y-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="h-auto p-1">
               <TabsTrigger value="general" className="gap-2">
                 <Layout className="h-4 w-4" /> General

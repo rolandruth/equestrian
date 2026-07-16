@@ -16,6 +16,7 @@ import {
   X,
   ClipboardCheck,
   Megaphone,
+  FileText,
 } from "lucide-react";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -60,6 +61,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     ...(isAdmin ? [{ href: "/admin/contacts", label: "Business", icon: ClipboardCheck }] : []),
     ...(isAdmin ? [{ href: "/admin/ads", label: "Ads", icon: Megaphone }] : []),
     { href: "/admin/users", label: "Users", icon: Users },
+    { href: "/admin/settings?tab=detail", label: "Detail Page", icon: FileText },
     { href: "/admin/settings", label: "Settings", icon: Settings },
   ];
 

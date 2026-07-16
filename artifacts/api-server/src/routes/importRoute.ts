@@ -69,10 +69,16 @@ function suggestMapping(columnName: string): { target: string; confidence: numbe
       }
     }
   }
+  // Internal bookkeeping columns from CSV exports should be skipped, not displayed.
+  if (INTERNAL_COLUMN_RE.test(slugify(columnName))) {
+    return { target: "skip", confidence: 0.9 };
+  }
+  // Coordinate columns are stored as custom fields here, then lifted into the
+  // latitude/longitude entry columns at insert time.
   // Default: save unrecognized columns as custom fields so no data is lost.
   // Each column gets its own key (custom_<slug>) rather than all overwriting
   // the single moreDetails field.
-  return { target: `custom_${slugify(columnName)}`, confidence: 0.3 };
+  return { target: `custom_${canonicalizeCustomKey(slugify(columnName))}`, confidence: 0.3 };
 }
 
 // Full CSV parser that correctly handles quoted fields containing embedded newlines and commas.
@@ -130,6 +136,33 @@ function parseCSV(content: string): string[][] {
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+// ─── Custom-field key canonicalization ────────────────────────────────────────
+// All imports must produce the same custom-field key convention the detail-page
+// template expects (q8/a8, image2, googlerating, review1_text, hoursofoperation…).
+// Otherwise entries from different CSV exports render differently.
+
+// Internal/bookkeeping columns that should never become visible custom fields.
+const INTERNAL_COLUMN_RE = /^(featured|place[-_]?id|source[-_]?id|data[-_]?source|post[-_]?status|listing[-_]?type|listing[-_]?status|pipeline[-_]?phase|last[-_]?enriched[-_]?at)$/i;
+
+// Coordinate columns lifted into the latitude/longitude entry columns at insert time.
+const LAT_KEY_RE = /^(manual[-_]?lat|lat|latitude)$/i;
+const LNG_KEY_RE = /^(manual[-_]?lng|lng|long|longitude)$/i;
+
+function canonicalizeCustomKey(slug: string): string {
+  let m: RegExpMatchArray | null;
+  if ((m = slug.match(/^qa?[-_]?(\d+)[-_]?question$/i))) return `q${m[1]}`;
+  if ((m = slug.match(/^qa?[-_]?(\d+)[-_]?answer$/i))) return `a${m[1]}`;
+  if ((m = slug.match(/^q[-_](\d+)$/i))) return `q${m[1]}`;
+  if ((m = slug.match(/^a[-_](\d+)$/i))) return `a${m[1]}`;
+  if ((m = slug.match(/^(?:listing[-_]?img|listing[-_]?image|image|img)[-_]?(\d+)$/i))) return `image${m[1]}`;
+  if ((m = slug.match(/^review[-_]?(\d+)[-_]?(text|author|rating)$/i))) return `review${m[1]}_${m[2].toLowerCase()}`;
+  if (/^google[-_]?rating$/i.test(slug)) return "googlerating";
+  if (/^google[-_]?(review[-_]?count|reviews[-_]?count)$/i.test(slug)) return "googlereviewcount";
+  if (/^hours([-_]?of[-_]?operation)?$/i.test(slug)) return "hoursofoperation";
+  if (/^listing[-_]?image$/i.test(slug)) return "listingimage";
+  return slug;
 }
 
 function extractJson(text: string): any {
@@ -362,12 +395,37 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
 
       const rows = chunk.map(({ data }) => {
         const customFields: Record<string, string> = {};
+        const parseCoord = (v: string | null | undefined): number | null => {
+          if (!v) return null;
+          const n = parseFloat(v);
+          return Number.isFinite(n) ? n : null;
+        };
+        let latitude: number | null = parseCoord(data.latitude);
+        let longitude: number | null = parseCoord(data.longitude);
+        delete data.latitude;
+        delete data.longitude;
         const customKeys = Object.keys(data).filter(k => k.startsWith("custom_"));
         for (const k of customKeys) {
-          if (data[k]) customFields[k.replace("custom_", "")] = data[k]!;
+          const value = data[k];
           delete data[k];
+          if (!value) continue;
+          const rawKey = k.replace("custom_", "");
+          if (INTERNAL_COLUMN_RE.test(rawKey)) continue;
+          if (LAT_KEY_RE.test(rawKey)) {
+            if (latitude === null) latitude = parseCoord(value);
+            continue;
+          }
+          if (LNG_KEY_RE.test(rawKey)) {
+            if (longitude === null) longitude = parseCoord(value);
+            continue;
+          }
+          // First non-empty value wins if two columns canonicalize to the same key.
+          const canonKey = canonicalizeCustomKey(rawKey);
+          if (!(canonKey in customFields)) customFields[canonKey] = value;
         }
         return {
+          latitude,
+          longitude,
           title: String(data.title || "Untitled").slice(0, 500),
           category: data.category?.slice(0, 200) ?? null,
           summary: data.summary?.slice(0, 1000) ?? null,

@@ -389,7 +389,6 @@ export default function ListingPlansPage() {
                 <span className="font-bold text-3xl">{plan.price}</span>
                 <span className="text-sm text-muted-foreground">/mo</span>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Recurring monthly subscription · Cancel anytime</p>
               <p className="text-sm text-muted-foreground leading-relaxed">{plan.description}</p>
             </div>
 

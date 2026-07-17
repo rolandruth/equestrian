@@ -450,7 +450,7 @@ export default function ListingPlansPage() {
                       setLocation("/business/dashboard");
                     }}
                   >
-                    Go to My Listings
+                    Go to Ad Listings
                   </Button>
                 </div>
               ) : (

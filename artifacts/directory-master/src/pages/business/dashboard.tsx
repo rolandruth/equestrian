@@ -176,7 +176,7 @@ export default function BusinessDashboardPage() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
       <div className="flex items-center justify-between gap-4 mb-10 flex-wrap">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-1">My Listings</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-1">Ad Listings</h1>
           <p className="text-muted-foreground text-sm">
             {bizAuth.user?.email ? `Signed in as ${bizAuth.user.email}` : "Manage your claimed listings."}
           </p>

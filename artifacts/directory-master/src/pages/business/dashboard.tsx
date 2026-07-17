@@ -180,6 +180,10 @@ export default function BusinessDashboardPage() {
           <p className="text-muted-foreground text-sm">
             {bizAuth.user?.email ? `Signed in as ${bizAuth.user.email}` : "Manage your claimed listings."}
           </p>
+          <p className="text-muted-foreground text-sm mt-1">
+            If you need any help please contact us at{" "}
+            <a href="mailto:info@saddleupguide.com" className="text-primary hover:underline">info@saddleupguide.com</a>
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => bizAuth.logout()}>
           <LogOut className="h-4 w-4 mr-2" />

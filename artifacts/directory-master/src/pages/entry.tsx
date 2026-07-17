@@ -982,7 +982,7 @@ export default function EntryPage() {
           <div><div className="text-sm font-medium mb-1">Location</div><div className="text-sm text-gray-600 dark:text-gray-300">{displayEntry.location}</div></div>
         </div>
       ) : null;
-      case "website": return displayEntry.website ? (
+      case "website": return (displayEntry.website && (e.featured || e.premium)) ? (
         <div key="website" className="flex items-start">
           <Globe className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
           <div className="overflow-hidden">

@@ -180,7 +180,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   style={textStyle}
                 >
                   <Building2 className="h-4 w-4" />
-                  Ad login
+                  Ad Login
                 </Link>
               ) : (
                 showNavLink("businessLogin") && (
@@ -190,7 +190,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     style={textStyle}
                   >
                     <Building2 className="h-4 w-4" />
-                    Business Login
+                    Ad Login
                   </button>
                 )
               )}
@@ -297,7 +297,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   style={navbarText ? textStyle : undefined}
                 >
                   <Building2 className="h-4 w-4" />
-                  Ad login
+                  Ad Login
                 </Link>
               ) : (
                 showNavLink("businessLogin") && (
@@ -310,7 +310,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     style={navbarText ? textStyle : undefined}
                   >
                     <Building2 className="h-4 w-4" />
-                    Business Login
+                    Ad Login
                   </button>
                 )
               )}

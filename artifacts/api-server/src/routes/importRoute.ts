@@ -6,6 +6,7 @@ import { getGeminiClient } from "../lib/gemini.js";
 import { eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
+import { mirrorEntryImages, isRemoteImageUrl } from "../lib/imageStore.js";
 
 const router = Router();
 
@@ -390,6 +391,8 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
 
+    const insertedEntries: Array<{ id: number; customFields: Record<string, unknown> | null }> = [];
+
     for (let chunkStart = 0; chunkStart < parsedEntries.length; chunkStart += INSERT_CHUNK) {
       const chunk = parsedEntries.slice(chunkStart, chunkStart + INSERT_CHUNK);
 
@@ -446,7 +449,13 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
         };
       });
 
-      await db.insert(entries).values(rows);
+      const inserted = await db.insert(entries).values(rows).returning({
+        id: entries.id,
+        customFields: entries.customFields,
+      });
+      for (const row of inserted) {
+        insertedEntries.push({ id: row.id, customFields: row.customFields as Record<string, unknown> | null });
+      }
       entriesCreated += chunk.length;
 
       const insertProgress = 70 + Math.round((entriesCreated / totalEntries) * 30);
@@ -456,6 +465,30 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
         message: `Saving entries... (${entriesCreated}/${totalEntries})`,
         updatedAt: new Date(),
       }).where(eq(importJobs.jobId, jobId));
+    }
+
+    // Step 5: Download remote listing images into our own storage so we
+    // never hot-link paid/external image URLs (Google Places etc.).
+    const withImages = insertedEntries.filter(e =>
+      e.customFields && Object.entries(e.customFields).some(([k, v]) =>
+        /^(listingimage|image\d+)$/.test(k) && typeof v === "string" && isRemoteImageUrl(v),
+      ),
+    );
+    let imagesDone = 0;
+    for (const entry of withImages) {
+      const { fields, changed } = await mirrorEntryImages(entry.customFields);
+      if (changed) {
+        await db.update(entries).set({ customFields: fields, updatedAt: new Date() })
+          .where(eq(entries.id, entry.id));
+      }
+      imagesDone++;
+      if (imagesDone % 5 === 0 || imagesDone === withImages.length) {
+        await db.update(importJobs).set({
+          progress: 99,
+          message: `Downloading listing photos... (${imagesDone}/${withImages.length})`,
+          updatedAt: new Date(),
+        }).where(eq(importJobs.jobId, jobId));
+      }
     }
 
     await db.update(importJobs).set({

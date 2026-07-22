@@ -31,7 +31,7 @@ const NAV_LINK_ITEMS: { key: string; label: string; description: string }[] = [
   { key: "listingPlans", label: "Listing Plans", description: "Link to the pricing/upgrade page." },
   { key: "advertise", label: "Advertise", description: "Link to the advertise-with-us page." },
   { key: "signIn", label: "Admin Sign In", description: "Admin/editor staff login link." },
-  { key: "businessLogin", label: "Business Login", description: "Business-owner login/signup link." },
+  { key: "businessLogin", label: "Ad Login", description: "Ad login/signup link." },
 ];
 
 function getNavLinksWithDefaults(navLinks: Record<string, boolean> | null | undefined) {

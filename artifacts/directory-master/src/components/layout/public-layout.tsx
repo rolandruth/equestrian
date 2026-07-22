@@ -174,14 +174,16 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 )
               )}
               {bizAuth.isAuthenticated ? (
-                <Link
-                  href="/business/dashboard"
-                  className={`${linkClass} flex items-center gap-1.5`}
-                  style={textStyle}
-                >
-                  <Building2 className="h-4 w-4" />
-                  Ad Login
-                </Link>
+                showNavLink("businessLogin") && (
+                  <Link
+                    href="/business/dashboard"
+                    className={`${linkClass} flex items-center gap-1.5`}
+                    style={textStyle}
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Ad Login
+                  </Link>
+                )
               ) : (
                 showNavLink("businessLogin") && (
                   <button
@@ -290,15 +292,17 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 )
               )}
               {bizAuth.isAuthenticated ? (
-                <Link
-                  href="/business/dashboard"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium"
-                  style={navbarText ? textStyle : undefined}
-                >
-                  <Building2 className="h-4 w-4" />
-                  Ad Login
-                </Link>
+                showNavLink("businessLogin") && (
+                  <Link
+                    href="/business/dashboard"
+                    onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md text-base font-medium"
+                    style={navbarText ? textStyle : undefined}
+                  >
+                    <Building2 className="h-4 w-4" />
+                    Ad Login
+                  </Link>
+                )
               ) : (
                 showNavLink("businessLogin") && (
                   <button

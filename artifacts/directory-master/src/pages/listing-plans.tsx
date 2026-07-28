@@ -49,7 +49,7 @@ const plans: {
   {
     key: "premium",
     name: "Premium Listing",
-    price: "$150",
+    price: "$99",
     description: "Maximum exposure — own your category and dominate local search.",
     badge: "Best Value",
     highlight: false,

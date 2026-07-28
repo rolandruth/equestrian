@@ -15,7 +15,7 @@ const AD_PLACEMENTS = [
 
 const LISTING_PLANS: Record<string, { label: string; price: number }> = {
   featured: { label: "Featured Listing", price: 3900 },
-  premium:  { label: "Premium Listing",  price: 15000 },
+  premium:  { label: "Premium Listing",  price: 9900 },
 };
 
 router.post("/checkout", async (req: Request, res: Response) => {

@@ -10,4 +10,3 @@ export * from "./contacts";
 export * from "./reviews";
 export * from "./ads";
 export * from "./bizAuth";
-export * from "./listingSubscriptions";

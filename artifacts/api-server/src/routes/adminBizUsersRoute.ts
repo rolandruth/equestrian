@@ -11,7 +11,6 @@ function formatBizUser(u: typeof bizUsers.$inferSelect) {
     email: u.email,
     firstName: u.firstName ?? null,
     lastName: u.lastName ?? null,
-    stripeCustomerId: u.stripeCustomerId ?? null,
     createdAt: u.createdAt.toISOString(),
   };
 }

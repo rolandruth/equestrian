@@ -1669,9 +1669,6 @@ components:
         lastName:
           type: string
           nullable: true
-        stripeCustomerId:
-          type: string
-          nullable: true
         createdAt:
           type: string
       required: [id, email, createdAt]

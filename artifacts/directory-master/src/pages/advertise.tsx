@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
 import { useGetPublicSettings } from "@workspace/api-client-react";
-import { useBusinessAuth } from "@workspace/replit-auth-web";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Megaphone, ImageIcon, Loader2, PartyPopper } from "lucide-react";
+import { CheckCircle2, XCircle, Megaphone, ImageIcon, Mail } from "lucide-react";
 
 type Availability = { placement: string; available: boolean };
+
+const CONTACT_EMAIL = "info@saddleupguide.com";
 
 const PLACEMENTS = [
   {
@@ -49,18 +49,14 @@ const PLACEMENTS = [
 
 const BUNDLE_PRICE = 249;
 
+function mailtoFor(subject: string) {
+  return `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subject)}`;
+}
+
 export default function AdvertisePage() {
   const { data: settings } = useGetPublicSettings();
   const siteName = (settings as any)?.siteTitle || "SaddleUpGuide";
-  const bizAuth = useBusinessAuth();
   const [availability, setAvailability] = useState<Availability[] | null>(null);
-  const [loadingPlacement, setLoadingPlacement] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [location] = useLocation();
-
-  const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-  const successPlacement = params.get("success") === "1" ? params.get("placement") : null;
-  const canceled = params.get("canceled") === "1";
 
   useEffect(() => {
     fetch("/api/ads/availability")
@@ -74,51 +70,6 @@ export default function AdvertisePage() {
   );
   const availableCount = Object.values(availMap).filter(Boolean).length;
   const allSoldOut = availability !== null && availableCount === 0;
-
-  async function handleCheckout(placement: string) {
-    if (!bizAuth.isAuthenticated) {
-      bizAuth.login("/advertise");
-      return;
-    }
-    setLoadingPlacement(placement);
-    setError(null);
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ placement }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Checkout failed");
-      window.location.href = data.url;
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
-      setLoadingPlacement(null);
-    }
-  }
-
-  if (successPlacement) {
-    const item = PLACEMENTS.find((p) => p.key === successPlacement);
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-24 text-center">
-        <PartyPopper className="h-14 w-14 text-green-500 mx-auto mb-6" />
-        <h1 className="text-3xl font-bold mb-3">You're live!</h1>
-        <p className="text-muted-foreground text-base mb-2">
-          Your <strong>{item?.label ?? successPlacement}</strong> ad has been confirmed.
-          Send your image to <a href="mailto:advertise@saddleupguide.com" className="underline">advertise@saddleupguide.com</a> and we'll get it live within 24 hours.
-        </p>
-        {item && (
-          <p className="text-sm text-muted-foreground mt-2">
-            Required image size: <span className="font-mono font-semibold">{item.size}</span>
-          </p>
-        )}
-        <Button className="mt-8" onClick={() => window.location.href = "/advertise"}>
-          Back to Advertise
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
@@ -135,19 +86,14 @@ export default function AdvertisePage() {
           who are actively searching for businesses like yours. We offer four exclusive ad placements —
           one advertiser per spot, guaranteed.
         </p>
+        <p className="text-sm font-medium mt-4">
+          To book an ad placement, email us at{" "}
+          <a href={mailtoFor(`Ad placement inquiry — ${siteName}`)} className="text-primary hover:underline">
+            {CONTACT_EMAIL}
+          </a>{" "}
+          and we'll get you set up.
+        </p>
       </div>
-
-      {canceled && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 mb-8">
-          Checkout was canceled — your card was not charged.
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 mb-8">
-          {error}
-        </div>
-      )}
 
       {/* Sold-out state */}
       {allSoldOut ? (
@@ -161,7 +107,6 @@ export default function AdvertisePage() {
           <div className="grid gap-5 mb-10">
             {PLACEMENTS.map((p) => {
               const isAvailable = availability === null ? null : (availMap[p.key] ?? true);
-              const isLoading = loadingPlacement === p.key;
               return (
                 <div
                   key={p.key}
@@ -201,16 +146,11 @@ export default function AdvertisePage() {
                             <CheckCircle2 className="h-4 w-4 text-green-500" />
                             <span className="text-sm font-medium text-green-600 dark:text-green-400">Available</span>
                           </div>
-                          <Button
-                            size="sm"
-                            onClick={() => handleCheckout(p.key)}
-                            disabled={loadingPlacement !== null}
-                          >
-                            {isLoading ? (
-                              <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Processing…</>
-                            ) : (
-                              "Buy Now"
-                            )}
+                          <Button size="sm" asChild>
+                            <a href={mailtoFor(`Ad placement inquiry — ${p.label}`)}>
+                              <Mail className="h-3.5 w-3.5 mr-1.5" />
+                              Email to Book
+                            </a>
                           </Button>
                         </div>
                       ) : (
@@ -242,15 +182,11 @@ export default function AdvertisePage() {
                     <p className="text-3xl font-bold">${BUNDLE_PRICE}</p>
                     <p className="text-xs text-muted-foreground">per month — saves $67</p>
                   </div>
-                  <Button
-                    onClick={() => handleCheckout("bundle")}
-                    disabled={loadingPlacement !== null}
-                  >
-                    {loadingPlacement === "bundle" ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Processing…</>
-                    ) : (
-                      "Buy Bundle"
-                    )}
+                  <Button asChild>
+                    <a href={mailtoFor("Ad placement inquiry — Directory Sponsor Bundle")}>
+                      <Mail className="h-4 w-4 mr-2" />
+                      Email to Book
+                    </a>
                   </Button>
                 </div>
               </div>

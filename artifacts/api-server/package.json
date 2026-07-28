@@ -24,9 +24,7 @@
     "nodemailer": "^9.0.3",
     "openid-client": "^6.8.4",
     "pino": "^9",
-    "pino-http": "^10",
-    "stripe": "^22.3.0",
-    "stripe-replit-sync": "^1.0.0"
+    "pino-http": "^10"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

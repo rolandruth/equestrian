@@ -32,8 +32,5 @@
       "@babel/core": "7.29.6"
     }
   },
-  "dependencies": {
-    "stripe": "^22.3.0",
-    "stripe-replit-sync": "^1.0.0"
-  }
+  "dependencies": {}
 }

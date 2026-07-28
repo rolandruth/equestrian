@@ -11,6 +11,5 @@ export interface BizUser {
   email: string;
   firstName?: string | null;
   lastName?: string | null;
-  stripeCustomerId?: string | null;
   createdAt: string;
 }

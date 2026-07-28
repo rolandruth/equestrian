@@ -1,18 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation } from "wouter";
 import { useBusinessAuth } from "@workspace/replit-auth-web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Star, Zap, Building2, LogOut, ExternalLink, Search, PlusCircle, CreditCard, AlertTriangle } from "lucide-react";
-
-const EXPIRY_WARNING_WINDOW_DAYS = 7;
-
-function daysUntil(dateStr: string): number {
-  const ms = new Date(dateStr).getTime() - Date.now();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
-}
+import { Loader2, Building2, LogOut, ExternalLink, Search, PlusCircle, Mail } from "lucide-react";
 
 type Entry = {
   id: number;
@@ -24,23 +16,14 @@ type Entry = {
   premium: boolean;
 };
 
-type Subscription = {
-  id: number;
-  entryId: number;
-  plan: string;
-  status: string;
-  cancelAtPeriodEnd: boolean;
-  currentPeriodEnd: string | null;
-};
+type Listing = { entry: Entry };
 
-type Listing = { entry: Entry; subscription: Subscription | null };
+const CONTACT_EMAIL = "info@saddleupguide.com";
 
 export default function BusinessDashboardPage() {
   const bizAuth = useBusinessAuth();
-  const [, setLocation] = useLocation();
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cancelingId, setCancelingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [claimQuery, setClaimQuery] = useState("");
@@ -48,9 +31,6 @@ export default function BusinessDashboardPage() {
   const [claimSearching, setClaimSearching] = useState(false);
   const [claimingId, setClaimingId] = useState<number | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
-
-  const [billingLoading, setBillingLoading] = useState(false);
-  const [billingError, setBillingError] = useState<string | null>(null);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -114,43 +94,6 @@ export default function BusinessDashboardPage() {
     }
   }
 
-  async function handleCancel(entryId: number) {
-    setCancelingId(entryId);
-    setError(null);
-    try {
-      const res = await fetch("/api/business/cancel-plan", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entryId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Cancellation failed");
-      await loadListings();
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
-    } finally {
-      setCancelingId(null);
-    }
-  }
-
-  async function handleBillingPortal() {
-    setBillingLoading(true);
-    setBillingError(null);
-    try {
-      const res = await fetch("/api/business/billing-portal", {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not open billing portal");
-      window.open(data.url, "_blank", "noopener,noreferrer");
-    } catch (err: any) {
-      setBillingError(err.message || "Something went wrong. Please try again.");
-      setBillingLoading(false);
-    }
-  }
-
   if (bizAuth.isLoading) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-24 flex justify-center">
@@ -165,7 +108,7 @@ export default function BusinessDashboardPage() {
         <Building2 className="h-12 w-12 text-primary mx-auto mb-6" />
         <h1 className="text-2xl font-bold mb-3">Business Owner Login Required</h1>
         <p className="text-muted-foreground mb-8">
-          Sign in to manage your listings, buy Featured or Premium upgrades, and view your billing status.
+          Sign in to claim and manage your listings.
         </p>
         <Button onClick={() => bizAuth.login("/business/dashboard")}>Sign In / Sign Up</Button>
       </div>
@@ -182,7 +125,7 @@ export default function BusinessDashboardPage() {
           </p>
           <p className="text-muted-foreground text-sm mt-1">
             If you need any help please contact us at{" "}
-            <a href="mailto:info@saddleupguide.com" className="text-primary hover:underline">info@saddleupguide.com</a>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-primary hover:underline">{CONTACT_EMAIL}</a>
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => bizAuth.logout()}>
@@ -191,85 +134,11 @@ export default function BusinessDashboardPage() {
         </Button>
       </div>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <CreditCard className="h-4 w-4" />
-            Billing
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {billingError && (
-            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300 mb-3">
-              {billingError}
-            </div>
-          )}
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <p className="text-sm text-muted-foreground max-w-md">
-              View past invoices and update your payment method through Stripe's secure billing portal.
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleBillingPortal}
-              disabled={billingLoading}
-            >
-              {billingLoading ? (
-                <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Opening…</>
-              ) : (
-                <><CreditCard className="h-3.5 w-3.5 mr-1.5" />Manage Billing</>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300 mb-8">
           {error}
         </div>
       )}
-
-      {listings &&
-        (() => {
-          const expiringSoon = listings.filter(
-            ({ subscription }) =>
-              subscription?.cancelAtPeriodEnd &&
-              subscription.currentPeriodEnd &&
-              daysUntil(subscription.currentPeriodEnd) <= EXPIRY_WARNING_WINDOW_DAYS,
-          );
-          if (expiringSoon.length === 0) return null;
-          return (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3.5 mb-8 flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-              <div className="text-sm text-amber-800 dark:text-amber-300">
-                <p className="font-medium mb-1">
-                  {expiringSoon.length === 1
-                    ? "Your upgrade badge is about to expire"
-                    : "Your upgrade badges are about to expire"}
-                </p>
-                <ul className="space-y-0.5">
-                  {expiringSoon.map(({ entry, subscription }) => {
-                    const days = daysUntil(subscription!.currentPeriodEnd!);
-                    return (
-                      <li key={entry.id}>
-                        <span className="font-medium">{entry.title}</span>'s {subscription!.plan} badge will be
-                        removed{" "}
-                        {days <= 0
-                          ? "today"
-                          : days === 1
-                            ? "tomorrow"
-                            : `in ${days} days`}{" "}
-                        (on {new Date(subscription!.currentPeriodEnd!).toLocaleDateString()}) since the plan was
-                        canceled. Resubscribe from Listing Plans to keep it active.
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </div>
-          );
-        })()}
 
       <Card className="mb-10">
         <CardHeader>
@@ -349,15 +218,14 @@ export default function BusinessDashboardPage() {
           <CardContent className="py-14 text-center">
             <Building2 className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">No listings claimed yet</h2>
-            <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
-              Head to Listing Plans to search for your business and claim it, then upgrade to Featured or Premium.
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+              Use the search above to find your business and claim it.
             </p>
-            <Button onClick={() => setLocation("/listing-plans")}>Browse Listing Plans</Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-5">
-          {listings.map(({ entry, subscription }) => (
+          {listings.map(({ entry }) => (
             <Card key={entry.id}>
               <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
                 <div>
@@ -383,65 +251,21 @@ export default function BusinessDashboardPage() {
                 </a>
               </CardHeader>
               <CardContent>
-                {subscription ? (
-                  <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div className="text-sm">
-                      {subscription.cancelAtPeriodEnd ? (
-                        <p className="text-amber-700 dark:text-amber-400">
-                          Your {subscription.plan} plan is set to cancel
-                          {subscription.currentPeriodEnd
-                            ? ` on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                            : " at the end of the billing period"}
-                          . The badge stays active until then.
-                        </p>
-                      ) : (
-                        <p className="text-muted-foreground">
-                          Active {subscription.plan} plan
-                          {subscription.currentPeriodEnd
-                            ? ` — renews ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}`
-                            : ""}
-                          .
-                        </p>
-                      )}
-                    </div>
-                    {!subscription.cancelAtPeriodEnd && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCancel(entry.id)}
-                        disabled={cancelingId === entry.id}
-                      >
-                        {cancelingId === entry.id ? (
-                          <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Canceling…</>
-                        ) : (
-                          "Cancel Plan"
-                        )}
-                      </Button>
-                    )}
-                  </div>
+                {entry.premium || entry.featured ? (
+                  <p className="text-sm text-muted-foreground">
+                    This listing has an active {entry.premium ? "Premium" : "Featured"} upgrade.
+                  </p>
                 ) : (
                   <div className="flex items-center justify-between gap-4 flex-wrap">
-                    <div>
-                      <p className="text-sm text-muted-foreground">No active upgrade on this listing.</p>
-                      <p className="text-xs text-muted-foreground/70 mt-0.5">Plans are recurring monthly subscriptions · Cancel anytime</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setLocation(`/listing-plans?entryId=${entry.id}&plan=featured`)}
-                      >
-                        <Zap className="h-3.5 w-3.5 mr-1.5" />
-                        Buy Featured
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => setLocation(`/listing-plans?entryId=${entry.id}&plan=premium`)}
-                      >
-                        <Star className="h-3.5 w-3.5 mr-1.5" />
-                        Buy Premium
-                      </Button>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      No active upgrade on this listing. To buy a Featured or Premium plan, email us.
+                    </p>
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Listing plan inquiry — ${entry.title}`)}`}>
+                        <Mail className="h-3.5 w-3.5 mr-1.5" />
+                        Email Us
+                      </a>
+                    </Button>
                   </div>
                 )}
               </CardContent>

@@ -53,7 +53,6 @@ export const ListBizUsersResponse = zod.object({
       email: zod.string(),
       firstName: zod.string().nullish(),
       lastName: zod.string().nullish(),
-      stripeCustomerId: zod.string().nullish(),
       createdAt: zod.string(),
     }),
   ),

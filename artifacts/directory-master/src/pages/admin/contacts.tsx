@@ -1,6 +1,6 @@
 import { useListBizUsers, useDeleteBizUser } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Mail, Calendar, Trash2, Building2, CreditCard } from "lucide-react";
+import { Mail, Calendar, Trash2, Building2 } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -109,9 +109,6 @@ export default function AdminContactsPage() {
                     <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5" /> Email</span>
                   </th>
                   <th className="text-left px-5 py-3 font-semibold text-muted-foreground">
-                    <span className="flex items-center gap-1.5"><CreditCard className="h-3.5 w-3.5" /> Stripe Customer</span>
-                  </th>
-                  <th className="text-left px-5 py-3 font-semibold text-muted-foreground">
                     <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> Joined</span>
                   </th>
                   <th className="px-5 py-3" />
@@ -128,9 +125,6 @@ export default function AdminContactsPage() {
                     </td>
                     <td className="px-5 py-3.5">
                       <a href={`mailto:${u.email}`} className="text-primary hover:underline">{u.email}</a>
-                    </td>
-                    <td className="px-5 py-3.5 text-muted-foreground font-mono text-xs">
-                      {u.stripeCustomerId ?? <span className="italic">none</span>}
                     </td>
                     <td className="px-5 py-3.5 text-muted-foreground text-xs whitespace-nowrap">
                       {formatDate(u.createdAt)}

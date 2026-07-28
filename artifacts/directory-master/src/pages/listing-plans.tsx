@@ -393,7 +393,7 @@ export default function ListingPlansPage() {
             </div>
 
             {/* Feature list */}
-            <ul className="space-y-2.5 flex-grow mb-8">
+            <ul className="space-y-2.5 flex-grow">
               {plan.features.map(f => (
                 <li key={f} className="flex items-start gap-2.5 text-sm">
                   <Check className={`h-4 w-4 mt-0.5 shrink-0 ${plan.highlight ? "text-primary" : "text-green-500"}`} />
@@ -401,15 +401,6 @@ export default function ListingPlansPage() {
                 </li>
               ))}
             </ul>
-
-            {/* CTA */}
-            <Button
-              onClick={() => openPicker(plan.key)}
-              className={`w-full ${plan.highlight ? "bg-primary hover:bg-primary/90 text-white" : ""}`}
-              variant={plan.highlight ? "default" : "default"}
-            >
-              {plan.cta}
-            </Button>
           </div>
         ))}
       </div>

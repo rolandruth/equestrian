@@ -37,6 +37,18 @@ export default function BrowsePage() {
 
   const { data: settings } = useGetPublicSettings();
   const { data: stats } = useGetPublicStats();
+
+  // ── SEO: per-page title ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const siteTitle = (settings as any)?.siteTitle || "Directory";
+    const prevTitle = document.title;
+    document.title = categoryParam
+      ? `${categoryParam} | Browse ${siteTitle}`
+      : `Browse All Listings | ${siteTitle}`;
+    return () => {
+      document.title = prevTitle;
+    };
+  }, [categoryParam, (settings as any)?.siteTitle]);
   
   const { data: entriesData, isLoading } = useListPublicEntries({
     page,

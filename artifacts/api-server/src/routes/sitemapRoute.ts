@@ -14,6 +14,20 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
+router.get("/robots.txt", (req, res) => {
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";
+  const host = req.headers["x-forwarded-host"] || req.headers.host || "localhost";
+  res.set("Content-Type", "text/plain; charset=utf-8");
+  res.send(`User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /business
+Disallow: /api
+
+Sitemap: ${protocol}://${host}/sitemap.xml
+`);
+});
+
 router.get("/sitemap.xml", async (req, res) => {
   try {
     const protocol = req.headers["x-forwarded-proto"] || req.protocol || "https";

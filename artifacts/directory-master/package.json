@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
-    "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
+    "serve": "node serve.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
@@ -92,7 +92,9 @@
     "@uppy/react": "^5.2.0",
     "@workspace/object-storage-web": "workspace:*",
     "@workspace/replit-auth-web": "workspace:*",
+    "express": "^5.2.1",
     "leaflet": "^1.9.4",
+    "pg": "^8.20.0",
     "react-leaflet": "^5.0.0"
   }
 }

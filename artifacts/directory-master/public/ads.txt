@@ -1,0 +1,4 @@
+# ads.txt — authorized digital sellers for this site
+# After your Google AdSense account is approved, replace the line below
+# with your own publisher ID (starts with pub-):
+# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0

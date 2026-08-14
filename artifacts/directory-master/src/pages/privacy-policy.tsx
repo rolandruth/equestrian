@@ -71,6 +71,33 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">Advertising</h2>
+          <p className="mb-3">
+            We may display advertising served by third-party vendors, including Google AdSense.
+            Third-party vendors, including Google, use cookies to serve ads based on your prior visits
+            to this website or other websites. Google's use of advertising cookies enables it and its
+            partners to serve ads to you based on your visits to this site and/or other sites on the
+            Internet.
+          </p>
+          <p className="mb-3">
+            You may opt out of personalized advertising by visiting{" "}
+            <a href="https://www.google.com/settings/ads" className="underline" target="_blank" rel="noopener noreferrer">
+              Google Ads Settings
+            </a>
+            . You can also opt out of some third-party vendors' use of cookies for personalized
+            advertising by visiting{" "}
+            <a href="https://www.aboutads.info/choices" className="underline" target="_blank" rel="noopener noreferrer">
+              www.aboutads.info/choices
+            </a>
+            .
+          </p>
+          <p>
+            Third-party ad networks and their use of cookies are governed by those vendors' own privacy
+            policies.
+          </p>
+        </section>
+
+        <section>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">5. Reviews and User-Submitted Content</h2>
           <p>
             When you submit a review on a listing page, your name and review content will be displayed

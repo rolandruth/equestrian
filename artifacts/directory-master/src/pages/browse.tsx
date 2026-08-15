@@ -18,6 +18,7 @@ import type { SectionProps } from "@/lib/templateTypes";
 import { BrowseMapView } from "@/components/directory/BrowseMapView";
 import { CardImage } from "@/components/directory/CardImage";
 import { AdSlot } from "@/components/ads/AdSlot";
+import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
 
 export default function BrowsePage() {
   const [location, setLocation] = useLocation();
@@ -557,6 +558,12 @@ export default function BrowsePage() {
                         </PaginationItem>
                       </PaginationContent>
                     </Pagination>
+                  )}
+                  {getSectionEnabled("ad") && (
+                    <AdSenseSlot
+                      adClient={getSection("ad")?.props?.adClient}
+                      adSlot={getSection("ad")?.props?.adSlot}
+                    />
                   )}
                 </div>
               )}

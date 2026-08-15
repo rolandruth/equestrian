@@ -94,6 +94,7 @@ export const BROWSE_BLOCK_DEFS: BlockDefinition[] = [
   { type: "header",  label: "Page Header",      description: "Title and result count for the browse page", defaultHeading: "All Entries" },
   { type: "filters", label: "Search & Filters", description: "Search bar and category sidebar filter panel" },
   { type: "grid",    label: "Entry Cards Grid", description: "Main grid of directory entry cards" },
+  { type: "ad",      label: "Ad Space",         description: "Google AdSense ad unit — shows a placeholder until your AdSense IDs are set" },
 ];
 
 export const ENTRY_BLOCK_DEFS: BlockDefinition[] = [
@@ -165,6 +166,7 @@ export const DEFAULT_BROWSE_SECTIONS: SectionConfig[] = [
   { id: "header",  label: "Page Header",       enabled: true, heading: "All Entries" },
   { id: "filters", label: "Search & Filters",  enabled: true },
   { id: "grid",    label: "Entry Cards Grid",  enabled: true },
+  { id: "ad",      label: "Ad Space",          enabled: true, type: "ad" },
 ];
 
 export const DEFAULT_ENTRY_SECTIONS: SectionConfig[] = [

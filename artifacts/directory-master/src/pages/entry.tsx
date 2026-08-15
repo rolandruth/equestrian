@@ -3,6 +3,7 @@ import { useParams, Link } from "wouter";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ReviewsSection } from "@/components/directory/ReviewsSection";
 import { AdSlot } from "@/components/ads/AdSlot";
+import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
 import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
 import { SafeImage, CardImage, ImageWithFallback } from "@/components/directory/CardImage";
 import genericHorseFallback from "@/assets/generic-horse-fallback.jpg";
@@ -1910,6 +1911,14 @@ export default function EntryPage() {
         })()}
 
         <AdSlot placement="entry_page" className="my-6" />
+
+        {/* Google AdSense ad space */}
+        {getSectionEnabled("ad") && (
+          <AdSenseSlot
+            adClient={getSectionProps("ad").adClient}
+            adSlot={getSectionProps("ad").adSlot}
+          />
+        )}
 
         {/* Google Rating section */}
         {(() => {

@@ -106,6 +106,7 @@ export const ENTRY_BLOCK_DEFS: BlockDefinition[] = [
   { type: "googleReviews", label: "Google Reviews", description: "Individual Google review cards" },
   { type: "related",     label: "Related Entries",        description: "Grid of similar entries in the same category", defaultHeading: "Related Entries", defaultProps: { maxItems: 3 } },
   { type: "claim",       label: "Claim Yours Now",        description: "Opt-in form to capture name, phone, and email for this listing", defaultHeading: "Claim Yours Now", defaultProps: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
+  { type: "ad",          label: "Ad Space",               description: "Google AdSense ad unit — shows a placeholder until your AdSense IDs are set" },
 ];
 
 export function getBlockDefs(pageType: string): BlockDefinition[] {
@@ -176,6 +177,7 @@ export const DEFAULT_ENTRY_SECTIONS: SectionConfig[] = [
   { id: "googleReviews", label: "Google Reviews", enabled: true },
   { id: "claim",       label: "Claim Yours Now",        enabled: true, heading: "Claim Yours Now", props: { buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon.", textAlignment: "center" } },
   { id: "related",     label: "Related Entries",        enabled: true },
+  { id: "ad",          label: "Ad Space",               enabled: true, type: "ad" },
 ];
 
 export const BROWSE_CARD_FIELDS: Array<{ id: string; label: string }> = [

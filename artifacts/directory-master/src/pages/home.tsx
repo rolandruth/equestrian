@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { FontLoader } from "@/components/template/FontLoader";
 import { HomeSearchSection } from "@/components/directory/HomeSearchSection";
+import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
 import { CardImage } from "@/components/directory/CardImage";
 import { PremiumSpotlightSection } from "@/components/directory/PremiumSpotlightSection";
 import { AdSlot } from "@/components/ads/AdSlot";
@@ -60,6 +61,7 @@ function BlockIcon({ type, className = "h-4 w-4" }: { type: string; className?: 
     case "custom-image-row": return <Grid3X3 className={className} />;
     case "custom-cta":   return <MousePointerClick className={className} />;
     case "custom-claim": return <ClipboardCheck className={className} />;
+    case "ad":           return <MousePointerClick className={className} />;
     default:             return <LayoutTemplate className={className} />;
   }
 }
@@ -284,6 +286,9 @@ function EditSectionDialog({
   const [claimThankYou, setClaimThankYou] = useState(section.props?.thankYouMessage ?? "Thank you! We'll be in touch soon.");
   const [claimButtonColor, setClaimButtonColor] = useState(section.props?.buttonColor ?? "");
   const [claimButtonTextColor, setClaimButtonTextColor] = useState(section.props?.buttonTextColor ?? "");
+  // Ad-specific
+  const [adClient, setAdClient] = useState(section.props?.adClient ?? "");
+  const [adSlot, setAdSlot] = useState(section.props?.adSlot ?? "");
 
   const handleSave = () => {
     const updatedProps = {
@@ -319,6 +324,10 @@ function EditSectionDialog({
         textColor: textColor || undefined,
         textAlignment: alignment,
       } : {}),
+      ...(type === "ad" ? {
+        adClient: adClient.trim() || undefined,
+        adSlot: adSlot.trim() || undefined,
+      } : {}),
     };
     onSave({ ...section, heading, props: updatedProps });
     onClose();
@@ -346,6 +355,29 @@ function EditSectionDialog({
                 placeholder="Section heading..."
               />
             </div>
+          )}
+          {type === "ad" && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Leave these blank until your Google AdSense account is approved — a placeholder box reserves the space. Once approved, paste your IDs here and the real ad will appear.
+              </p>
+              <div className="space-y-1.5">
+                <Label>AdSense Client ID</Label>
+                <Input
+                  value={adClient}
+                  onChange={(e) => setAdClient(e.target.value)}
+                  placeholder="ca-pub-1234567890123456"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ad Unit Slot ID</Label>
+                <Input
+                  value={adSlot}
+                  onChange={(e) => setAdSlot(e.target.value)}
+                  placeholder="1234567890"
+                />
+              </div>
+            </>
           )}
           {type === "custom-text" && (
             <>
@@ -1089,6 +1121,14 @@ export default function HomePage() {
               </a>
             )}
           </div>
+        </section>
+      );
+    }
+
+    if (type === "ad") {
+      return (
+        <section key={section.id} style={sectionStyle(p)}>
+          <AdSenseSlot adClient={p.adClient} adSlot={p.adSlot} />
         </section>
       );
     }

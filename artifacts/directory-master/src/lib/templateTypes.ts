@@ -52,6 +52,8 @@ export interface SectionProps {
   buttonRadius?: "rounded" | "square";
   buttonTextColor?: string;
   thankYouMessage?: string;
+  adClient?: string;
+  adSlot?: string;
 }
 
 export interface SectionConfig {
@@ -85,6 +87,7 @@ export const HOMEPAGE_BLOCK_DEFS: BlockDefinition[] = [
   { type: "custom-image-row", label: "Image Row",   description: "A row of side-by-side photos, e.g. a gallery strip", defaultProps: { imageUrls: [], aspectRatio: "4/3" } },
   { type: "custom-cta",  label: "Call to Action",  description: "A prominent button with optional heading and description", defaultProps: { textAlignment: "center", buttonText: "Get Started", buttonRadius: "rounded", buttonTarget: "_self" } },
   { type: "custom-claim", label: "Claim Your Listing", description: "Opt-in form to capture name, phone, and email leads", defaultProps: { textAlignment: "center", buttonText: "Submit", thankYouMessage: "Thank you! We'll be in touch soon." } },
+  { type: "ad",          label: "Ad Space",          description: "Google AdSense ad unit — shows a placeholder until your AdSense IDs are set", defaultProps: {} },
 ];
 
 export const BROWSE_BLOCK_DEFS: BlockDefinition[] = [

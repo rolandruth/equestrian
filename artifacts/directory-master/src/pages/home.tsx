@@ -1060,7 +1060,7 @@ export default function HomePage() {
       // While settings are still loading, render a quiet neutral placeholder
       // instead of the default blue banner + search box to avoid a flash of
       // wrong content before the real hero appears.
-      if (settingsLoading) {
+      if (settingsLoading && !editMode) {
         return (
           <section key={section.id} className={`${paddingClass} border-b bg-muted/30`} aria-hidden="true">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

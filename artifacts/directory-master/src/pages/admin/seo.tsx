@@ -204,7 +204,7 @@ export default function AdminSeoPage() {
                 </Label>
                 <Input
                   id="meta-title"
-                  placeholder="e.g. Bigfoot Blueprint — Find Local Services"
+                  placeholder="e.g. SaddleUpGuide — Find Local Services"
                   value={metaTitle}
                   onChange={e => setMetaTitle(e.target.value)}
                   maxLength={100}

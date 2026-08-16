@@ -1057,6 +1057,19 @@ export default function HomePage() {
         ? { backgroundImage: `url(${heroImageUrl})`, backgroundSize: "cover", backgroundPosition: p.backgroundPosition || "center" }
         : { backgroundColor: ts.homepage.heroBgColor || p.backgroundColor || themeColor };
 
+      // While settings are still loading, render a quiet neutral placeholder
+      // instead of the default blue banner + search box to avoid a flash of
+      // wrong content before the real hero appears.
+      if (settingsLoading) {
+        return (
+          <section key={section.id} className={`${paddingClass} border-b bg-muted/30`} aria-hidden="true">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="h-40" />
+            </div>
+          </section>
+        );
+      }
+
       return (
         <section
           key={section.id}

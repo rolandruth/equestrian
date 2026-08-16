@@ -11,7 +11,7 @@ import { Building2 } from "lucide-react";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { data: settings } = useGetPublicSettings();
+  const { data: settings, isLoading: settingsLoading } = useGetPublicSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { token, logout: clearToken } = useAuth();
@@ -100,7 +100,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   <img src={settings.logoUrl} alt={settings.siteTitle} className="max-h-[60px] max-w-[170px] w-auto h-auto object-contain" />
                 ) : (
                   <span className="font-bold text-xl text-gray-900 dark:text-white" style={textStyle}>
-                    {settings?.siteTitle || "Directory"}
+                    {settings?.siteTitle || (settingsLoading ? "\u00A0" : "Directory")}
                   </span>
                 )}
               </Link>

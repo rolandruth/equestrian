@@ -748,7 +748,7 @@ function alignClass(p: SectionProps | undefined): string {
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const [heroSearch, setHeroSearch] = useState("");
-  const { data: settings } = useGetPublicSettings();
+  const { data: settings, isLoading: settingsLoading } = useGetPublicSettings();
   const { data: stats } = useGetPublicStats();
   const { data: featured } = useGetFeaturedEntries();
   const { data: recent, isLoading: recentLoading } = useGetRecentEntries();
@@ -1074,13 +1074,13 @@ export default function HomePage() {
               className="font-extrabold tracking-tight mb-6"
               style={{ color: (settings as any)?.heroHeadlineColor || p.headingColor || (hasBg ? "#ffffff" : undefined), fontSize: p.headingFontSize || "clamp(2rem, 5vw, 3.75rem)" }}
             >
-              {settings?.homepageHeadline || section.heading || "Discover the Best Resources"}
+              {settings?.homepageHeadline || section.heading || (settingsLoading ? "\u00A0" : "Discover the Best Resources")}
             </h1>
             <p
               className="max-w-3xl mx-auto mb-10"
               style={{ color: (settings as any)?.heroSubtitleColor || p.textColor || (hasBg ? "#e2e8f0" : undefined), fontSize: p.bodyFontSize || "1.125rem" }}
             >
-              {settings?.homepageDescription || "A curated directory of tools, companies, and events."}
+              {settings?.homepageDescription || (settingsLoading ? "\u00A0" : "A curated directory of tools, companies, and events.")}
             </p>
             {!p.hideSearch && (
             <form

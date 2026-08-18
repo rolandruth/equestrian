@@ -2,8 +2,12 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { entries, directorySettings, categories, reviews } from "@workspace/db";
 import { eq, ilike, and, desc, asc, count, avg, sql, or } from "drizzle-orm";
+import { expireStaleUpgrades } from "../lib/upgradeExpiry.js";
 
 const router = Router();
+
+// Lazily clear expired featured/premium upgrades (throttled internally)
+router.use((_req, _res, next) => { void expireStaleUpgrades(); next(); });
 
 function formatEntry(e: typeof entries.$inferSelect) {
   return {

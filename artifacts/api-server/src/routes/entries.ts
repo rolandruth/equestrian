@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { entries, categories, bizUsers } from "@workspace/db";
 import { requireAuth, requireEditor, requireAdmin } from "../middlewares/auth.js";
 import { eq, ilike, and, or, desc, count, sql, inArray } from "drizzle-orm";
+import { expireStaleUpgrades } from "../lib/upgradeExpiry.js";
 
 async function getOwnersMap(ownerIds: (string | null)[]) {
   const ids = [...new Set(ownerIds.filter((id): id is string => !!id))];
@@ -12,6 +13,9 @@ async function getOwnersMap(ownerIds: (string | null)[]) {
 }
 
 const router = Router();
+
+// Lazily clear expired featured/premium upgrades (throttled internally)
+router.use((_req, _res, next) => { void expireStaleUpgrades(); next(); });
 
 router.get("/", requireAuth, async (req, res) => {
   try {
@@ -136,7 +140,8 @@ router.patch("/:id/featured", requireEditor, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { featured } = req.body;
-    const [entry] = await db.update(entries).set({ featured, updatedAt: new Date() })
+    const featuredUntil = featured ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
+    const [entry] = await db.update(entries).set({ featured, featuredUntil, updatedAt: new Date() })
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     res.json(formatEntry(entry));
@@ -150,7 +155,8 @@ router.patch("/:id/premium", requireEditor, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { premium } = req.body;
-    const [entry] = await db.update(entries).set({ premium, updatedAt: new Date() })
+    const premiumUntil = premium ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null;
+    const [entry] = await db.update(entries).set({ premium, premiumUntil, updatedAt: new Date() })
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     res.json(formatEntry(entry));

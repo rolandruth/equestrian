@@ -2,7 +2,7 @@ import { db, entries } from "@workspace/db";
 import { and, eq, lt, sql } from "drizzle-orm";
 
 let lastSweep = 0;
-const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // at most once every 5 minutes
+const SWEEP_INTERVAL_MS = 60 * 1000; // at most once per minute
 
 /**
  * Clears featured/premium flags whose 30-day window has passed.

@@ -35,7 +35,7 @@ async function getOwnersMap(ownerIds: (string | null)[]) {
 const router = Router();
 
 // Lazily clear expired featured/premium upgrades (throttled internally)
-router.use((_req, _res, next) => { void expireStaleUpgrades(); next(); });
+router.use((_req, _res, next) => { expireStaleUpgrades().finally(next); });
 
 router.get("/", requireAuth, async (req, res) => {
   try {

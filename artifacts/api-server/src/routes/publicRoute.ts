@@ -7,7 +7,7 @@ import { expireStaleUpgrades } from "../lib/upgradeExpiry.js";
 const router = Router();
 
 // Lazily clear expired featured/premium upgrades (throttled internally)
-router.use((_req, _res, next) => { void expireStaleUpgrades(); next(); });
+router.use((_req, _res, next) => { expireStaleUpgrades().finally(next); });
 
 function formatEntry(e: typeof entries.$inferSelect) {
   return {

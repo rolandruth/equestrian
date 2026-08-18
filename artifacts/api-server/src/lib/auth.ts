@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { db } from "@workspace/db";
-import { sessions } from "@workspace/db";
+import { sessions, users } from "@workspace/db";
 import { eq, lt } from "drizzle-orm";
 
 export function hashPassword(password: string): string {
@@ -35,7 +35,16 @@ export async function getSession(token: string): Promise<{ userId: number; role:
     await db.delete(sessions).where(eq(sessions.token, token));
     return null;
   }
-  return { userId: session.userId, role: session.role };
+  // Always resolve the user's CURRENT role (not the role snapshotted at
+  // login) so deleting a user or demoting their role takes effect
+  // immediately instead of persisting for up to 30 days.
+  const [user] = await db.select({ id: users.id, role: users.role }).from(users)
+    .where(eq(users.id, session.userId)).limit(1);
+  if (!user) {
+    await db.delete(sessions).where(eq(sessions.token, token));
+    return null;
+  }
+  return { userId: user.id, role: user.role };
 }
 
 export async function deleteSession(token: string): Promise<void> {

@@ -304,6 +304,40 @@ router.get("/reviews/:entryId", async (req, res) => {
   }
 });
 
+// ── Review spam protection ────────────────────────────────────────────────
+// In-memory per-IP rate limits: max 3 reviews/hour overall, and only one
+// review per listing per IP per 24h. Entries are pruned lazily.
+const reviewRateLog = new Map<string, number[]>(); // ip -> timestamps (ms)
+const reviewEntryLog = new Map<string, number>(); // `${ip}:${entryId}` -> timestamp (ms)
+
+function getClientIp(req: import("express").Request): string {
+  const fwd = req.headers["x-forwarded-for"];
+  if (typeof fwd === "string" && fwd.length > 0) return fwd.split(",")[0].trim();
+  return req.ip || "unknown";
+}
+
+function checkReviewRateLimit(ip: string, entryId: number): string | null {
+  const now = Date.now();
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+  // prune occasionally to bound memory
+  if (reviewRateLog.size > 5000) {
+    for (const [k, v] of reviewRateLog) if (v.every((t) => now - t > HOUR)) reviewRateLog.delete(k);
+  }
+  if (reviewEntryLog.size > 20000) {
+    for (const [k, t] of reviewEntryLog) if (now - t > DAY) reviewEntryLog.delete(k);
+  }
+  const recent = (reviewRateLog.get(ip) || []).filter((t) => now - t < HOUR);
+  if (recent.length >= 3) return "Too many reviews submitted. Please try again later.";
+  const entryKey = `${ip}:${entryId}`;
+  const lastForEntry = reviewEntryLog.get(entryKey);
+  if (lastForEntry && now - lastForEntry < DAY) return "You have already reviewed this listing recently.";
+  recent.push(now);
+  reviewRateLog.set(ip, recent);
+  reviewEntryLog.set(entryKey, now);
+  return null;
+}
+
 router.post("/reviews", async (req, res) => {
   try {
     const { entryId, reviewerName, reviewerEmail, rating, body } = req.body;
@@ -317,6 +351,9 @@ router.post("/reviews", async (req, res) => {
     const [entry] = await db.select({ id: entries.id }).from(entries)
       .where(and(eq(entries.id, parseInt(entryId, 10)), eq(entries.published, true))).limit(1);
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
+
+    const rateError = checkReviewRateLimit(getClientIp(req), entry.id);
+    if (rateError) { res.status(429).json({ error: rateError }); return; }
 
     const [created] = await db.insert(reviews).values({
       entryId: parseInt(entryId, 10),

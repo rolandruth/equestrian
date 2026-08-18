@@ -361,7 +361,8 @@ router.post("/reviews", async (req, res) => {
       reviewerEmail: reviewerEmail ? String(reviewerEmail).slice(0, 200) : null,
       rating: ratingNum,
       body: body ? String(body).slice(0, 2000) : null,
-      isApproved: true,
+      // New reviews await admin approval before appearing publicly
+      isApproved: false,
     }).returning();
 
     res.status(201).json({

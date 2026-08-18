@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./adminReview";
 export * from "./authorizationSessionHeaderParameter";
 export * from "./authResult";
 export * from "./authUser";
@@ -62,6 +63,7 @@ export * from "./togglePublishBody";
 export * from "./updateCategoryBody";
 export * from "./updateEntryBody";
 export * from "./updateEntryBodyCustomFields";
+export * from "./updateReviewApprovalBody";
 export * from "./updateSettingsBody";
 export * from "./updateSettingsBodyNavLinks";
 export * from "./updateUserBody";

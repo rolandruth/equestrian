@@ -13,6 +13,7 @@ import storageRouter from "./storage.js";
 import builderRouter from "./builderRoute.js";
 import contactsRouter from "./contactsRoute.js";
 import adsRouter from "./adsRoute.js";
+import reviewsRouter from "./reviewsRoute.js";
 import bizAuthRouter from "./bizAuthRoute.js";
 import businessRouter from "./businessRoute.js";
 import adminBizUsersRouter from "./adminBizUsersRoute.js";
@@ -36,5 +37,6 @@ router.use("/builder", builderRouter);
 router.use("/contacts", contactsRouter);
 router.use(adminBizUsersRouter);
 router.use("/ads", adsRouter);
+router.use("/reviews", reviewsRouter);
 
 export default router;

@@ -657,6 +657,64 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /reviews:
+    get:
+      operationId: listAdminReviews
+      tags: [reviews]
+      summary: List all reviews for moderation
+      responses:
+        "200":
+          description: List of reviews
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminReview"
+
+  /reviews/{id}:
+    patch:
+      operationId: updateReviewApproval
+      tags: [reviews]
+      summary: Approve or unapprove a review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateReviewApprovalBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReview"
+
+    delete:
+      operationId: deleteReview
+      tags: [reviews]
+      summary: Delete a review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   /settings:
     get:
       operationId: getSettings
@@ -1342,6 +1400,36 @@ components:
         totalPages:
           type: integer
       required: [entries, total, page, totalPages]
+
+    AdminReview:
+      type: object
+      properties:
+        id:
+          type: integer
+        entryId:
+          type: integer
+        entryTitle:
+          type: ["string", "null"]
+        reviewerName:
+          type: string
+        reviewerEmail:
+          type: ["string", "null"]
+        rating:
+          type: integer
+        body:
+          type: ["string", "null"]
+        isApproved:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, entryId, reviewerName, rating, isApproved, createdAt]
+
+    UpdateReviewApprovalBody:
+      type: object
+      properties:
+        isApproved:
+          type: boolean
+      required: [isApproved]
 
     Category:
       type: object

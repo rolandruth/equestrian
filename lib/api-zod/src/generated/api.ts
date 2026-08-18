@@ -591,6 +591,57 @@ export const DeleteCategoryResponse = zod.object({
 });
 
 /**
+ * @summary List all reviews for moderation
+ */
+export const ListAdminReviewsResponseItem = zod.object({
+  id: zod.number(),
+  entryId: zod.number(),
+  entryTitle: zod.string().nullish(),
+  reviewerName: zod.string(),
+  reviewerEmail: zod.string().nullish(),
+  rating: zod.number(),
+  body: zod.string().nullish(),
+  isApproved: zod.boolean(),
+  createdAt: zod.string(),
+});
+export const ListAdminReviewsResponse = zod.array(ListAdminReviewsResponseItem);
+
+/**
+ * @summary Approve or unapprove a review
+ */
+export const UpdateReviewApprovalParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateReviewApprovalBody = zod.object({
+  isApproved: zod.boolean(),
+});
+
+export const UpdateReviewApprovalResponse = zod.object({
+  id: zod.number(),
+  entryId: zod.number(),
+  entryTitle: zod.string().nullish(),
+  reviewerName: zod.string(),
+  reviewerEmail: zod.string().nullish(),
+  rating: zod.number(),
+  body: zod.string().nullish(),
+  isApproved: zod.boolean(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete a review
+ */
+export const DeleteReviewParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteReviewResponse = zod.object({
+  success: zod.boolean(),
+  message: zod.string().nullish(),
+});
+
+/**
  * @summary Get directory settings
  */
 export const GetSettingsResponse = zod.object({

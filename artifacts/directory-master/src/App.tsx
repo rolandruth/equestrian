@@ -40,6 +40,7 @@ import AdminUsersPage from "@/pages/admin/users";
 import AdminSeoPage from "@/pages/admin/seo";
 import AdminContactsPage from "@/pages/admin/contacts";
 import AdminAdsPage from "@/pages/admin/ads";
+import AdminReviewsPage from "@/pages/admin/reviews";
 import BuilderPage from "@/pages/admin/builder";
 
 const queryClient = new QueryClient();
@@ -113,6 +114,13 @@ function Router() {
         <RequireAuth>
           <AdminLayout>
             <AdminSeoPage />
+          </AdminLayout>
+        </RequireAuth>
+      </Route>
+      <Route path="/admin/reviews">
+        <RequireAuth>
+          <AdminLayout>
+            <AdminReviewsPage />
           </AdminLayout>
         </RequireAuth>
       </Route>

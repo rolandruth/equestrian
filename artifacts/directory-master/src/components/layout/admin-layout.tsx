@@ -16,6 +16,7 @@ import {
   X,
   ClipboardCheck,
   Megaphone,
+  MessageSquare,
   FileText,
 } from "lucide-react";
 
@@ -58,6 +59,7 @@ export function AdminLayout({ children }: { children: React.ReactNode }) {
     { href: "/admin/categories", label: "Categories", icon: Tags },
     { href: "/admin/import", label: "Import CSV", icon: Upload },
     { href: "/admin/seo", label: "SEO", icon: Search },
+    { href: "/admin/reviews", label: "Reviews", icon: MessageSquare },
     ...(isAdmin ? [{ href: "/admin/contacts", label: "Business", icon: ClipboardCheck }] : []),
     ...(isAdmin ? [{ href: "/admin/ads", label: "Ads", icon: Megaphone }] : []),
     { href: "/admin/users", label: "Users", icon: Users },

@@ -127,7 +127,7 @@ export function ReviewsSection({ entryId, themeColor }: ReviewsSectionProps) {
         {submitted ? (
           <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
             <CheckCircle2 className="h-5 w-5" />
-            <span>Thanks for your review!</span>
+            <span>Thanks for your review! It will appear once it's been approved.</span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">

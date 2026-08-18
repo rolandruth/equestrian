@@ -270,6 +270,25 @@ export interface EntryListResponse {
   totalPages: number;
 }
 
+export interface AdminReview {
+  id: number;
+  entryId: number;
+  /** @nullable */
+  entryTitle?: string | null;
+  reviewerName: string;
+  /** @nullable */
+  reviewerEmail?: string | null;
+  rating: number;
+  /** @nullable */
+  body?: string | null;
+  isApproved: boolean;
+  createdAt: string;
+}
+
+export interface UpdateReviewApprovalBody {
+  isApproved: boolean;
+}
+
 export interface Category {
   id: number;
   name: string;

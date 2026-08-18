@@ -5,6 +5,26 @@ import { requireAuth, requireEditor, requireAdmin } from "../middlewares/auth.js
 import { eq, ilike, and, or, desc, count, sql, inArray } from "drizzle-orm";
 import { expireStaleUpgrades } from "../lib/upgradeExpiry.js";
 
+// Normalize featured/premium fields on generic create/update payloads so the
+// 30-day auto-expiry cannot be bypassed: enabling a flag always sets its
+// expiry to +30 days, disabling always clears it. Clients may not set the
+// *Until fields directly.
+function normalizeUpgradeFields(body: Record<string, unknown>, current?: { featured: boolean; premium: boolean }) {
+  const out: Record<string, unknown> = { ...body };
+  delete out.featuredUntil;
+  delete out.premiumUntil;
+  const in30Days = () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  if (typeof out.featured === "boolean") {
+    if (out.featured && !current?.featured) out.featuredUntil = in30Days();
+    if (!out.featured) out.featuredUntil = null;
+  }
+  if (typeof out.premium === "boolean") {
+    if (out.premium && !current?.premium) out.premiumUntil = in30Days();
+    if (!out.premium) out.premiumUntil = null;
+  }
+  return out;
+}
+
 async function getOwnersMap(ownerIds: (string | null)[]) {
   const ids = [...new Set(ownerIds.filter((id): id is string => !!id))];
   if (ids.length === 0) return new Map<string, typeof bizUsers.$inferSelect>();
@@ -76,7 +96,7 @@ router.post("/", requireEditor, async (req, res) => {
       res.status(400).json({ error: "Title is required" });
       return;
     }
-    const [entry] = await db.insert(entries).values({ title, ...rest }).returning();
+    const [entry] = await db.insert(entries).values({ title, ...normalizeUpgradeFields(rest) } as any).returning();
     res.status(201).json(formatEntry(entry));
   } catch (err) {
     req.log.error(err);
@@ -100,7 +120,10 @@ router.get("/:id", requireAuth, async (req, res) => {
 router.patch("/:id", requireEditor, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    const [entry] = await db.update(entries).set({ ...req.body, updatedAt: new Date() })
+    const [existing] = await db.select({ featured: entries.featured, premium: entries.premium })
+      .from(entries).where(eq(entries.id, id)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Entry not found" }); return; }
+    const [entry] = await db.update(entries).set({ ...normalizeUpgradeFields(req.body, existing), updatedAt: new Date() } as any)
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     const ownersMap = await getOwnersMap([entry.ownerId]);

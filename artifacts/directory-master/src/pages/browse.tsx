@@ -541,7 +541,10 @@ export default function BrowsePage() {
                       <PaginationContent>
                         <PaginationItem>
                           <PaginationPrevious 
-                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            onClick={() => {
+                              setPage(p => Math.max(1, p - 1));
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
                             className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                           />
                         </PaginationItem>
@@ -552,7 +555,10 @@ export default function BrowsePage() {
                         </PaginationItem>
                         <PaginationItem>
                           <PaginationNext 
-                            onClick={() => setPage(p => Math.min(entriesData.totalPages, p + 1))}
+                            onClick={() => {
+                              setPage(p => Math.min(entriesData.totalPages, p + 1));
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
                             className={page === entriesData.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                           />
                         </PaginationItem>

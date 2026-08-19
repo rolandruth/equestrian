@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useGetPublicSettings, useLogout, useGetCurrentUser } from "@workspace/api-client-react";
+import { useGetPublicSettings, useGetPublicStats, useLogout, useGetCurrentUser } from "@workspace/api-client-react";
 import { Search, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Building2 } from "lucide-react";
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { data: settings, isLoading: settingsLoading } = useGetPublicSettings();
+  const { data: publicStats } = useGetPublicStats();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const { token, logout: clearToken } = useAuth();
@@ -329,6 +330,28 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 py-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-sm text-gray-500 dark:text-gray-400">
+          {(publicStats?.categoryBreakdown?.length ?? 0) > 0 && (
+            <nav aria-label="Popular directory sections" className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-800">
+              <p className="font-semibold text-gray-900 dark:text-white mb-3">Browse the directory</p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                {[...(publicStats?.categoryBreakdown ?? [])]
+                  .sort((a, b) => b.count - a.count)
+                  .slice(0, 12)
+                  .map((category) => (
+                    <Link
+                      key={category.category}
+                      href={`/browse/${encodeURIComponent(category.category)}`}
+                      className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                    >
+                      {category.category}
+                    </Link>
+                  ))}
+                <Link href="/browse" className="font-medium text-primary hover:underline">
+                  Browse all
+                </Link>
+              </div>
+            </nav>
+          )}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>
               {(settings as any)?.footerText ||

@@ -7,6 +7,7 @@ import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
 import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
 import { SafeImage, CardImage, ImageWithFallback } from "@/components/directory/CardImage";
 import genericHorseFallback from "@/assets/generic-horse-fallback.jpg";
+import { getPublicEntryPath } from "@/lib/entryPath";
 import {
   useGetPublicEntry,
   useListPublicEntries,
@@ -924,19 +925,33 @@ export default function EntryPage() {
   useEffect(() => {
     if (!displayEntry) return;
     const e = displayEntry as any;
-    document.title = e.metaTitle || `${e.title} | ${siteTitle}`;
+    const pageTitle = e.metaTitle || `${e.title} | ${siteTitle}`;
+    const description = e.metaDescription || e.summary || "";
+    const canonicalUrl = `${window.location.origin}/entry/${encodeURIComponent(e.slug || String(e.id || idOrSlug))}`;
+    document.title = pageTitle;
     const setMeta = (attr: string, value: string, content: string) => {
       let el = document.querySelector(`meta[${attr}="${value}"]`) as HTMLMetaElement | null;
       if (!el) { el = document.createElement("meta"); el.setAttribute(attr, value); document.head.appendChild(el); }
       el.setAttribute("content", content);
     };
-    setMeta("name", "description", e.metaDescription || e.summary || "");
-    setMeta("property", "og:title", e.ogTitle || e.title);
-    setMeta("property", "og:description", e.ogDescription || e.summary || "");
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+    setMeta("name", "description", description);
+    setMeta("property", "og:title", e.ogTitle || pageTitle);
+    setMeta("property", "og:description", e.ogDescription || description);
     setMeta("property", "og:site_name", siteTitle);
-    setMeta("property", "og:type", "article");
+    setMeta("property", "og:type", "website");
+    setMeta("property", "og:url", canonicalUrl);
+    setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:title", e.ogTitle || pageTitle);
+    setMeta("name", "twitter:description", e.ogDescription || description);
     return () => { document.title = siteTitle; };
-  }, [displayEntry, siteTitle]);
+  }, [displayEntry, siteTitle, idOrSlug]);
 
   if (isLoading && !isDemo) {
     return <div className="flex justify-center items-center py-32"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
@@ -1327,7 +1342,7 @@ export default function EntryPage() {
               {relatedEntries.slice(0, maxItems).map((related) => {
                 const relatedImage = getCardImage(related);
                 return (
-                  <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+                  <Link key={related.id} href={getPublicEntryPath(related)}>
                     <Card className="h-full overflow-hidden hover:border-primary/50 transition-colors cursor-pointer">
                       {relatedImage && <CardImage src={relatedImage} alt={related.title} />}
                       <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>
@@ -1565,11 +1580,36 @@ export default function EntryPage() {
       <FontLoader fontKey={ts.entry.font} />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-8">
-        {/* Top row: back link + admin Edit button */}
+        {/* Top row: breadcrumbs + admin Edit button */}
         <div className="flex items-center justify-between">
-          <Link href="/browse" className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-            <ChevronLeft className="mr-1 h-4 w-4" /> Back to Directory
-          </Link>
+          <nav aria-label="Breadcrumb" className="min-w-0">
+            <ol className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <li>
+                <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+              </li>
+              <li aria-hidden="true">/</li>
+              <li>
+                <Link href="/browse" className="hover:text-foreground transition-colors">Browse</Link>
+              </li>
+              {displayEntry.category && (
+                <>
+                  <li aria-hidden="true">/</li>
+                  <li>
+                    <Link
+                      href={`/browse/${encodeURIComponent(displayEntry.category)}`}
+                      className="hover:text-foreground transition-colors"
+                    >
+                      {displayEntry.category}
+                    </Link>
+                  </li>
+                </>
+              )}
+              <li aria-hidden="true">/</li>
+              <li className="text-foreground font-medium truncate max-w-[16rem]" aria-current="page">
+                {displayEntry.title}
+              </li>
+            </ol>
+          </nav>
           {isAdmin && (
             <Button size="sm" variant="outline"
               className="border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/30"
@@ -2006,7 +2046,7 @@ export default function EntryPage() {
                   {filtered.slice(0, relatedMax).map((related) => {
                     const relatedImage = getCardImage(related);
                     return (
-                      <Link key={related.id} href={`/entry/${(related as any).slug || related.id}`}>
+                      <Link key={related.id} href={getPublicEntryPath(related)}>
                         <Card className="h-full overflow-hidden hover:border-primary/50 transition-colors cursor-pointer">
                           {relatedImage && <CardImage src={relatedImage} alt={related.title} />}
                           <CardHeader className="pb-3"><CardTitle className="text-lg line-clamp-1">{related.title}</CardTitle></CardHeader>

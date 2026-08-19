@@ -19,6 +19,7 @@ import { BrowseMapView } from "@/components/directory/BrowseMapView";
 import { CardImage } from "@/components/directory/CardImage";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
+import { getPublicEntryPath } from "@/lib/entryPath";
 
 export default function BrowsePage() {
   const [location, setLocation] = useLocation();
@@ -28,13 +29,15 @@ export default function BrowsePage() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialSearch = searchParams.get("search") || "";
   const initialCity = searchParams.get("city") || "";
+  const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
+  const initialPage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   
   const [search, setSearch] = useState(initialSearch);
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [city, setCity] = useState(initialCity);
   const [cityInput, setCityInput] = useState(initialCity);
   const [sort, setSort] = useState<string>("newest");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
   const [ridingType, setRidingType] = useState<string>("");
   const limit = 12;
@@ -203,17 +206,21 @@ export default function BrowsePage() {
   };
 
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("search") || "";
+    const currentParams = new URLSearchParams(window.location.search);
+    const q = currentParams.get("search") || "";
     if (q !== search) {
       setSearch(q);
       setSearchInput(q);
     }
-    const c = new URLSearchParams(window.location.search).get("city") || "";
+    const c = currentParams.get("city") || "";
     if (c !== city) {
       setCity(c);
       setCityInput(c);
     }
-  }, [window.location.search]);
+    const nextPage = Number.parseInt(currentParams.get("page") || "1", 10);
+    const normalizedPage = Number.isFinite(nextPage) && nextPage > 0 ? nextPage : 1;
+    if (normalizedPage !== page) setPage(normalizedPage);
+  }, [location]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,7 +238,24 @@ export default function BrowsePage() {
     } else {
       newUrl.searchParams.delete("city");
     }
-    window.history.pushState({}, "", newUrl);
+    newUrl.searchParams.delete("page");
+    setLocation(`${newUrl.pathname}${newUrl.search}`);
+  };
+
+  const browsePageUrl = (nextPage: number) => {
+    const params = new URLSearchParams(window.location.search);
+    if (nextPage <= 1) params.delete("page");
+    else params.set("page", String(nextPage));
+    const query = params.toString();
+    const pathname = categoryParam ? `/browse/${encodeURIComponent(categoryParam)}` : "/browse";
+    return `${pathname}${query ? `?${query}` : ""}`;
+  };
+
+  const goToPage = (event: React.MouseEvent<HTMLAnchorElement>, nextPage: number) => {
+    event.preventDefault();
+    setPage(nextPage);
+    setLocation(browsePageUrl(nextPage));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const clearFilters = () => {
@@ -311,15 +335,18 @@ export default function BrowsePage() {
 
   const renderEntryCard = (entry: any, isDemo = false) => {
     const cardImage = getCardImage(entry);
+    const entryHref = getPublicEntryPath(entry);
     return (
-      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setLocation(`/entry/${(entry as any).slug || entry.id}`)}>
+      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
         <CardImage src={cardImage} alt={entry.title} />
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start mb-2">
             {showField("category") && entry.category && (
-              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                {entry.category}
-              </Badge>
+              <Link href={`/browse/${encodeURIComponent(entry.category)}`}>
+                <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                  {entry.category}
+                </Badge>
+              </Link>
             )}
             {isDemo && <Badge variant="outline">Demo</Badge>}
           </div>
@@ -333,14 +360,18 @@ export default function BrowsePage() {
               )}
             </div>
           )}
-          <CardTitle className="line-clamp-2 text-xl">{entry.title}</CardTitle>
+          <CardTitle className="line-clamp-2 text-xl">
+            <Link href={entryHref} className="hover:text-primary transition-colors">
+              {entry.title}
+            </Link>
+          </CardTitle>
         </CardHeader>
         {renderCardFields(entry)}
         <CardFooter className="pt-4 border-t">
-          <Button variant="ghost" className="w-full group">
+          <Link href={entryHref} className="w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground group">
             View Details
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
+          </Link>
         </CardFooter>
       </Card>
     );
@@ -433,6 +464,27 @@ export default function BrowsePage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {(stats?.categoryBreakdown?.length ?? 0) > 0 && (
+                <nav aria-label="Browse by state">
+                  <h3 className="font-semibold mb-3 text-lg">Browse States</h3>
+                  <ul className="space-y-1.5 text-sm">
+                    {[...(stats?.categoryBreakdown ?? [])]
+                      .sort((a, b) => a.category.localeCompare(b.category))
+                      .map((cat) => (
+                        <li key={cat.category}>
+                          <Link
+                            href={`/browse/${encodeURIComponent(cat.category)}`}
+                            className="flex items-center justify-between gap-3 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <span>{cat.category}</span>
+                            <span className="text-xs">{cat.count}</span>
+                          </Link>
+                        </li>
+                      ))}
+                  </ul>
+                </nav>
+              )}
 
               {(stats as any)?.ridingTypeBreakdown?.length > 0 && (
                 <div>
@@ -569,11 +621,9 @@ export default function BrowsePage() {
                     <Pagination>
                       <PaginationContent>
                         <PaginationItem>
-                          <PaginationPrevious 
-                            onClick={() => {
-                              setPage(p => Math.max(1, p - 1));
-                              window.scrollTo({ top: 0, behavior: "smooth" });
-                            }}
+                          <PaginationPrevious
+                            href={browsePageUrl(Math.max(1, page - 1))}
+                            onClick={(event) => goToPage(event, Math.max(1, page - 1))}
                             className={page === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                           />
                         </PaginationItem>
@@ -583,11 +633,9 @@ export default function BrowsePage() {
                           </span>
                         </PaginationItem>
                         <PaginationItem>
-                          <PaginationNext 
-                            onClick={() => {
-                              setPage(p => Math.min(entriesData.totalPages, p + 1));
-                              window.scrollTo({ top: 0, behavior: "smooth" });
-                            }}
+                          <PaginationNext
+                            href={browsePageUrl(Math.min(entriesData.totalPages, page + 1))}
+                            onClick={(event) => goToPage(event, Math.min(entriesData.totalPages, page + 1))}
                             className={page === entriesData.totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
                           />
                         </PaginationItem>

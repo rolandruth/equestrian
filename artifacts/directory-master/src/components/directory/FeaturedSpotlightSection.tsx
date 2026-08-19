@@ -1,13 +1,12 @@
-import { useLocation } from "wouter";
+import { Link } from "wouter";
 import { useGetFeaturedEntries, useGetPublicSettings } from "@workspace/api-client-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Star, MapPin, ArrowRight, Zap } from "lucide-react";
 import { mergeTemplateSettings } from "@/lib/templateTypes";
+import { getPublicEntryPath } from "@/lib/entryPath";
 
 export function FeaturedSpotlightSection() {
-  const [, setLocation] = useLocation();
   const { data: featured, isLoading } = useGetFeaturedEntries();
   const { data: settings } = useGetPublicSettings();
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
@@ -40,55 +39,49 @@ export function FeaturedSpotlightSection() {
       {/* Cards — horizontal scroll on mobile, grid on desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {featured.slice(0, 4).map((entry: any) => (
-          <Card
-            key={entry.id}
-            className="flex flex-col border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-900/10 hover:border-amber-400 dark:hover:border-amber-700 transition-colors relative overflow-hidden cursor-pointer"
-            onClick={() => setLocation(`/entry/${entry.slug || entry.id}`)}
-          >
-            {/* Featured ribbon */}
-            <div className="absolute top-3 right-3">
-              <Badge className="bg-amber-400 hover:bg-amber-400 text-amber-900 text-[10px] font-bold gap-1 px-2 py-0.5">
-                <Star className="h-2.5 w-2.5 fill-amber-900" />
-                Featured
-              </Badge>
-            </div>
-
-            <CardHeader className="pb-2 pr-20">
-              {showField("category") && entry.category && (
-                <Badge variant="secondary" className="w-fit mb-1.5 text-[10px]">
-                  {entry.category}
+          <Link key={entry.id} href={getPublicEntryPath(entry)} className="block h-full">
+            <Card className="h-full flex flex-col border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-900/10 hover:border-amber-400 dark:hover:border-amber-700 transition-colors relative overflow-hidden">
+              {/* Featured ribbon */}
+              <div className="absolute top-3 right-3">
+                <Badge className="bg-amber-400 hover:bg-amber-400 text-amber-900 text-[10px] font-bold gap-1 px-2 py-0.5">
+                  <Star className="h-2.5 w-2.5 fill-amber-900" />
+                  Featured
                 </Badge>
-              )}
-              <CardTitle className="text-base leading-snug line-clamp-2">
-                {entry.title}
-              </CardTitle>
-            </CardHeader>
+              </div>
 
-            <CardContent className="flex-grow pb-2">
-              {entry.summary && (
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                  {entry.summary}
-                </p>
-              )}
-              {showField("location") && entry.location && (
-                <div className="flex items-center text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3 mr-1 shrink-0" />
-                  <span className="line-clamp-1">{entry.location}</span>
-                </div>
-              )}
-            </CardContent>
+              <CardHeader className="pb-2 pr-20">
+                {showField("category") && entry.category && (
+                  <Badge variant="secondary" className="w-fit mb-1.5 text-[10px]">
+                    {entry.category}
+                  </Badge>
+                )}
+                <CardTitle className="text-base leading-snug line-clamp-2">
+                  {entry.title}
+                </CardTitle>
+              </CardHeader>
 
-            <CardFooter className="pt-3 border-t border-amber-200 dark:border-amber-800/40">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full group text-xs hover:bg-amber-100 dark:hover:bg-amber-900/30"
-              >
-                View Details
-                <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </CardFooter>
-          </Card>
+              <CardContent className="flex-grow pb-2">
+                {entry.summary && (
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                    {entry.summary}
+                  </p>
+                )}
+                {showField("location") && entry.location && (
+                  <div className="flex items-center text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 mr-1 shrink-0" />
+                    <span className="line-clamp-1">{entry.location}</span>
+                  </div>
+                )}
+              </CardContent>
+
+              <CardFooter className="pt-3 border-t border-amber-200 dark:border-amber-800/40">
+                <span className="w-full inline-flex items-center justify-center rounded-md px-3 py-2 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 group">
+                  View Details
+                  <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                </span>
+              </CardFooter>
+            </Card>
+          </Link>
         ))}
       </div>
     </section>

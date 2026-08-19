@@ -32,6 +32,7 @@ import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
 import { CardImage } from "@/components/directory/CardImage";
 import { PremiumSpotlightSection } from "@/components/directory/PremiumSpotlightSection";
 import { AdSlot } from "@/components/ads/AdSlot";
+import { getPublicEntryPath } from "@/lib/entryPath";
 import {
   mergeTemplateSettings, getFontFamily,
   HOMEPAGE_BLOCK_DEFS,
@@ -1008,19 +1009,26 @@ export default function HomePage() {
 
   const renderEntryCard = (entry: any, demo = false) => {
     const cardImage = getCardImage(entry);
+    const entryHref = getPublicEntryPath(entry);
     return (
-      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setLocation(`/entry/${(entry as any).slug || entry.id}`)}>
+      <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
         <CardImage src={cardImage} alt={entry.title} />
         <CardHeader>
           <div className="flex justify-between items-start mb-2">
             {showField("category") && entry.category && (
-              <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
-                {entry.category}
-              </Badge>
+              <Link href={`/browse/${encodeURIComponent(entry.category)}`}>
+                <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                  {entry.category}
+                </Badge>
+              </Link>
             )}
             {demo && <Badge variant="outline">Demo</Badge>}
           </div>
-          <CardTitle className="line-clamp-2 text-xl">{entry.title}</CardTitle>
+          <CardTitle className="line-clamp-2 text-xl">
+            <Link href={entryHref} className="hover:text-primary transition-colors">
+              {entry.title}
+            </Link>
+          </CardTitle>
         </CardHeader>
         <CardContent className="flex-grow space-y-2">
           {entry.summary && (
@@ -1029,10 +1037,10 @@ export default function HomePage() {
           {cardFields.filter(id => id !== "category" && !cardImageFields.includes(id)).map(fid => renderCardField(entry, fid))}
         </CardContent>
         <CardFooter className="pt-4 border-t">
-          <Button variant="ghost" className="w-full group">
+          <Link href={entryHref} className="w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground group">
             View Details
             <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
+          </Link>
         </CardFooter>
       </Card>
     );

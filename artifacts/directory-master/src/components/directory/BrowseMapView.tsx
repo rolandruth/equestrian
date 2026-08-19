@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link } from "wouter";
+import { getPublicEntryPath } from "@/lib/entryPath";
 
 interface MapEntry {
   id: number;
@@ -60,7 +61,7 @@ export function BrowseMapView({ entries, themeColor }: BrowseMapViewProps) {
         bounds.push([lat, lng]);
 
         const marker = L.marker([lat, lng]).addTo(map);
-        const href = `/entry/${entry.slug || entry.id}`;
+        const href = getPublicEntryPath(entry);
         marker.bindPopup(`
           <div style="min-width:160px;max-width:220px">
             <a href="${href}" style="font-weight:600;font-size:14px;color:#1a1a1a;text-decoration:none">${entry.title}</a>

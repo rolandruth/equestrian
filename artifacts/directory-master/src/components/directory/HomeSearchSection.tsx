@@ -1,6 +1,6 @@
 import "leaflet/dist/leaflet.css";
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import {
   useListPublicEntries,
   useGetPublicStats,
@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, MapPin, ArrowRight, Loader2, X, LayoutGrid, List, Map, Phone, Globe } from "lucide-react";
 import { mergeTemplateSettings } from "@/lib/templateTypes";
 import { CardImage } from "@/components/directory/CardImage";
+import { getPublicEntryPath } from "@/lib/entryPath";
 
 // Fix Leaflet default marker icons when bundled with Vite
 import L from "leaflet";
@@ -33,7 +34,6 @@ type ViewMode = "grid" | "list" | "map";
 type SortMode = "newest" | "oldest" | "az" | "za";
 
 export function HomeSearchSection() {
-  const [, setLocation] = useLocation();
   const [keyword, setKeyword] = useState("");
   const [cityInput, setCityInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
@@ -111,11 +111,6 @@ export function HomeSearchSection() {
     e.preventDefault();
     setActiveSearch(keyword);
     setActiveCity(cityInput);
-    setPage(1);
-  };
-
-  const handleCategoryClick = (cat: string) => {
-    setSelectedCategory(prev => prev === cat ? "" : cat);
     setPage(1);
   };
 
@@ -331,18 +326,20 @@ export function HomeSearchSection() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {entries.map((entry: any) => {
                     const cardImage = getCardImage(entry);
+                    const entryHref = getPublicEntryPath(entry);
                     return (
-                    <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors cursor-pointer" onClick={() => setLocation(`/entry/${entry.slug || entry.id}`)}>
+                    <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
                       <CardImage src={cardImage} alt={entry.title} />
                       <CardHeader className="pb-2">
                         {showField("category") && entry.category && (
-                          <Badge
-                            variant="secondary"
-                            className="w-fit mb-2 bg-primary/10 text-primary cursor-pointer hover:bg-primary/20"
-                            onClick={() => handleCategoryClick(entry.category)}
-                          >
-                            {entry.category}
-                          </Badge>
+                          <Link href={`/browse/${encodeURIComponent(entry.category)}`} className="w-fit mb-2">
+                            <Badge
+                              variant="secondary"
+                              className="bg-primary/10 text-primary hover:bg-primary/20"
+                            >
+                              {entry.category}
+                            </Badge>
+                          </Link>
                         )}
                         {(entry.premium || entry.featured) && (
                           <div className="flex gap-1.5 mb-2">
@@ -355,7 +352,9 @@ export function HomeSearchSection() {
                           </div>
                         )}
                         <CardTitle className="line-clamp-2 text-base leading-snug">
-                          {entry.title}
+                          <Link href={entryHref} className="hover:text-primary transition-colors">
+                            {entry.title}
+                          </Link>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="flex-grow pb-2">
@@ -399,10 +398,10 @@ export function HomeSearchSection() {
                         </div>
                       </CardContent>
                       <CardFooter className="pt-3 border-t">
-                        <Button variant="ghost" size="sm" className="w-full group">
+                        <Link href={entryHref} className="w-full inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground group">
                           View Details
                           <ArrowRight className="ml-2 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                        </Button>
+                        </Link>
                       </CardFooter>
                     </Card>
                     );
@@ -414,7 +413,7 @@ export function HomeSearchSection() {
               {viewMode === "list" && (
                 <div className="flex flex-col divide-y border rounded-xl overflow-hidden bg-white dark:bg-gray-950">
                   {entries.map((entry: any) => (
-                    <Link key={entry.id} href={`/entry/${entry.slug || entry.id}`}>
+                    <Link key={entry.id} href={getPublicEntryPath(entry)}>
                       <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group">
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-0.5">
@@ -422,11 +421,7 @@ export function HomeSearchSection() {
                               {entry.title}
                             </span>
                             {showField("category") && entry.category && (
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] bg-primary/10 text-primary shrink-0 cursor-pointer"
-                                onClick={e => { e.preventDefault(); handleCategoryClick(entry.category); }}
-                              >
+                              <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary shrink-0">
                                 {entry.category}
                               </Badge>
                             )}
@@ -536,7 +531,7 @@ export function HomeSearchSection() {
                                 );
                               })()}
                               <a
-                                href={`/entry/${entry.slug || entry.id}`}
+                                href={getPublicEntryPath(entry)}
                                 className="text-xs text-primary font-medium hover:underline"
                               >
                                 View Details →

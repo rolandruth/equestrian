@@ -18,13 +18,12 @@ localPort = 19179
 run = "pnpm --filter @workspace/directory-master run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/directory-master", "run", "build" ]
-publicDir = "artifacts/directory-master/dist/public"
-serve = "static"
 
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/directory-master", "run", "build"]
+
+[services.production.run]
+args = ["pnpm", "--filter", "@workspace/directory-master", "run", "serve"]
 
 [services.env]
 PORT = "19179"

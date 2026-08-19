@@ -887,6 +887,7 @@ export const ListPublicEntriesQueryParams = zod.object({
   limit: zod.coerce.number().nullish(),
   search: zod.coerce.string().nullish(),
   category: zod.coerce.string().nullish(),
+  city: zod.coerce.string().nullish(),
   sort: zod.coerce.string().nullish(),
   ridingType: zod.coerce.string().nullish(),
 });

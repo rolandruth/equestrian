@@ -27,9 +27,12 @@ export default function BrowsePage() {
   
   const searchParams = new URLSearchParams(window.location.search);
   const initialSearch = searchParams.get("search") || "";
+  const initialCity = searchParams.get("city") || "";
   
   const [search, setSearch] = useState(initialSearch);
   const [searchInput, setSearchInput] = useState(initialSearch);
+  const [city, setCity] = useState(initialCity);
+  const [cityInput, setCityInput] = useState(initialCity);
   const [sort, setSort] = useState<string>("newest");
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
@@ -56,6 +59,7 @@ export default function BrowsePage() {
     limit,
     search: search || undefined,
     category: categoryParam || undefined,
+    city: city || undefined,
     sort,
     ridingType: ridingType || undefined,
   });
@@ -66,6 +70,7 @@ export default function BrowsePage() {
       limit: 1000,
       search: search || undefined,
       category: categoryParam || undefined,
+      city: city || undefined,
       sort,
       ridingType: ridingType || undefined,
     },
@@ -203,11 +208,17 @@ export default function BrowsePage() {
       setSearch(q);
       setSearchInput(q);
     }
+    const c = new URLSearchParams(window.location.search).get("city") || "";
+    if (c !== city) {
+      setCity(c);
+      setCityInput(c);
+    }
   }, [window.location.search]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSearch(searchInput);
+    setCity(cityInput);
     setPage(1);
     const newUrl = new URL(window.location.href);
     if (searchInput) {
@@ -215,12 +226,19 @@ export default function BrowsePage() {
     } else {
       newUrl.searchParams.delete("search");
     }
+    if (cityInput) {
+      newUrl.searchParams.set("city", cityInput);
+    } else {
+      newUrl.searchParams.delete("city");
+    }
     window.history.pushState({}, "", newUrl);
   };
 
   const clearFilters = () => {
     setSearch("");
     setSearchInput("");
+    setCity("");
+    setCityInput("");
     setSort("newest");
     setRidingType("");
     setPage(1);
@@ -376,6 +394,15 @@ export default function BrowsePage() {
                       onChange={(e) => setSearchInput(e.target.value)}
                     />
                   </div>
+                  <div className="relative mt-2">
+                    <MapPin className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="City or ZIP..."
+                      className="pl-9"
+                      value={cityInput}
+                      onChange={(e) => setCityInput(e.target.value)}
+                    />
+                  </div>
                   <Button type="submit" className="w-full mt-2" variant="secondary">
                     Search
                   </Button>
@@ -387,8 +414,10 @@ export default function BrowsePage() {
                 <Select
                   value={categoryParam || "all"}
                   onValueChange={(val) => {
-                    if (val === "all") setLocation("/browse");
-                    else setLocation(`/browse/${encodeURIComponent(val)}`);
+                    const query = new URLSearchParams(window.location.search).toString();
+                    setPage(1);
+                    if (val === "all") setLocation(`/browse${query ? `?${query}` : ""}`);
+                    else setLocation(`/browse/${encodeURIComponent(val)}${query ? `?${query}` : ""}`);
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -427,7 +456,7 @@ export default function BrowsePage() {
                 </div>
               )}
 
-              {(search || categoryParam || sort !== "newest" || ridingType) && (
+              {(search || city || categoryParam || sort !== "newest" || ridingType) && (
                 <Button variant="outline" className="w-full" onClick={clearFilters}>
                   <FilterX className="mr-2 h-4 w-4" />
                   Clear Filters

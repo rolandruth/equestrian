@@ -26,6 +26,10 @@ export type ListPublicEntriesParams = {
   /**
    * @nullable
    */
+  city?: string | null;
+  /**
+   * @nullable
+   */
   sort?: string | null;
   /**
    * @nullable

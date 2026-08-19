@@ -50,6 +50,7 @@ router.get("/entries", async (req, res) => {
     const offset = (page - 1) * limit;
     const search = (req.query.search as string) || "";
     const category = (req.query.category as string) || "";
+    const city = (req.query.city as string) || "";
     const sort = (req.query.sort as string) || "newest";
     const ridingType = (req.query.ridingType as string) || "";
 
@@ -92,6 +93,10 @@ router.get("/entries", async (req, res) => {
       }
     }
     if (category && category !== "null") conditions.push(eq(entries.category, category));
+    if (city && city !== "null") {
+      const escapedCity = city.trim().replace(/[\\%_]/g, "\\$&");
+      if (escapedCity) conditions.push(ilike(entries.location, `%${escapedCity}%`));
+    }
     if (ridingType && ridingType !== "null") conditions.push(sql`${entries.customFields}->>'ridingtype' = ${ridingType}`);
 
     const where = and(...conditions);

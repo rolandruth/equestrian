@@ -922,6 +922,10 @@ paths:
           in: query
           schema:
             type: ["string", "null"]
+        - name: city
+          in: query
+          schema:
+            type: ["string", "null"]
         - name: sort
           in: query
           schema:

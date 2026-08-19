@@ -35,9 +35,9 @@ type SortMode = "newest" | "oldest" | "az" | "za";
 export function HomeSearchSection() {
   const [, setLocation] = useLocation();
   const [keyword, setKeyword] = useState("");
-  const [locationInput, setLocationInput] = useState("");
+  const [cityInput, setCityInput] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
-  const [activeLocation, setActiveLocation] = useState("");
+  const [activeCity, setActiveCity] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedRidingType, setSelectedRidingType] = useState("");
   const [page, setPage] = useState(1);
@@ -49,13 +49,12 @@ export function HomeSearchSection() {
   const { data: stats } = useGetPublicStats();
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
 
-  const combinedSearch = [activeSearch, activeLocation].filter(Boolean).join(" ");
-
   const { data: entriesData, isLoading } = useListPublicEntries({
     page,
     limit: viewMode === "map" ? 200 : PAGE_SIZE,
-    search: combinedSearch || undefined,
+    search: activeSearch || undefined,
     category: selectedCategory || undefined,
+    city: activeCity || undefined,
     ridingType: selectedRidingType || undefined,
     sort: sortMode === "newest" ? "newest" : "newest",
   });
@@ -79,7 +78,7 @@ export function HomeSearchSection() {
 
   const total = (entriesData as any)?.total ?? 0;
   const totalPages = entriesData?.totalPages ?? 1;
-  const isFiltered = !!combinedSearch || !!selectedCategory || !!selectedRidingType;
+  const isFiltered = !!activeSearch || !!activeCity || !!selectedCategory || !!selectedRidingType;
 
   const cardFields = ts.browse.cardFields;
   const cardImageFields = ts.browse.cardImageFields;
@@ -111,7 +110,7 @@ export function HomeSearchSection() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setActiveSearch(keyword);
-    setActiveLocation(locationInput);
+    setActiveCity(cityInput);
     setPage(1);
   };
 
@@ -122,9 +121,9 @@ export function HomeSearchSection() {
 
   const clearAll = () => {
     setKeyword("");
-    setLocationInput("");
+    setCityInput("");
     setActiveSearch("");
-    setActiveLocation("");
+    setActiveCity("");
     setSelectedCategory("");
     setSelectedRidingType("");
     setPage(1);
@@ -132,7 +131,8 @@ export function HomeSearchSection() {
 
   const browseUrl = () => {
     const params = new URLSearchParams();
-    if (combinedSearch) params.set("search", combinedSearch);
+    if (activeSearch) params.set("search", activeSearch);
+    if (activeCity) params.set("city", activeCity);
     if (selectedCategory) params.set("category", selectedCategory);
     const q = params.toString();
     return q ? `/browse?${q}` : "/browse";
@@ -184,9 +184,9 @@ export function HomeSearchSection() {
             <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <Input
               type="text"
-              placeholder="City or State (e.g. Austin, TX)"
-              value={locationInput}
-              onChange={e => setLocationInput(e.target.value)}
+              placeholder="City or ZIP (e.g. Austin or 78701)"
+              value={cityInput}
+              onChange={e => setCityInput(e.target.value)}
               className="pl-9 h-11 text-sm"
             />
           </div>

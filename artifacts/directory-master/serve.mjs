@@ -870,13 +870,11 @@ async function handleServiceCityPage(reqPath, html, page) {
   return out;
 }
 
-function injectEntryShell(html, entry, canonicalUrl) {
-  const categoryUrl = entry.category ? `/browse/${encodeURIComponent(entry.category)}` : null;
+function injectEntryShell(html, entry, categoryEligible) {
+  const categoryUrl = (entry.category && categoryEligible) ? `/browse/${encodeURIComponent(entry.category)}` : null;
   const websiteUrl = toAbsoluteUrl(entry.website);
   const details = [
-    entry.category
-      ? `<dt>Category</dt><dd><a href="${escapeHtml(categoryUrl)}">${escapeHtml(entry.category)}</a></dd>`
-      : "",
+    entry.category ? `<dt>Category</dt><dd>${escapeHtml(entry.category)}</dd>` : "",
     entry.location ? `<dt>Location</dt><dd>${escapeHtml(entry.location)}</dd>` : "",
     entry.contact_phone ? `<dt>Phone</dt><dd>${escapeHtml(entry.contact_phone)}</dd>` : "",
     websiteUrl
@@ -892,16 +890,19 @@ function injectEntryShell(html, entry, canonicalUrl) {
   const breadcrumbs = [
     `<a href="/">Home</a>`,
     `<a href="/browse">Browse</a>`,
-    entry.category && categoryUrl ? `<a href="${escapeHtml(categoryUrl)}">${escapeHtml(entry.category)}</a>` : "",
+    entry.category && categoryUrl ? `<a href="${escapeHtml(categoryUrl)}">${escapeHtml(entry.category)}</a>` : (entry.category ? `<span>${escapeHtml(entry.category)}</span>` : ""),
     `<span aria-current="page">${escapeHtml(entry.title)}</span>`,
   ].filter(Boolean).join("<span aria-hidden=\"true\"> / </span>");
+  const viewAllLink = categoryUrl
+    ? `<p><a href="${escapeHtml(categoryUrl)}">View all ${escapeHtml(entry.category)} listings</a></p>`
+    : "";
   const shell = `<article class="seo-entry-shell">
     <nav aria-label="Breadcrumb">${breadcrumbs}</nav>
     <h1>${escapeHtml(entry.title)}</h1>
     ${entry.summary ? `<p class="seo-entry-summary">${escapeHtml(entry.summary)}</p>` : ""}
     ${details ? `<dl>${details}</dl>` : ""}
     ${description ? `<section aria-label="About ${escapeHtml(entry.title)}">${description}</section>` : ""}
-    <p><a href="${escapeHtml(canonicalUrl)}">View the complete ${escapeHtml(entry.title)} listing</a></p>
+    ${viewAllLink}
   </article>`;
   const root = /<div\s+id=["']root["']\s*><\/div>/i;
   if (!root.test(html)) return html;
@@ -926,7 +927,11 @@ async function injectSeoMeta(html, reqPath) {
         `SELECT e.id, e.slug, e.title, e.category, e.summary, e.description,
                 e.location, e.contact_phone, e.website, e.custom_fields,
                 e.meta_title, e.meta_description, e.og_title, e.og_description,
-                e.latitude, e.longitude, s.site_title
+                 e.latitude, e.longitude, s.site_title,
+                 (SELECT count(*)
+                    FROM entries category_entries
+                   WHERE category_entries.published = true
+                     AND category_entries.category = e.category) AS category_count
          FROM entries e, directory_settings s
          WHERE e.published = true AND ${isNumeric ? "e.id = $1::int" : "e.slug = $1"}
          LIMIT 1`,
@@ -934,13 +939,35 @@ async function injectSeoMeta(html, reqPath) {
       );
       if (!rows[0]) return html;
       const r = rows[0];
+
+      const categoryEligible =
+        typeof r.category === "string" &&
+        r.category.trim().length > 0 &&
+        Number(r.category_count ?? 0) >= THRESHOLD.stateCategory;
+
       const title = r.meta_title || `${r.title} | ${r.site_title || "Directory"}`;
       const desc = String(r.meta_description || r.summary || "").replace(/\s+/g, " ").trim().slice(0, 160);
       const canonicalUrl = `${publicOrigin}/entry/${encodeURIComponent(r.slug || String(r.id))}`;
-      const categoryUrl = r.category
+      const categoryUrl = (r.category && categoryEligible)
         ? `${publicOrigin}/browse/${encodeURIComponent(r.category)}`
-        : `${publicOrigin}/browse`;
+        : null;
       const imageUrl = findImage(r.custom_fields);
+
+      // BreadcrumbList: only include category item if hub is eligible
+      const breadcrumbItems = [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${publicOrigin}/` },
+        { "@type": "ListItem", position: 2, name: "Browse", item: `${publicOrigin}/browse` },
+        ...(r.category && categoryEligible && categoryUrl
+          ? [{ "@type": "ListItem", position: 3, name: r.category, item: categoryUrl }]
+          : []),
+        {
+          "@type": "ListItem",
+          position: (r.category && categoryEligible) ? 4 : 3,
+          name: r.title,
+          item: canonicalUrl,
+        },
+      ];
+
       const structuredData = {
         "@context": "https://schema.org",
         "@graph": [
@@ -964,19 +991,7 @@ async function injectSeoMeta(html, reqPath) {
           },
           {
             "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: `${publicOrigin}/` },
-              { "@type": "ListItem", position: 2, name: "Browse", item: `${publicOrigin}/browse` },
-              ...(r.category
-                ? [{ "@type": "ListItem", position: 3, name: r.category, item: categoryUrl }]
-                : []),
-              {
-                "@type": "ListItem",
-                position: r.category ? 4 : 3,
-                name: r.title,
-                item: canonicalUrl,
-              },
-            ],
+            itemListElement: breadcrumbItems,
           },
         ],
       };
@@ -993,7 +1008,7 @@ async function injectSeoMeta(html, reqPath) {
       out = replaceMeta(out, "name", "twitter:image", imageUrl);
       out = replaceCanonical(out, canonicalUrl);
       out = injectJsonLd(out, structuredData);
-      out = injectEntryShell(out, r, canonicalUrl);
+      out = injectEntryShell(out, r, categoryEligible);
       return out;
     }
     if (reqPath === "/browse" || reqPath.startsWith("/browse/")) {

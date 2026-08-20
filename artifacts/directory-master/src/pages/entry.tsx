@@ -8,10 +8,12 @@ import { EntryMapWidget } from "@/components/directory/EntryMapWidget";
 import { SafeImage, CardImage, ImageWithFallback } from "@/components/directory/CardImage";
 import genericHorseFallback from "@/assets/generic-horse-fallback.jpg";
 import { getPublicEntryPath } from "@/lib/entryPath";
+import { getCategoryHubPath, isCategoryQualified } from "@/lib/seoLinks";
 import {
   useGetPublicEntry,
   useListPublicEntries,
   useGetPublicSettings,
+  useGetPublicStats,
   useGetCurrentUser,
   useUpdateSettings,
   useCreateContact,
@@ -752,6 +754,13 @@ export default function EntryPage() {
   const { data: currentUser } = useGetCurrentUser({ query: { enabled: isLoggedIn } });
   const isAdmin = isLoggedIn && (currentUser as any)?.role === "admin";
   const { data: seoHubs } = useGetLocalSeoHubs();
+  const { data: publicStats } = useGetPublicStats();
+
+  const isCategoryEligible = (category: string | undefined | null): boolean =>
+    Boolean(
+      category &&
+      isCategoryQualified(category, publicStats?.categoryBreakdown ?? [])
+    );
 
   // ── Edit mode state ────────────────────────────────────────────────────────
   const [editMode, setEditMode] = useState(false);
@@ -963,7 +972,9 @@ export default function EntryPage() {
       <div className="max-w-3xl mx-auto px-4 py-20 text-center">
         <h2 className="text-2xl font-bold">Entry not found</h2>
         <p className="text-muted-foreground mt-2">The entry you are looking for does not exist or has been removed.</p>
-        <Link href="/browse"><Button className="mt-6">Back to Directory</Button></Link>
+        <Button asChild className="mt-6">
+          <Link href="/browse">Back to Directory</Link>
+        </Button>
       </div>
     );
   }
@@ -1048,9 +1059,13 @@ export default function EntryPage() {
     <div className="p-8 md:p-10" style={{ backgroundColor: props.backgroundColor || undefined, fontFamily: props.fontFamily ? getFontFamily(props.fontFamily) : undefined }}>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         {displayEntry.category && (
-          <Link href={`/browse/${encodeURIComponent(displayEntry.category)}`}>
-            <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-sm py-1 px-3">{displayEntry.category}</Badge>
-          </Link>
+          isCategoryEligible(displayEntry.category) ? (
+            <Link href={getCategoryHubPath(displayEntry.category)}>
+              <Badge className="bg-primary/10 text-primary hover:bg-primary/20 text-sm py-1 px-3">{displayEntry.category}</Badge>
+            </Link>
+          ) : (
+            <Badge className="bg-primary/10 text-primary text-sm py-1 px-3">{displayEntry.category}</Badge>
+          )
         )}
         {isDemo && <Badge variant="outline">Demo Entry</Badge>}
         <span className="text-sm text-muted-foreground">Last updated {format(new Date(displayEntry.updatedAt || new Date()), "MMMM d, yyyy")}</span>
@@ -1358,6 +1373,16 @@ export default function EntryPage() {
         ) : (
           <div className="text-sm text-muted-foreground italic">No related entries to display.</div>
         )}
+        {isCategoryEligible(displayEntry.category) && (
+          <div className="mt-6">
+            <Link
+              href={getCategoryHubPath(displayEntry.category!)}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              View all {displayEntry.category} listings →
+            </Link>
+          </div>
+        )}
       </div>
     );
   };
@@ -1597,12 +1622,16 @@ export default function EntryPage() {
                 <>
                   <li aria-hidden="true">/</li>
                   <li>
-                    <Link
-                      href={`/browse/${encodeURIComponent(displayEntry.category)}`}
-                      className="hover:text-foreground transition-colors"
-                    >
-                      {displayEntry.category}
-                    </Link>
+                    {isCategoryEligible(displayEntry.category) ? (
+                      <Link
+                        href={getCategoryHubPath(displayEntry.category)}
+                        className="hover:text-foreground transition-colors"
+                      >
+                        {displayEntry.category}
+                      </Link>
+                    ) : (
+                      <span>{displayEntry.category}</span>
+                    )}
                   </li>
                 </>
               )}
@@ -2062,6 +2091,17 @@ export default function EntryPage() {
             );
           })
         }
+
+        {isCategoryEligible(displayEntry.category) && (
+          <nav aria-label={`More ${displayEntry.category} listings`} className="pt-6">
+            <Link
+              href={getCategoryHubPath(displayEntry.category!)}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              View all {displayEntry.category} listings →
+            </Link>
+          </nav>
+        )}
 
         {/* Local SEO Links */}
         {!isDemo && displayEntry.normalizedLocation && seoHubs && (

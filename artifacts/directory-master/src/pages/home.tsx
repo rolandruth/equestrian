@@ -33,6 +33,7 @@ import { CardImage } from "@/components/directory/CardImage";
 import { PremiumSpotlightSection } from "@/components/directory/PremiumSpotlightSection";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { getPublicEntryPath } from "@/lib/entryPath";
+import { getCategoryHubPath, getQualifiedCategoryHubs, isCategoryQualified } from "@/lib/seoLinks";
 import {
   mergeTemplateSettings, getFontFamily,
   HOMEPAGE_BLOCK_DEFS,
@@ -1010,17 +1011,26 @@ export default function HomePage() {
   const renderEntryCard = (entry: any, demo = false) => {
     const cardImage = getCardImage(entry);
     const entryHref = getPublicEntryPath(entry);
+    const categoryQualified =
+      entry.category &&
+      isCategoryQualified(entry.category, stats?.categoryBreakdown ?? []);
     return (
       <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
         <CardImage src={cardImage} alt={entry.title} />
         <CardHeader>
           <div className="flex justify-between items-start mb-2">
             {showField("category") && entry.category && (
-              <Link href={`/browse/${encodeURIComponent(entry.category)}`}>
-                <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+              categoryQualified ? (
+                <Link href={getCategoryHubPath(entry.category)}>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                    {entry.category}
+                  </Badge>
+                </Link>
+              ) : (
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
                   {entry.category}
                 </Badge>
-              </Link>
+              )
             )}
             {demo && <Badge variant="outline">Demo</Badge>}
           </div>
@@ -1156,6 +1166,8 @@ export default function HomePage() {
 
     if (type === "categories") {
       if (!stats || stats.categoryBreakdown.length === 0) return null;
+      const qualifiedCategories = getQualifiedCategoryHubs(stats.categoryBreakdown);
+      if (qualifiedCategories.length === 0) return null;
       const max = p.maxItems ?? 8;
       return (
         <section key={section.id} style={sectionStyle(p)}>
@@ -1171,27 +1183,30 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {stats.categoryBreakdown.slice(0, max).map((cat) => {
+            {qualifiedCategories.slice(0, max).map((cat) => {
               const imgUrl = (cat as any).imageUrl as string | null | undefined;
+              const cardInner = (
+                <Card className="hover:border-primary/50 transition-colors overflow-hidden group cursor-pointer">
+                  {imgUrl ? (
+                    <div className="relative h-28 overflow-hidden">
+                      <img src={imgUrl} alt={cat.category} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
+                        <p className="font-semibold text-white text-sm leading-tight">{cat.category}</p>
+                        <p className="text-white/80 text-xs mt-0.5">{cat.count} entries</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 px-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                      <CardTitle className="text-lg">{cat.category}</CardTitle>
+                      <p className="text-sm text-muted-foreground mt-2">{cat.count} entries</p>
+                    </div>
+                  )}
+                </Card>
+              );
               return (
-                <Link key={cat.category} href={`/browse/${encodeURIComponent(cat.category)}`}>
-                  <Card className="hover:border-primary/50 transition-colors cursor-pointer overflow-hidden group">
-                    {imgUrl ? (
-                      <div className="relative h-28 overflow-hidden">
-                        <img src={imgUrl} alt={cat.category} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 px-3 pb-3">
-                          <p className="font-semibold text-white text-sm leading-tight">{cat.category}</p>
-                          <p className="text-white/80 text-xs mt-0.5">{cat.count} entries</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-6 px-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                        <CardTitle className="text-lg">{cat.category}</CardTitle>
-                        <p className="text-sm text-muted-foreground mt-2">{cat.count} entries</p>
-                      </div>
-                    )}
-                  </Card>
+                <Link key={cat.category} href={getCategoryHubPath(cat.category)}>
+                  {cardInner}
                 </Link>
               );
             })}

@@ -1,6 +1,18 @@
 import { useEffect, useRef } from "react";
-import { Link } from "wouter";
 import { getPublicEntryPath } from "@/lib/entryPath";
+import {
+  getCategoryHubPath,
+  isCategoryQualified,
+  type CategoryHubStat,
+} from "@/lib/seoLinks";
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 
 interface MapEntry {
   id: number;
@@ -16,9 +28,14 @@ interface MapEntry {
 interface BrowseMapViewProps {
   entries: MapEntry[];
   themeColor?: string;
+  categoryBreakdown?: CategoryHubStat[];
 }
 
-export function BrowseMapView({ entries, themeColor }: BrowseMapViewProps) {
+export function BrowseMapView({
+  entries,
+  themeColor,
+  categoryBreakdown = [],
+}: BrowseMapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
 
@@ -61,12 +78,19 @@ export function BrowseMapView({ entries, themeColor }: BrowseMapViewProps) {
         bounds.push([lat, lng]);
 
         const marker = L.marker([lat, lng]).addTo(map);
-        const href = getPublicEntryPath(entry);
+        const href = escapeHtml(getPublicEntryPath(entry));
+        const title = escapeHtml(entry.title);
+        const category = entry.category ? escapeHtml(entry.category) : null;
+        const categoryHref =
+          entry.category && isCategoryQualified(entry.category, categoryBreakdown)
+            ? escapeHtml(getCategoryHubPath(entry.category))
+            : null;
+        const location = entry.location ? escapeHtml(entry.location) : null;
         marker.bindPopup(`
           <div style="min-width:160px;max-width:220px">
-            <a href="${href}" style="font-weight:600;font-size:14px;color:#1a1a1a;text-decoration:none">${entry.title}</a>
-            ${entry.category ? `<div style="margin-top:4px"><span style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;color:#555">${entry.category}</span></div>` : ""}
-            ${entry.location ? `<div style="margin-top:4px;font-size:12px;color:#666">${entry.location}</div>` : ""}
+            <a href="${href}" style="font-weight:600;font-size:14px;color:#1a1a1a;text-decoration:none">${title}</a>
+            ${category ? `<div style="margin-top:4px">${categoryHref ? `<a href="${categoryHref}" style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;color:#555;text-decoration:none">${category}</a>` : `<span style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px;color:#555">${category}</span>`}</div>` : ""}
+            ${location ? `<div style="margin-top:4px;font-size:12px;color:#666">${location}</div>` : ""}
             <a href="${href}" style="display:inline-block;margin-top:8px;font-size:12px;color:${themeColor || "#6366f1"};font-weight:500">View Details →</a>
           </div>
         `);
@@ -85,7 +109,7 @@ export function BrowseMapView({ entries, themeColor }: BrowseMapViewProps) {
         mapInstanceRef.current = null;
       }
     };
-  }, [entries]);
+  }, [entries, categoryBreakdown, themeColor]);
 
   return (
     <div>

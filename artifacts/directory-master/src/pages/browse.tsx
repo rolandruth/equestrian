@@ -21,6 +21,7 @@ import { CardImage } from "@/components/directory/CardImage";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
 import { getPublicEntryPath } from "@/lib/entryPath";
+import { getCategoryHubPath, getQualifiedCategoryHubs, isCategoryQualified } from "@/lib/seoLinks";
 
 export default function BrowsePage() {
   const [location, setLocation] = useLocation();
@@ -30,6 +31,7 @@ export default function BrowsePage() {
   const searchParams = new URLSearchParams(window.location.search);
   const initialSearch = searchParams.get("search") || "";
   const initialCity = searchParams.get("city") || "";
+  const initialRidingType = searchParams.get("ridingType") || "";
   const requestedPage = Number.parseInt(searchParams.get("page") || "1", 10);
   const initialPage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   
@@ -40,12 +42,13 @@ export default function BrowsePage() {
   const [sort, setSort] = useState<string>("newest");
   const [page, setPage] = useState(initialPage);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
-  const [ridingType, setRidingType] = useState<string>("");
+  const [ridingType, setRidingType] = useState<string>(initialRidingType);
   const limit = 12;
 
   const { data: settings } = useGetPublicSettings();
   const { data: stats } = useGetPublicStats();
   const { data: seoHubs } = useGetLocalSeoHubs();
+  const qualifiedCategoryHubs = getQualifiedCategoryHubs(stats?.categoryBreakdown ?? []);
 
   // ── SEO: per-page title ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -219,6 +222,8 @@ export default function BrowsePage() {
       setCity(c);
       setCityInput(c);
     }
+    const nextRidingType = currentParams.get("ridingType") || "";
+    if (nextRidingType !== ridingType) setRidingType(nextRidingType);
     const nextPage = Number.parseInt(currentParams.get("page") || "1", 10);
     const normalizedPage = Number.isFinite(nextPage) && nextPage > 0 ? nextPage : 1;
     if (normalizedPage !== page) setPage(normalizedPage);
@@ -339,17 +344,27 @@ export default function BrowsePage() {
   const renderEntryCard = (entry: any, isDemo = false) => {
     const cardImage = getCardImage(entry);
     const entryHref = getPublicEntryPath(entry);
+    const catQualified =
+      entry.category &&
+      showField("category") &&
+      isCategoryQualified(entry.category, stats?.categoryBreakdown ?? []);
     return (
       <Card key={entry.id} className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
         <CardImage src={cardImage} alt={entry.title} />
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start mb-2">
             {showField("category") && entry.category && (
-              <Link href={`/browse/${encodeURIComponent(entry.category)}`}>
-                <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+              catQualified ? (
+                <Link href={getCategoryHubPath(entry.category)}>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/20">
+                    {entry.category}
+                  </Badge>
+                </Link>
+              ) : (
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
                   {entry.category}
                 </Badge>
-              </Link>
+              )
             )}
             {isDemo && <Badge variant="outline">Demo</Badge>}
           </div>
@@ -468,16 +483,16 @@ export default function BrowsePage() {
                 </Select>
               </div>
 
-              {(stats?.categoryBreakdown?.length ?? 0) > 0 && (
+              {qualifiedCategoryHubs.length > 0 && (
                 <nav aria-label="Browse by state">
                   <h3 className="font-semibold mb-3 text-lg">Browse States</h3>
                   <ul className="space-y-1.5 text-sm">
-                    {[...(stats?.categoryBreakdown ?? [])]
+                    {[...qualifiedCategoryHubs]
                       .sort((a, b) => a.category.localeCompare(b.category))
                       .map((cat) => (
                         <li key={cat.category}>
                           <Link
-                            href={`/browse/${encodeURIComponent(cat.category)}`}
+                            href={getCategoryHubPath(cat.category)}
                             className="flex items-center justify-between gap-3 text-muted-foreground hover:text-primary transition-colors"
                           >
                             <span>{cat.category}</span>
@@ -596,6 +611,7 @@ export default function BrowsePage() {
                     <BrowseMapView
                       entries={(allEntriesData?.entries ?? []) as any}
                       themeColor={(settings as any)?.themeColor}
+                categoryBreakdown={stats?.categoryBreakdown ?? []}
                     />
                   </div>
                 )

@@ -1,17 +1,20 @@
 import { Link } from "wouter";
-import { useGetFeaturedEntries, useGetPublicSettings } from "@workspace/api-client-react";
+import { useGetFeaturedEntries, useGetPublicSettings, useGetPublicStats } from "@workspace/api-client-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star, MapPin, ArrowRight, Zap } from "lucide-react";
 import { mergeTemplateSettings } from "@/lib/templateTypes";
 import { getPublicEntryPath } from "@/lib/entryPath";
+import { isCategoryQualified, getCategoryHubPath } from "@/lib/seoLinks";
 
 export function FeaturedSpotlightSection() {
   const { data: featured, isLoading } = useGetFeaturedEntries();
   const { data: settings } = useGetPublicSettings();
+  const { data: stats } = useGetPublicStats();
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
   const cardFields = ts.browse.cardFields;
   const showField = (id: string) => cardFields.includes(id);
+  const categoryBreakdown = stats?.categoryBreakdown ?? [];
 
   if (isLoading || !featured || featured.length === 0) return null;
 
@@ -38,9 +41,18 @@ export function FeaturedSpotlightSection() {
 
       {/* Cards — horizontal scroll on mobile, grid on desktop */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {featured.slice(0, 4).map((entry: any) => (
-          <Link key={entry.id} href={getPublicEntryPath(entry)} className="block h-full">
-            <Card className="h-full flex flex-col border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-900/10 hover:border-amber-400 dark:hover:border-amber-700 transition-colors relative overflow-hidden">
+        {featured.slice(0, 4).map((entry: any) => {
+          const entryHref = getPublicEntryPath(entry);
+          const catQualified =
+            entry.category &&
+            showField("category") &&
+            isCategoryQualified(entry.category, categoryBreakdown);
+
+          return (
+            <Card
+              key={entry.id}
+              className="h-full flex flex-col border-amber-200 dark:border-amber-800/60 bg-amber-50/30 dark:bg-amber-900/10 hover:border-amber-400 dark:hover:border-amber-700 transition-colors relative overflow-hidden"
+            >
               {/* Featured ribbon */}
               <div className="absolute top-3 right-3">
                 <Badge className="bg-amber-400 hover:bg-amber-400 text-amber-900 text-[10px] font-bold gap-1 px-2 py-0.5">
@@ -51,12 +63,22 @@ export function FeaturedSpotlightSection() {
 
               <CardHeader className="pb-2 pr-20">
                 {showField("category") && entry.category && (
-                  <Badge variant="secondary" className="w-fit mb-1.5 text-[10px]">
-                    {entry.category}
-                  </Badge>
+                  catQualified ? (
+                    <Link href={getCategoryHubPath(entry.category)} className="w-fit mb-1.5">
+                      <Badge variant="secondary" className="text-[10px] hover:bg-secondary/80">
+                        {entry.category}
+                      </Badge>
+                    </Link>
+                  ) : (
+                    <Badge variant="secondary" className="w-fit mb-1.5 text-[10px]">
+                      {entry.category}
+                    </Badge>
+                  )
                 )}
                 <CardTitle className="text-base leading-snug line-clamp-2">
-                  {entry.title}
+                  <Link href={entryHref} className="hover:text-primary transition-colors">
+                    {entry.title}
+                  </Link>
                 </CardTitle>
               </CardHeader>
 
@@ -75,14 +97,17 @@ export function FeaturedSpotlightSection() {
               </CardContent>
 
               <CardFooter className="pt-3 border-t border-amber-200 dark:border-amber-800/40">
-                <span className="w-full inline-flex items-center justify-center rounded-md px-3 py-2 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 group">
+                <Link
+                  href={entryHref}
+                  className="w-full inline-flex items-center justify-center rounded-md px-3 py-2 text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 group transition-colors"
+                >
                   View Details
                   <ArrowRight className="ml-1.5 h-3 w-3 transition-transform group-hover:translate-x-1" />
-                </span>
+                </Link>
               </CardFooter>
             </Card>
-          </Link>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

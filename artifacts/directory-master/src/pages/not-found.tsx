@@ -11,12 +11,12 @@ export default function NotFound() {
         <p className="text-gray-500 max-w-sm mx-auto">
           The page you're looking for doesn't exist or may have moved.
         </p>
-        <Link href="/">
-          <Button className="mt-2 gap-2">
+        <Button asChild className="mt-2 gap-2">
+          <Link href="/">
             <Home className="h-4 w-4" />
             Go to Homepage
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     </div>
   );

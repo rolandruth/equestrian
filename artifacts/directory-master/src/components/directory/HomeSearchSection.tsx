@@ -15,6 +15,7 @@ import { Search, MapPin, ArrowRight, Loader2, X, LayoutGrid, List, Map, Phone, G
 import { mergeTemplateSettings } from "@/lib/templateTypes";
 import { CardImage } from "@/components/directory/CardImage";
 import { getPublicEntryPath } from "@/lib/entryPath";
+import { getCategoryHubPath, isCategoryQualified, isSafeExternalUrl } from "@/lib/seoLinks";
 
 // Fix Leaflet default marker icons when bundled with Vite
 import L from "leaflet";
@@ -48,6 +49,7 @@ export function HomeSearchSection() {
   const { data: settings } = useGetPublicSettings();
   const { data: stats } = useGetPublicStats();
   const ts = mergeTemplateSettings((settings as any)?.templateSettings);
+  const categoryBreakdown = stats?.categoryBreakdown ?? [];
 
   const { data: entriesData, isLoading } = useListPublicEntries({
     page,
@@ -79,6 +81,8 @@ export function HomeSearchSection() {
   const total = (entriesData as any)?.total ?? 0;
   const totalPages = entriesData?.totalPages ?? 1;
   const isFiltered = !!activeSearch || !!activeCity || !!selectedCategory || !!selectedRidingType;
+  const selectedCategoryHasHub =
+    !selectedCategory || isCategoryQualified(selectedCategory, categoryBreakdown);
 
   const cardFields = ts.browse.cardFields;
   const cardImageFields = ts.browse.cardImageFields;
@@ -124,13 +128,22 @@ export function HomeSearchSection() {
     setPage(1);
   };
 
+  /**
+   * Build the "View all" browse URL.
+   * When a category is selected, use the real /browse/:category pathname
+   * (crawlable hub) rather than a ?category= query param so Browse reads it.
+   * Preserve search, city, and ridingType as query params.
+   */
   const browseUrl = () => {
     const params = new URLSearchParams();
     if (activeSearch) params.set("search", activeSearch);
     if (activeCity) params.set("city", activeCity);
-    if (selectedCategory) params.set("category", selectedCategory);
+    if (selectedRidingType) params.set("ridingType", selectedRidingType);
     const q = params.toString();
-    return q ? `/browse?${q}` : "/browse";
+    const base = selectedCategory
+      ? `/browse/${encodeURIComponent(selectedCategory)}`
+      : "/browse";
+    return q ? `${base}?${q}` : base;
   };
 
   const mapEntries = entries.filter((e: any) => e.latitude && e.longitude);
@@ -296,9 +309,11 @@ export function HomeSearchSection() {
               <ViewToggle />
 
               {/* View all */}
-              <Link href={browseUrl()} className="text-primary hover:underline text-sm font-medium hidden sm:flex items-center gap-1">
-                View all <ArrowRight className="h-4 w-4" />
-              </Link>
+              {selectedCategoryHasHub && (
+                <Link href={browseUrl()} className="text-primary hover:underline text-sm font-medium hidden sm:flex items-center gap-1">
+                  View all <ArrowRight className="h-4 w-4" />
+                </Link>
+              )}
             </div>
           </div>
 
@@ -327,83 +342,98 @@ export function HomeSearchSection() {
                   {entries.map((entry: any) => {
                     const cardImage = getCardImage(entry);
                     const entryHref = getPublicEntryPath(entry);
+                    const catQualified =
+                      entry.category &&
+                      showField("category") &&
+                      isCategoryQualified(entry.category, categoryBreakdown);
+
                     return (
-                    <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
-                      <CardImage src={cardImage} alt={entry.title} />
-                      <CardHeader className="pb-2">
-                        {showField("category") && entry.category && (
-                          <Link href={`/browse/${encodeURIComponent(entry.category)}`} className="w-fit mb-2">
-                            <Badge
-                              variant="secondary"
-                              className="bg-primary/10 text-primary hover:bg-primary/20"
-                            >
-                              {entry.category}
-                            </Badge>
-                          </Link>
-                        )}
-                        {(entry.premium || entry.featured) && (
-                          <div className="flex gap-1.5 mb-2">
-                            {entry.premium && (
-                              <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] px-2 py-0.5">⭐ Premium</Badge>
-                            )}
-                            {entry.featured && !entry.premium && (
-                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] px-2 py-0.5">★ Featured</Badge>
-                            )}
-                          </div>
-                        )}
-                        <CardTitle className="line-clamp-2 text-base leading-snug">
-                          <Link href={entryHref} className="hover:text-primary transition-colors">
-                            {entry.title}
-                          </Link>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="flex-grow pb-2">
-                        {entry.summary && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{entry.summary}</p>
-                        )}
-                        <div className="space-y-1">
-                          {(entry.location || entry.category) && (() => {
-                            const lp = entry.location?.split(",") || [];
-                            const street = lp[0]?.trim() || "";
-                            const cityState = lp.slice(1).join(",").trim();
-                            const cat = entry.category && !cityState.includes(entry.category) ? entry.category : "";
-                            const line2 = [cityState, cat].filter(Boolean).join(", ");
-                            return (
-                              <div className="flex items-start text-xs text-muted-foreground">
-                                <MapPin className="h-3 w-3 mr-1.5 shrink-0 mt-0.5" />
-                                <div>
-                                  {street && <div>{street}</div>}
-                                  {line2 && <div>{line2}</div>}
-                                </div>
-                              </div>
-                            );
-                          })()}
-                          {entry.contactPhone && (
-                            <div className="flex items-center text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3 mr-1.5 shrink-0" />
-                              <span>{entry.contactPhone}</span>
+                      <Card key={entry.id} className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
+                        <CardImage src={cardImage} alt={entry.title} />
+                        <CardHeader className="pb-2">
+                          {showField("category") && entry.category && (
+                            catQualified ? (
+                              <Link href={getCategoryHubPath(entry.category)} className="w-fit mb-2">
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-primary/10 text-primary hover:bg-primary/20"
+                                >
+                                  {entry.category}
+                                </Badge>
+                              </Link>
+                            ) : (
+                              <Badge
+                                variant="secondary"
+                                className="w-fit mb-2 bg-primary/10 text-primary"
+                              >
+                                {entry.category}
+                              </Badge>
+                            )
+                          )}
+                          {(entry.premium || entry.featured) && (
+                            <div className="flex gap-1.5 mb-2">
+                              {entry.premium && (
+                                <Badge className="bg-violet-600 hover:bg-violet-700 text-white text-[10px] px-2 py-0.5">⭐ Premium</Badge>
+                              )}
+                              {entry.featured && !entry.premium && (
+                                <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] px-2 py-0.5">★ Featured</Badge>
+                              )}
                             </div>
                           )}
-                          {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {
-                            const url = entry.website || (entry.customFields as any)?.website;
-                            return (
+                          <CardTitle className="line-clamp-2 text-base leading-snug">
+                            <Link href={entryHref} className="hover:text-primary transition-colors">
+                              {entry.title}
+                            </Link>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-grow pb-2">
+                          {entry.summary && (
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{entry.summary}</p>
+                          )}
+                          <div className="space-y-1">
+                            {(entry.location || entry.category) && (() => {
+                              const lp = entry.location?.split(",") || [];
+                              const street = lp[0]?.trim() || "";
+                              const cityState = lp.slice(1).join(",").trim();
+                              const cat = entry.category && !cityState.includes(entry.category) ? entry.category : "";
+                              const line2 = [cityState, cat].filter(Boolean).join(", ");
+                              return (
+                                <div className="flex items-start text-xs text-muted-foreground">
+                                  <MapPin className="h-3 w-3 mr-1.5 shrink-0 mt-0.5" />
+                                  <div>
+                                    {street && <div>{street}</div>}
+                                    {line2 && <div>{line2}</div>}
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                            {entry.contactPhone && (
                               <div className="flex items-center text-xs text-muted-foreground">
-                                <Globe className="h-3 w-3 mr-1.5 shrink-0" />
-                                <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors break-all" onClick={e => e.stopPropagation()}>
-                                  {url.replace(/^https?:\/\/(www\.)?/, "")}
-                                </a>
+                                <Phone className="h-3 w-3 mr-1.5 shrink-0" />
+                                <span>{entry.contactPhone}</span>
                               </div>
-                            );
-                          })()}
-                        </div>
-                      </CardContent>
-                      <CardFooter className="pt-3 border-t">
-                        <Link href={entryHref} className="w-full inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground group">
-                          View Details
-                          <ArrowRight className="ml-2 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                        </Link>
-                      </CardFooter>
-                    </Card>
+                            )}
+                            {(entry.featured || entry.premium) && (() => {
+                              const url = entry.website || (entry.customFields as any)?.website;
+                              if (!isSafeExternalUrl(url)) return null;
+                              return (
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                  <Globe className="h-3 w-3 mr-1.5 shrink-0" />
+                                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors break-all">
+                                    {url.replace(/^https?:\/\/(www\.)?/, "")}
+                                  </a>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </CardContent>
+                        <CardFooter className="pt-3 border-t">
+                          <Link href={entryHref} className="w-full inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground group">
+                            View Details
+                            <ArrowRight className="ml-2 h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                          </Link>
+                        </CardFooter>
+                      </Card>
                     );
                   })}
                 </div>
@@ -412,18 +442,36 @@ export function HomeSearchSection() {
               {/* ── LIST VIEW ── */}
               {viewMode === "list" && (
                 <div className="flex flex-col divide-y border rounded-xl overflow-hidden bg-white dark:bg-gray-950">
-                  {entries.map((entry: any) => (
-                    <Link key={entry.id} href={getPublicEntryPath(entry)}>
-                      <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group">
+                  {entries.map((entry: any) => {
+                    const entryHref = getPublicEntryPath(entry);
+                    const catQualified =
+                      entry.category &&
+                      showField("category") &&
+                      isCategoryQualified(entry.category, categoryBreakdown);
+                    const websiteUrl = (entry.featured || entry.premium)
+                      ? (entry.website || (entry.customFields as any)?.website)
+                      : null;
+                    const hasExternalUrl = isSafeExternalUrl(websiteUrl);
+
+                    return (
+                      <div key={entry.id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors group">
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-0.5">
-                            <span className="font-medium text-sm text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">
+                            <Link href={entryHref} className="font-medium text-sm text-gray-900 dark:text-white group-hover:text-primary transition-colors line-clamp-1">
                               {entry.title}
-                            </span>
+                            </Link>
                             {showField("category") && entry.category && (
-                              <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary shrink-0">
-                                {entry.category}
-                              </Badge>
+                              catQualified ? (
+                                <Link href={getCategoryHubPath(entry.category)}>
+                                  <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary shrink-0 hover:bg-primary/20">
+                                    {entry.category}
+                                  </Badge>
+                                </Link>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px] bg-primary/10 text-primary shrink-0">
+                                  {entry.category}
+                                </Badge>
+                              )
                             )}
                             {entry.premium && (
                               <Badge className="bg-violet-600 text-white text-[10px] px-2 py-0.5 shrink-0">⭐ Premium</Badge>
@@ -455,17 +503,14 @@ export function HomeSearchSection() {
                                 <span>{entry.contactPhone}</span>
                               </div>
                             )}
-                            {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {
-                              const url = entry.website || (entry.customFields as any)?.website;
-                              return (
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                  <Globe className="h-3 w-3 mr-1 shrink-0" />
-                                  <a href={url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors break-all" onClick={e => e.stopPropagation()}>
-                                    {url.replace(/^https?:\/\/(www\.)?/, "")}
-                                  </a>
-                                </div>
-                              );
-                            })()}
+                            {hasExternalUrl && (
+                              <div className="flex items-center text-xs text-muted-foreground">
+                                <Globe className="h-3 w-3 mr-1 shrink-0" />
+                                <a href={websiteUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors break-all">
+                                  {websiteUrl.replace(/^https?:\/\/(www\.)?/, "")}
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </div>
                         {entry.summary && (
@@ -473,10 +518,12 @@ export function HomeSearchSection() {
                             {entry.summary}
                           </p>
                         )}
-                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0 transition-colors" />
+                        <Link href={entryHref} className="shrink-0" aria-label={`View details for ${entry.title}`}>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </Link>
                       </div>
-                    </Link>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
@@ -512,9 +559,18 @@ export function HomeSearchSection() {
                           <MapComponents.Popup>
                             <div className="min-w-[160px]">
                               {entry.category && (
-                                <span className="text-xs font-semibold text-primary block mb-1">
-                                  {entry.category}
-                                </span>
+                                isCategoryQualified(entry.category, categoryBreakdown) ? (
+                                  <Link
+                                    href={getCategoryHubPath(entry.category)}
+                                    className="text-xs font-semibold text-primary block mb-1 hover:underline"
+                                  >
+                                    {entry.category}
+                                  </Link>
+                                ) : (
+                                  <span className="text-xs font-semibold text-primary block mb-1">
+                                    {entry.category}
+                                  </span>
+                                )
                               )}
                               <strong className="text-sm block mb-1">{entry.title}</strong>
                               {(entry.location || entry.category) && (() => {

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useGetPublicSettings, useGetPublicStats, useLogout, useGetCurrentUser, useGetLocalSeoHubs } from "@workspace/api-client-react";
+import { getCategoryHubPath, getQualifiedCategoryHubs } from "@/lib/seoLinks";
 import { Search, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const isAdmin = isLoggedIn && currentUser?.role === "admin";
   const bizAuth = useBusinessAuth();
   const { data: seoHubs } = useGetLocalSeoHubs();
+  const qualifiedCategoryHubs = getQualifiedCategoryHubs(publicStats?.categoryBreakdown ?? []);
   const navLinks = (settings as any)?.navLinks as Record<string, boolean> | null | undefined;
   const showNavLink = (key: string) => navLinks?.[key] !== false;
 
@@ -331,19 +333,19 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 py-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-sm text-gray-500 dark:text-gray-400">
-          {((publicStats?.categoryBreakdown?.length ?? 0) > 0 || (seoHubs?.globalServices?.length ?? 0) > 0 || (seoHubs?.cities?.length ?? 0) > 0) && (
+          {(qualifiedCategoryHubs.length > 0 || (seoHubs?.globalServices?.length ?? 0) > 0 || (seoHubs?.cities?.length ?? 0) > 0) && (
             <div className="pb-8 mb-6 border-b border-gray-200 dark:border-gray-800 space-y-6">
-              {(publicStats?.categoryBreakdown?.length ?? 0) > 0 && (
+              {qualifiedCategoryHubs.length > 0 && (
                 <nav aria-label="Popular states">
                   <p className="font-semibold text-gray-900 dark:text-white mb-3">States</p>
                   <div className="flex flex-wrap gap-x-5 gap-y-2">
-                    {[...(publicStats?.categoryBreakdown ?? [])]
+                    {[...qualifiedCategoryHubs]
                       .sort((a, b) => b.count - a.count)
                       .slice(0, 12)
                       .map((category) => (
                         <Link
                           key={category.category}
-                          href={`/browse/${encodeURIComponent(category.category)}`}
+                          href={getCategoryHubPath(category.category)}
                           className="hover:text-gray-900 dark:hover:text-white transition-colors"
                         >
                           {category.category}

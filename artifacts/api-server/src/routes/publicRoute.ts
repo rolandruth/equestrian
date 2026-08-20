@@ -239,7 +239,13 @@ router.get("/stats", async (req, res) => {
       category: entries.category,
       count: count(),
     }).from(entries)
-      .where(and(eq(entries.published, true), sql`${entries.category} IS NOT NULL`))
+      .where(
+        and(
+          eq(entries.published, true),
+          sql`${entries.category} IS NOT NULL`,
+          sql`btrim(${entries.category}) <> ''`,
+        ),
+      )
       .groupBy(entries.category)
       .orderBy(desc(count()));
 

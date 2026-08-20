@@ -7,6 +7,8 @@
  */
 import type { EntryCustomFields } from "./entryCustomFields";
 import type { EntryOwner } from "./entryOwner";
+import type { NormalizedLocation } from "./normalizedLocation";
+import type { ServiceTypeRef } from "./serviceTypeRef";
 
 export interface Entry {
   id: number;
@@ -46,6 +48,8 @@ export interface Entry {
   ownerId?: string | null;
   /** @nullable */
   owner?: EntryOwner;
+  normalizedLocation?: NormalizedLocation | null;
+  confirmedServices?: ServiceTypeRef[];
   createdAt: string;
   updatedAt: string;
 }

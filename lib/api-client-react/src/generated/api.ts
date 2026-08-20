@@ -37,8 +37,12 @@ import type {
   CreateUserBody,
   DirectorySettings,
   Entry,
+  EntryClassificationResult,
+  EntryClassificationUpdate,
   EntryListResponse,
   ErrorResponse,
+  GetLocalSeoLandingParams,
+  GetLocalSeoReviewParams,
   HealthStatus,
   ImportAnalyzeBody,
   ImportAnalyzeResult,
@@ -46,6 +50,13 @@ import type {
   ImportJob,
   ListEntriesParams,
   ListPublicEntriesParams,
+  LocalSeoApplyResponse,
+  LocalSeoCoverageResponse,
+  LocalSeoHubsResponse,
+  LocalSeoLandingResponse,
+  LocalSeoPreviewInput,
+  LocalSeoPreviewResponse,
+  LocalSeoReviewResponse,
   LoginBody,
   PublicStats,
   RequestUploadUrlBody,
@@ -4301,3 +4312,620 @@ export function useGetPublicSettings<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get eligible local SEO hub pages (states and cities meeting thresholds)
+ */
+export const getGetLocalSeoHubsUrl = () => {
+  return `/api/public/local-seo/hubs`;
+};
+
+export const getLocalSeoHubs = async (
+  options?: RequestInit,
+): Promise<LocalSeoHubsResponse> => {
+  return customFetch<LocalSeoHubsResponse>(getGetLocalSeoHubsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLocalSeoHubsQueryKey = () => {
+  return [`/api/public/local-seo/hubs`] as const;
+};
+
+export const getGetLocalSeoHubsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLocalSeoHubs>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoHubs>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLocalSeoHubsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLocalSeoHubs>>> = ({
+    signal,
+  }) => getLocalSeoHubs({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoHubs>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLocalSeoHubsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLocalSeoHubs>>
+>;
+export type GetLocalSeoHubsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get eligible local SEO hub pages (states and cities meeting thresholds)
+ */
+
+export function useGetLocalSeoHubs<
+  TData = Awaited<ReturnType<typeof getLocalSeoHubs>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoHubs>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLocalSeoHubsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns eligible landing page data for a given state/city/service combination. stateSlug is required when citySlug is provided. Unknown serviceSlug values and under-threshold combinations return eligible=false.
+
+ * @summary Get entries and metadata for a local SEO landing page
+ */
+export const getGetLocalSeoLandingUrl = (params?: GetLocalSeoLandingParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/public/local-seo/landing?${stringifiedParams}`
+    : `/api/public/local-seo/landing`;
+};
+
+export const getLocalSeoLanding = async (
+  params?: GetLocalSeoLandingParams,
+  options?: RequestInit,
+): Promise<LocalSeoLandingResponse> => {
+  return customFetch<LocalSeoLandingResponse>(
+    getGetLocalSeoLandingUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetLocalSeoLandingQueryKey = (
+  params?: GetLocalSeoLandingParams,
+) => {
+  return [
+    `/api/public/local-seo/landing`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetLocalSeoLandingQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLocalSeoLanding>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetLocalSeoLandingParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLocalSeoLanding>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetLocalSeoLandingQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getLocalSeoLanding>>
+  > = ({ signal }) => getLocalSeoLanding(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoLanding>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLocalSeoLandingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLocalSeoLanding>>
+>;
+export type GetLocalSeoLandingQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get entries and metadata for a local SEO landing page
+ */
+
+export function useGetLocalSeoLanding<
+  TData = Awaited<ReturnType<typeof getLocalSeoLanding>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params?: GetLocalSeoLandingParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLocalSeoLanding>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLocalSeoLandingQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get local SEO coverage summary and queue counts
+ */
+export const getGetLocalSeoSummaryUrl = () => {
+  return `/api/local-seo/summary`;
+};
+
+export const getLocalSeoSummary = async (
+  options?: RequestInit,
+): Promise<LocalSeoCoverageResponse> => {
+  return customFetch<LocalSeoCoverageResponse>(getGetLocalSeoSummaryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLocalSeoSummaryQueryKey = () => {
+  return [`/api/local-seo/summary`] as const;
+};
+
+export const getGetLocalSeoSummaryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLocalSeoSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLocalSeoSummaryQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getLocalSeoSummary>>
+  > = ({ signal }) => getLocalSeoSummary({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoSummary>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLocalSeoSummaryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLocalSeoSummary>>
+>;
+export type GetLocalSeoSummaryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get local SEO coverage summary and queue counts
+ */
+
+export function useGetLocalSeoSummary<
+  TData = Awaited<ReturnType<typeof getLocalSeoSummary>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoSummary>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLocalSeoSummaryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Preview deterministic location and service suggestions (read-only)
+ */
+export const getPreviewLocalSeoClassificationsUrl = () => {
+  return `/api/local-seo/classifications/preview`;
+};
+
+export const previewLocalSeoClassifications = async (
+  localSeoPreviewInput?: LocalSeoPreviewInput,
+  options?: RequestInit,
+): Promise<LocalSeoPreviewResponse> => {
+  return customFetch<LocalSeoPreviewResponse>(
+    getPreviewLocalSeoClassificationsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(localSeoPreviewInput),
+    },
+  );
+};
+
+export const getPreviewLocalSeoClassificationsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewLocalSeoClassifications>>,
+    TError,
+    { data: BodyType<LocalSeoPreviewInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof previewLocalSeoClassifications>>,
+  TError,
+  { data: BodyType<LocalSeoPreviewInput> },
+  TContext
+> => {
+  const mutationKey = ["previewLocalSeoClassifications"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof previewLocalSeoClassifications>>,
+    { data: BodyType<LocalSeoPreviewInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return previewLocalSeoClassifications(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PreviewLocalSeoClassificationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof previewLocalSeoClassifications>>
+>;
+export type PreviewLocalSeoClassificationsMutationBody =
+  BodyType<LocalSeoPreviewInput>;
+export type PreviewLocalSeoClassificationsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Preview deterministic location and service suggestions (read-only)
+ */
+export const usePreviewLocalSeoClassifications = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof previewLocalSeoClassifications>>,
+    TError,
+    { data: BodyType<LocalSeoPreviewInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof previewLocalSeoClassifications>>,
+  TError,
+  { data: BodyType<LocalSeoPreviewInput> },
+  TContext
+> => {
+  return useMutation(getPreviewLocalSeoClassificationsMutationOptions(options));
+};
+
+/**
+ * @summary Idempotently apply high-confidence locations and queue service suggestions
+ */
+export const getApplyLocalSeoClassificationsUrl = () => {
+  return `/api/local-seo/classifications/apply`;
+};
+
+export const applyLocalSeoClassifications = async (
+  options?: RequestInit,
+): Promise<LocalSeoApplyResponse> => {
+  return customFetch<LocalSeoApplyResponse>(
+    getApplyLocalSeoClassificationsUrl(),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getApplyLocalSeoClassificationsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof applyLocalSeoClassifications>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof applyLocalSeoClassifications>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["applyLocalSeoClassifications"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof applyLocalSeoClassifications>>,
+    void
+  > = () => {
+    return applyLocalSeoClassifications(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApplyLocalSeoClassificationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof applyLocalSeoClassifications>>
+>;
+
+export type ApplyLocalSeoClassificationsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Idempotently apply high-confidence locations and queue service suggestions
+ */
+export const useApplyLocalSeoClassifications = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof applyLocalSeoClassifications>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof applyLocalSeoClassifications>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getApplyLocalSeoClassificationsMutationOptions(options));
+};
+
+/**
+ * @summary Get paginated manual-review rows with service suggestions
+ */
+export const getGetLocalSeoReviewUrl = (params?: GetLocalSeoReviewParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/local-seo/review?${stringifiedParams}`
+    : `/api/local-seo/review`;
+};
+
+export const getLocalSeoReview = async (
+  params?: GetLocalSeoReviewParams,
+  options?: RequestInit,
+): Promise<LocalSeoReviewResponse> => {
+  return customFetch<LocalSeoReviewResponse>(getGetLocalSeoReviewUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLocalSeoReviewQueryKey = (
+  params?: GetLocalSeoReviewParams,
+) => {
+  return [`/api/local-seo/review`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetLocalSeoReviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLocalSeoReview>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetLocalSeoReviewParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLocalSeoReview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetLocalSeoReviewQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getLocalSeoReview>>
+  > = ({ signal }) => getLocalSeoReview(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLocalSeoReview>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLocalSeoReviewQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLocalSeoReview>>
+>;
+export type GetLocalSeoReviewQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get paginated manual-review rows with service suggestions
+ */
+
+export function useGetLocalSeoReview<
+  TData = Awaited<ReturnType<typeof getLocalSeoReview>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: GetLocalSeoReviewParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getLocalSeoReview>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLocalSeoReviewQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Approve, edit, or reject normalized location and confirmed services for an entry
+ */
+export const getUpdateEntryClassificationUrl = (id: number) => {
+  return `/api/local-seo/entries/${id}/classification`;
+};
+
+export const updateEntryClassification = async (
+  id: number,
+  entryClassificationUpdate: EntryClassificationUpdate,
+  options?: RequestInit,
+): Promise<EntryClassificationResult> => {
+  return customFetch<EntryClassificationResult>(
+    getUpdateEntryClassificationUrl(id),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(entryClassificationUpdate),
+    },
+  );
+};
+
+export const getUpdateEntryClassificationMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateEntryClassification>>,
+    TError,
+    { id: number; data: BodyType<EntryClassificationUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateEntryClassification>>,
+  TError,
+  { id: number; data: BodyType<EntryClassificationUpdate> },
+  TContext
+> => {
+  const mutationKey = ["updateEntryClassification"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateEntryClassification>>,
+    { id: number; data: BodyType<EntryClassificationUpdate> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateEntryClassification(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateEntryClassificationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateEntryClassification>>
+>;
+export type UpdateEntryClassificationMutationBody =
+  BodyType<EntryClassificationUpdate>;
+export type UpdateEntryClassificationMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Approve, edit, or reject normalized location and confirmed services for an entry
+ */
+export const useUpdateEntryClassification = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateEntryClassification>>,
+    TError,
+    { id: number; data: BodyType<EntryClassificationUpdate> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateEntryClassification>>,
+  TError,
+  { id: number; data: BodyType<EntryClassificationUpdate> },
+  TContext
+> => {
+  return useMutation(getUpdateEntryClassificationMutationOptions(options));
+};

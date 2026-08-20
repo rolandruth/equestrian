@@ -35,4 +35,16 @@ export type ListPublicEntriesParams = {
    * @nullable
    */
   ridingType?: string | null;
+  /**
+   * @nullable
+   */
+  stateSlug?: string | null;
+  /**
+   * @nullable
+   */
+  citySlug?: string | null;
+  /**
+   * @nullable
+   */
+  serviceSlug?: string | null;
 };

@@ -15,6 +15,7 @@ import {
   useGetCurrentUser,
   useUpdateSettings,
   useCreateContact,
+  useGetLocalSeoHubs,
   getGetPublicSettingsQueryKey,
   getGetSettingsQueryKey,
 } from "@workspace/api-client-react";
@@ -750,6 +751,7 @@ export default function EntryPage() {
   const isLoggedIn = Boolean(token);
   const { data: currentUser } = useGetCurrentUser({ query: { enabled: isLoggedIn } });
   const isAdmin = isLoggedIn && (currentUser as any)?.role === "admin";
+  const { data: seoHubs } = useGetLocalSeoHubs();
 
   // ── Edit mode state ────────────────────────────────────────────────────────
   const [editMode, setEditMode] = useState(false);
@@ -998,12 +1000,12 @@ export default function EntryPage() {
           <div><div className="text-sm font-medium mb-1">Location</div><div className="text-sm text-gray-600 dark:text-gray-300">{displayEntry.location}</div></div>
         </div>
       ) : null;
-      case "website": return (displayEntry.website && (e.featured || e.premium)) ? (
+      case "website": return (displayEntry.website && displayEntry.website.startsWith("http") && (e.featured || e.premium)) ? (
         <div key="website" className="flex items-start">
           <Globe className="h-5 w-5 text-muted-foreground mr-3 mt-0.5 flex-shrink-0" />
           <div className="overflow-hidden">
             <div className="text-sm font-medium mb-1">Website</div>
-            <a href={displayEntry.website.startsWith("http") ? displayEntry.website : `https://${displayEntry.website}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm truncate block">
+            <a href={displayEntry.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm truncate block">
               {displayEntry.website.replace(/^https?:\/\//, "")}
             </a>
           </div>
@@ -2060,6 +2062,53 @@ export default function EntryPage() {
             );
           })
         }
+
+        {/* Local SEO Links */}
+        {!isDemo && displayEntry.normalizedLocation && seoHubs && (
+          <div className="pt-12 mt-8 border-t">
+            <h2 className="text-xl font-bold tracking-tight mb-4">Discover More Local Services</h2>
+            <div className="flex flex-wrap gap-2">
+              {/* City Hub */}
+              {seoHubs.cities?.filter(c => c.citySlug === displayEntry.normalizedLocation?.citySlug && c.stateSlug === displayEntry.normalizedLocation?.stateSlug).map(city => (
+                <Link key={`city-${city.citySlug}`} href={`/locations/${city.stateSlug}/${city.citySlug}`}>
+                  <Badge variant="outline" className="hover:bg-primary/5 hover:border-primary/30 transition-colors py-1.5 font-normal cursor-pointer">
+                    All Services in {city.cityName}, {city.stateName}
+                  </Badge>
+                </Link>
+              ))}
+
+              {/* Global Services */}
+              {displayEntry.confirmedServices?.map(service => {
+                const globalHub = seoHubs.globalServices?.find(h => h.serviceSlug === service.slug);
+                if (!globalHub) return null;
+                return (
+                  <Link key={`service-${service.slug}`} href={`/services/${service.slug}`}>
+                    <Badge variant="outline" className="hover:bg-primary/5 hover:border-primary/30 transition-colors py-1.5 font-normal cursor-pointer">
+                      Top {service.label} Providers
+                    </Badge>
+                  </Link>
+                );
+              })}
+
+              {/* City-Service Hubs */}
+              {displayEntry.confirmedServices?.map(service => {
+                const cityService = seoHubs.cityServices?.find(
+                  h => h.serviceSlug === service.slug &&
+                       h.citySlug === displayEntry.normalizedLocation?.citySlug &&
+                       h.stateSlug === displayEntry.normalizedLocation?.stateSlug
+                );
+                if (!cityService) return null;
+                return (
+                  <Link key={`city-service-${service.slug}`} href={`/services/${service.slug}/${cityService.stateSlug}/${cityService.citySlug}`}>
+                    <Badge variant="outline" className="hover:bg-primary/5 hover:border-primary/30 transition-colors py-1.5 font-normal cursor-pointer text-primary">
+                      {service.label} in {cityService.cityName}
+                    </Badge>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

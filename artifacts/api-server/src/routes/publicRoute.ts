@@ -1,7 +1,15 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { entries, directorySettings, categories, reviews } from "@workspace/db";
-import { eq, ilike, and, desc, asc, count, avg, sql, or } from "drizzle-orm";
+import {
+  entries,
+  directorySettings,
+  categories,
+  reviews,
+  entryLocations,
+  entryServiceTypes,
+  serviceTypes,
+} from "@workspace/db";
+import { eq, ilike, and, desc, asc, count, avg, sql, or, inArray } from "drizzle-orm";
 import { expireStaleUpgrades } from "../lib/upgradeExpiry.js";
 
 const router = Router();
@@ -9,7 +17,11 @@ const router = Router();
 // Lazily clear expired featured/premium upgrades (throttled internally)
 router.use((_req, _res, next) => { expireStaleUpgrades().finally(next); });
 
-function formatEntry(e: typeof entries.$inferSelect) {
+function formatEntry(
+  e: typeof entries.$inferSelect,
+  normalizedLocation?: typeof entryLocations.$inferSelect | null,
+  confirmedServices?: Array<{ slug: string | null; label: string | null }>,
+) {
   return {
     id: e.id,
     title: e.title,
@@ -38,9 +50,50 @@ function formatEntry(e: typeof entries.$inferSelect) {
     ogDescription: e.ogDescription,
     latitude: e.latitude ?? null,
     longitude: e.longitude ?? null,
+    normalizedLocation: normalizedLocation
+      ? {
+          cityName: normalizedLocation.cityName,
+          citySlug: normalizedLocation.citySlug,
+          stateName: normalizedLocation.stateName,
+          stateSlug: normalizedLocation.stateSlug,
+          postalCode: normalizedLocation.postalCode,
+          locationStatus: normalizedLocation.locationStatus,
+        }
+      : null,
+    confirmedServices: confirmedServices ?? [],
     createdAt: e.createdAt.toISOString(),
     updatedAt: e.updatedAt.toISOString(),
   };
+}
+
+async function enrichEntries(rows: (typeof entries.$inferSelect)[]) {
+  if (rows.length === 0) return rows.map((e) => formatEntry(e));
+  const ids = rows.map((r) => r.id);
+
+  type LocRecord = { entryId: number; [key: string]: unknown };
+  const locs = await db
+    .select()
+    .from(entryLocations)
+    .where(and(inArray(entryLocations.entryId, ids), eq(entryLocations.locationStatus, "confirmed")));
+  const locMap = new Map((locs as LocRecord[]).map((l) => [l.entryId as number, l as typeof entryLocations.$inferSelect]));
+
+  const svcs = await db
+    .select({
+      entryId: entryServiceTypes.entryId,
+      slug: serviceTypes.slug,
+      label: serviceTypes.label,
+    })
+    .from(entryServiceTypes)
+    .leftJoin(serviceTypes, eq(entryServiceTypes.serviceTypeId, serviceTypes.id))
+    .where(and(inArray(entryServiceTypes.entryId, ids), eq(entryServiceTypes.status, "confirmed")));
+  const svcMap = new Map<number, Array<{ slug: string | null; label: string | null }>>();
+  for (const s of svcs) {
+    const arr = svcMap.get(s.entryId) ?? [];
+    arr.push({ slug: s.slug, label: s.label });
+    svcMap.set(s.entryId, arr);
+  }
+
+  return rows.map((e) => formatEntry(e, locMap.get(e.id) ?? null, svcMap.get(e.id) ?? []));
 }
 
 router.get("/entries", async (req, res) => {
@@ -53,6 +106,10 @@ router.get("/entries", async (req, res) => {
     const city = (req.query.city as string) || "";
     const sort = (req.query.sort as string) || "newest";
     const ridingType = (req.query.ridingType as string) || "";
+    // Normalized location/service filters
+    const stateSlugFilter = (req.query.stateSlug as string) || "";
+    const citySlugFilter = (req.query.citySlug as string) || "";
+    const serviceSlugFilter = (req.query.serviceSlug as string) || "";
 
     const conditions = [eq(entries.published, true)];
     if (search && search !== "null") {
@@ -99,6 +156,35 @@ router.get("/entries", async (req, res) => {
     }
     if (ridingType && ridingType !== "null") conditions.push(sql`${entries.customFields}->>'ridingtype' = ${ridingType}`);
 
+    // Normalized slug filters: find matching entry IDs via join
+    let filteredIds: number[] | null = null;
+
+    if ((stateSlugFilter && stateSlugFilter !== "null") || (citySlugFilter && citySlugFilter !== "null")) {
+      const locConds = [eq(entryLocations.locationStatus, "confirmed")];
+      if (stateSlugFilter && stateSlugFilter !== "null") locConds.push(eq(entryLocations.stateSlug, stateSlugFilter));
+      if (citySlugFilter && citySlugFilter !== "null") locConds.push(eq(entryLocations.citySlug, citySlugFilter));
+      const locRows = await db.select({ entryId: entryLocations.entryId }).from(entryLocations).where(and(...locConds));
+      filteredIds = (locRows as Array<{ entryId: number }>).map(r => r.entryId);
+    }
+
+    if (serviceSlugFilter && serviceSlugFilter !== "null") {
+      const svcRows = await db
+        .select({ entryId: entryServiceTypes.entryId })
+        .from(entryServiceTypes)
+        .leftJoin(serviceTypes, eq(entryServiceTypes.serviceTypeId, serviceTypes.id))
+        .where(and(eq(entryServiceTypes.status, "confirmed"), eq(serviceTypes.slug, serviceSlugFilter)));
+      const svcIds = (svcRows as Array<{ entryId: number }>).map(r => r.entryId);
+      filteredIds = filteredIds !== null ? filteredIds.filter(id => svcIds.includes(id)) : svcIds;
+    }
+
+    if (filteredIds !== null) {
+      if (filteredIds.length === 0) {
+        res.json({ entries: [], total: 0, page, totalPages: 0 });
+        return;
+      }
+      conditions.push(inArray(entries.id, filteredIds));
+    }
+
     const where = and(...conditions);
     // Premium listings always rank first, then featured, then the
     // requested sort within each tier.
@@ -112,8 +198,10 @@ router.get("/entries", async (req, res) => {
     const [total] = await db.select({ count: count() }).from(entries).where(where);
     const rows = await db.select().from(entries).where(where).orderBy(priority, orderBy).limit(limit).offset(offset);
 
+    const formattedEntries = await enrichEntries(rows);
+
     res.json({
-      entries: rows.map(formatEntry),
+      entries: formattedEntries,
       total: Number(total.count),
       page,
       totalPages: Math.ceil(Number(total.count) / limit),
@@ -136,7 +224,8 @@ router.get("/entries/:idOrSlug", async (req, res) => {
 
     const [entry] = await db.select().from(entries).where(where).limit(1);
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
-    res.json(formatEntry(entry));
+    const [formatted] = await enrichEntries([entry]);
+    res.json(formatted);
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to get entry" });
@@ -190,7 +279,7 @@ router.get("/featured", async (req, res) => {
       .where(and(eq(entries.published, true), eq(entries.featured, true)))
       .orderBy(desc(entries.createdAt))
       .limit(6);
-    res.json(rows.map(formatEntry));
+    res.json(await enrichEntries(rows));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to get featured entries" });
@@ -203,7 +292,7 @@ router.get("/premium", async (req, res) => {
       .where(and(eq(entries.published, true), eq(entries.premium, true)))
       .orderBy(desc(entries.createdAt))
       .limit(4);
-    res.json(rows.map(formatEntry));
+    res.json(await enrichEntries(rows));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to get premium entries" });
@@ -216,7 +305,7 @@ router.get("/recent", async (req, res) => {
       .where(eq(entries.published, true))
       .orderBy(sql`CASE WHEN ${entries.premium} THEN 0 WHEN ${entries.featured} THEN 1 ELSE 2 END`, desc(entries.createdAt))
       .limit(8);
-    res.json(rows.map(formatEntry));
+    res.json(await enrichEntries(rows));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to get recent entries" });

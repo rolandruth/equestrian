@@ -145,6 +145,40 @@ export type EntryOwner = {
   lastName?: string | null;
 } | null;
 
+export type NormalizedLocationLocationStatus =
+  (typeof NormalizedLocationLocationStatus)[keyof typeof NormalizedLocationLocationStatus];
+
+export const NormalizedLocationLocationStatus = {
+  confirmed: "confirmed",
+  manual_review: "manual_review",
+  rejected: "rejected",
+} as const;
+
+export interface NormalizedLocation {
+  /** @nullable */
+  cityName?: string | null;
+  /** @nullable */
+  citySlug?: string | null;
+  /** @nullable */
+  stateName?: string | null;
+  /** @nullable */
+  stateSlug?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  locationStatus?: NormalizedLocationLocationStatus;
+  /** @nullable */
+  locationSource?: string | null;
+  /** @nullable */
+  locationConfidence?: number | null;
+}
+
+export interface ServiceTypeRef {
+  /** @nullable */
+  slug?: string | null;
+  /** @nullable */
+  label?: string | null;
+}
+
 export interface Entry {
   id: number;
   title: string;
@@ -183,6 +217,8 @@ export interface Entry {
   ownerId?: string | null;
   /** @nullable */
   owner?: EntryOwner;
+  normalizedLocation?: NormalizedLocation | null;
+  confirmedServices?: ServiceTypeRef[];
   createdAt: string;
   updatedAt: string;
 }
@@ -584,6 +620,252 @@ export interface RequestUploadUrlResponse {
   metadata: RequestUploadUrlResponseMetadata;
 }
 
+export interface ServiceType {
+  id: number;
+  slug: string;
+  label: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  parentSlug?: string | null;
+}
+
+export interface LocalSeoCoverageResponse {
+  totalEntries: number;
+  confirmedLocations: number;
+  locationReviewQueue: number;
+  confirmedServices: number;
+  serviceReviewQueue: number;
+  eligibleStateHubs: number;
+  eligibleCityHubs: number;
+}
+
+export interface LocalSeoPreviewInput {
+  /** @nullable */
+  limit?: number | null;
+}
+
+export interface LocationSuggestion {
+  /** @nullable */
+  cityName?: string | null;
+  /** @nullable */
+  citySlug?: string | null;
+  /** @nullable */
+  stateName?: string | null;
+  /** @nullable */
+  stateSlug?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  confidence?: number;
+  source?: string;
+}
+
+export interface ServiceSuggestion {
+  serviceSlug: string;
+  confidence: number;
+  source: string;
+}
+
+export interface ClassificationPreview {
+  entryId: number;
+  entryTitle: string;
+  locationSuggestion?: LocationSuggestion | null;
+  serviceSuggestions: ServiceSuggestion[];
+}
+
+export interface LocalSeoPreviewResponse {
+  previews: ClassificationPreview[];
+}
+
+export interface LocalSeoApplyResponse {
+  success: boolean;
+  locationsApplied: number;
+  servicesQueued: number;
+}
+
+export type LocalSeoReviewRowServiceSuggestionsItem = {
+  serviceTypeId?: number;
+  /** @nullable */
+  serviceSlug?: string | null;
+  /** @nullable */
+  serviceLabel?: string | null;
+  /** @nullable */
+  confidence?: number | null;
+};
+
+export interface LocalSeoReviewRow {
+  entryId: number;
+  /** @nullable */
+  entryTitle?: string | null;
+  /** @nullable */
+  originalLocation?: string | null;
+  location?: NormalizedLocation | null;
+  serviceSuggestions: LocalSeoReviewRowServiceSuggestionsItem[];
+}
+
+export interface LocalSeoReviewResponse {
+  rows: LocalSeoReviewRow[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+/**
+ * @nullable
+ */
+export type EntryClassificationUpdateLocationStatus =
+  | (typeof EntryClassificationUpdateLocationStatus)[keyof typeof EntryClassificationUpdateLocationStatus]
+  | null;
+
+export const EntryClassificationUpdateLocationStatus = {
+  confirmed: "confirmed",
+  manual_review: "manual_review",
+  rejected: "rejected",
+} as const;
+
+/**
+ * Reviews an entry's local SEO classification. citySlug and stateSlug are derived server-side from cityName/stateName and must not be supplied by callers. reviewedSuggestionServiceSlugs decides ONLY the entry's current manual_review service suggestions: listed slugs are confirmed, the remaining manual_review suggestions on the entry are rejected (audit rows retained). It is NOT a full replacement of confirmed assignments — existing confirmed and rejected service rows are never modified or deleted. The location decision is independent.
+
+ */
+export interface EntryClassificationUpdate {
+  /** @nullable */
+  locationStatus?: EntryClassificationUpdateLocationStatus;
+  /** @nullable */
+  cityName?: string | null;
+  /** @nullable */
+  stateName?: string | null;
+  /** @nullable */
+  postalCode?: string | null;
+  /** Slugs of the entry's current manual_review service suggestions to confirm. Any current manual_review suggestion whose slug is omitted is rejected.
+   */
+  reviewedSuggestionServiceSlugs?: string[];
+}
+
+export type EntryClassificationResultServicesItem = {
+  serviceTypeId?: number;
+  status?: string;
+  /** @nullable */
+  slug?: string | null;
+  /** @nullable */
+  label?: string | null;
+};
+
+export interface EntryClassificationResult {
+  entryId: number;
+  location?: NormalizedLocation | null;
+  services: EntryClassificationResultServicesItem[];
+}
+
+export interface StateHub {
+  /** @nullable */
+  stateSlug?: string | null;
+  /** @nullable */
+  stateName?: string | null;
+  entryCount: number;
+}
+
+export interface CityHub {
+  /** @nullable */
+  citySlug?: string | null;
+  /** @nullable */
+  cityName?: string | null;
+  /** @nullable */
+  stateSlug?: string | null;
+  /** @nullable */
+  stateName?: string | null;
+  entryCount: number;
+}
+
+export interface GlobalServiceHub {
+  /** @nullable */
+  serviceSlug?: string | null;
+  /** @nullable */
+  serviceLabel?: string | null;
+  entryCount: number;
+}
+
+export interface StateServiceHub {
+  /** @nullable */
+  stateSlug?: string | null;
+  /** @nullable */
+  stateName?: string | null;
+  /** @nullable */
+  serviceSlug?: string | null;
+  /** @nullable */
+  serviceLabel?: string | null;
+  entryCount: number;
+}
+
+export interface CityServiceHub {
+  citySlug?: string;
+  /** @nullable */
+  cityName?: string | null;
+  stateSlug?: string;
+  /** @nullable */
+  stateName?: string | null;
+  serviceSlug?: string;
+  /** @nullable */
+  serviceLabel?: string | null;
+  entryCount: number;
+}
+
+export interface LocalSeoHubsResponse {
+  states: StateHub[];
+  cities: CityHub[];
+  globalServices: GlobalServiceHub[];
+  stateServices: StateServiceHub[];
+  cityServices: CityServiceHub[];
+}
+
+export interface LocalSeoLandingEntry {
+  id: number;
+  title: string;
+  /** @nullable */
+  slug?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  summary?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  contactPhone?: string | null;
+  featured?: boolean;
+  premium?: boolean;
+  published: boolean;
+  createdAt: string;
+  updatedAt: string;
+  normalizedLocation?: NormalizedLocation | null;
+  confirmedServices: ServiceTypeRef[];
+}
+
+export interface LocalSeoLandingMeta {
+  /** @nullable */
+  stateSlug?: string | null;
+  /** @nullable */
+  stateName?: string | null;
+  /** @nullable */
+  citySlug?: string | null;
+  /** @nullable */
+  cityName?: string | null;
+  /** @nullable */
+  serviceSlug?: string | null;
+  /** @nullable */
+  serviceLabel?: string | null;
+}
+
+export interface LocalSeoLandingResponse {
+  eligible: boolean;
+  entries: LocalSeoLandingEntry[];
+  total: number;
+  page: number;
+  totalPages: number;
+  meta?: LocalSeoLandingMeta | null;
+  relatedHubs?: LocalSeoHubsResponse | null;
+}
+
 /**
  * Opaque business-owner session token — `Bearer <sid>`.
  */
@@ -641,4 +923,51 @@ export type ListPublicEntriesParams = {
    * @nullable
    */
   ridingType?: string | null;
+  /**
+   * @nullable
+   */
+  stateSlug?: string | null;
+  /**
+   * @nullable
+   */
+  citySlug?: string | null;
+  /**
+   * @nullable
+   */
+  serviceSlug?: string | null;
+};
+
+export type GetLocalSeoLandingParams = {
+  /**
+   * @nullable
+   */
+  stateSlug?: string | null;
+  /**
+   * Requires stateSlug to be provided as well to avoid same-name city collisions.
+   * @nullable
+   */
+  citySlug?: string | null;
+  /**
+   * @nullable
+   */
+  serviceSlug?: string | null;
+  /**
+   * @nullable
+   */
+  page?: number | null;
+  /**
+   * @nullable
+   */
+  limit?: number | null;
+};
+
+export type GetLocalSeoReviewParams = {
+  /**
+   * @nullable
+   */
+  page?: number | null;
+  /**
+   * @nullable
+   */
+  limit?: number | null;
 };

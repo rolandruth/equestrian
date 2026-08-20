@@ -33,6 +33,10 @@ tags:
     description: Admin management of business owner accounts
   - name: Business Auth
     description: Business owner login (Replit Auth) for managing listings and ads.
+  - name: local-seo
+    description: Local SEO classification and hub management (admin)
+  - name: public-local-seo
+    description: Public local SEO hub and landing pages
 
 paths:
   /contacts:
@@ -934,6 +938,18 @@ paths:
           in: query
           schema:
             type: ["string", "null"]
+        - name: stateSlug
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: citySlug
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: serviceSlug
+          in: query
+          schema:
+            type: ["string", "null"]
       responses:
         "200":
           description: Published entries
@@ -1066,6 +1082,178 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DirectorySettings"
+
+  /public/local-seo/hubs:
+    get:
+      operationId: getLocalSeoHubs
+      tags: [public-local-seo]
+      summary: Get eligible local SEO hub pages (states and cities meeting thresholds)
+      responses:
+        "200":
+          description: Eligible hubs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSeoHubsResponse"
+
+  /public/local-seo/landing:
+    get:
+      operationId: getLocalSeoLanding
+      tags: [public-local-seo]
+      summary: Get entries and metadata for a local SEO landing page
+      description: >
+        Returns eligible landing page data for a given state/city/service combination.
+        stateSlug is required when citySlug is provided.
+        Unknown serviceSlug values and under-threshold combinations return eligible=false.
+      parameters:
+        - name: stateSlug
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: citySlug
+          in: query
+          description: Requires stateSlug to be provided as well to avoid same-name city collisions.
+          schema:
+            type: ["string", "null"]
+        - name: serviceSlug
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: page
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Landing page data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSeoLandingResponse"
+        "400":
+          description: Missing required slug parameter or citySlug without stateSlug
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /local-seo/summary:
+    get:
+      operationId: getLocalSeoSummary
+      tags: [local-seo]
+      summary: Get local SEO coverage summary and queue counts
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Coverage summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSeoCoverageResponse"
+
+  /local-seo/classifications/preview:
+    post:
+      operationId: previewLocalSeoClassifications
+      tags: [local-seo]
+      summary: Preview deterministic location and service suggestions (read-only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LocalSeoPreviewInput"
+      responses:
+        "200":
+          description: Classification previews
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSeoPreviewResponse"
+
+  /local-seo/classifications/apply:
+    post:
+      operationId: applyLocalSeoClassifications
+      tags: [local-seo]
+      summary: Idempotently apply high-confidence locations and queue service suggestions
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Apply result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSeoApplyResponse"
+
+  /local-seo/review:
+    get:
+      operationId: getLocalSeoReview
+      tags: [local-seo]
+      summary: Get paginated manual-review rows with service suggestions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: ["integer", "null"]
+        - name: limit
+          in: query
+          schema:
+            type: ["integer", "null"]
+      responses:
+        "200":
+          description: Review queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LocalSeoReviewResponse"
+
+  /local-seo/entries/{id}/classification:
+    patch:
+      operationId: updateEntryClassification
+      tags: [local-seo]
+      summary: Approve, edit, or reject normalized location and confirmed services for an entry
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntryClassificationUpdate"
+      responses:
+        "200":
+          description: Updated classification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EntryClassificationResult"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Entry not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   parameters:
@@ -1306,6 +1494,14 @@ components:
             lastName:
               type: ["string", "null"]
           required: [id]
+        normalizedLocation:
+          oneOf:
+            - $ref: "#/components/schemas/NormalizedLocation"
+            - type: "null"
+        confirmedServices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceTypeRef"
         createdAt:
           type: string
         updatedAt:
@@ -1861,3 +2057,409 @@ components:
               type: string
           required: [name, size, contentType]
       required: [uploadURL, objectPath, metadata]
+
+    NormalizedLocation:
+      type: object
+      properties:
+        cityName:
+          type: ["string", "null"]
+        citySlug:
+          type: ["string", "null"]
+        stateName:
+          type: ["string", "null"]
+        stateSlug:
+          type: ["string", "null"]
+        postalCode:
+          type: ["string", "null"]
+        locationStatus:
+          type: string
+          enum: [confirmed, manual_review, rejected]
+        locationSource:
+          type: ["string", "null"]
+        locationConfidence:
+          type: ["number", "null"]
+
+    ServiceTypeRef:
+      type: object
+      properties:
+        slug:
+          type: ["string", "null"]
+        label:
+          type: ["string", "null"]
+
+    ServiceType:
+      type: object
+      required: [id, slug, label]
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        label:
+          type: string
+        description:
+          type: ["string", "null"]
+        parentSlug:
+          type: ["string", "null"]
+
+    LocalSeoCoverageResponse:
+      type: object
+      required: [totalEntries, confirmedLocations, locationReviewQueue, confirmedServices, serviceReviewQueue, eligibleStateHubs, eligibleCityHubs]
+      properties:
+        totalEntries:
+          type: integer
+        confirmedLocations:
+          type: integer
+        locationReviewQueue:
+          type: integer
+        confirmedServices:
+          type: integer
+        serviceReviewQueue:
+          type: integer
+        eligibleStateHubs:
+          type: integer
+        eligibleCityHubs:
+          type: integer
+
+    LocalSeoPreviewInput:
+      type: object
+      properties:
+        limit:
+          type: ["integer", "null"]
+
+    LocationSuggestion:
+      type: object
+      properties:
+        cityName:
+          type: ["string", "null"]
+        citySlug:
+          type: ["string", "null"]
+        stateName:
+          type: ["string", "null"]
+        stateSlug:
+          type: ["string", "null"]
+        postalCode:
+          type: ["string", "null"]
+        confidence:
+          type: number
+        source:
+          type: string
+
+    ServiceSuggestion:
+      type: object
+      required: [serviceSlug, confidence, source]
+      properties:
+        serviceSlug:
+          type: string
+        confidence:
+          type: number
+        source:
+          type: string
+
+    ClassificationPreview:
+      type: object
+      required: [entryId, entryTitle, serviceSuggestions]
+      properties:
+        entryId:
+          type: integer
+        entryTitle:
+          type: string
+        locationSuggestion:
+          oneOf:
+            - $ref: "#/components/schemas/LocationSuggestion"
+            - type: "null"
+        serviceSuggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceSuggestion"
+
+    LocalSeoPreviewResponse:
+      type: object
+      required: [previews]
+      properties:
+        previews:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClassificationPreview"
+
+    LocalSeoApplyResponse:
+      type: object
+      required: [success, locationsApplied, servicesQueued]
+      properties:
+        success:
+          type: boolean
+        locationsApplied:
+          type: integer
+        servicesQueued:
+          type: integer
+
+    LocalSeoReviewRow:
+      type: object
+      required: [entryId, serviceSuggestions]
+      properties:
+        entryId:
+          type: integer
+        entryTitle:
+          type: ["string", "null"]
+        originalLocation:
+          type: ["string", "null"]
+        location:
+          oneOf:
+            - $ref: "#/components/schemas/NormalizedLocation"
+            - type: "null"
+        serviceSuggestions:
+          type: array
+          items:
+            type: object
+            properties:
+              serviceTypeId:
+                type: integer
+              serviceSlug:
+                type: ["string", "null"]
+              serviceLabel:
+                type: ["string", "null"]
+              confidence:
+                type: ["number", "null"]
+
+    LocalSeoReviewResponse:
+      type: object
+      required: [rows, total, page, totalPages]
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/LocalSeoReviewRow"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+
+    EntryClassificationUpdate:
+      type: object
+      description: >
+        Reviews an entry's local SEO classification. citySlug and stateSlug are derived
+        server-side from cityName/stateName and must not be supplied by callers.
+        reviewedSuggestionServiceSlugs decides ONLY the entry's current manual_review
+        service suggestions: listed slugs are confirmed, the remaining manual_review
+        suggestions on the entry are rejected (audit rows retained). It is NOT a full
+        replacement of confirmed assignments — existing confirmed and rejected service
+        rows are never modified or deleted. The location decision is independent.
+      properties:
+        locationStatus:
+          type: ["string", "null"]
+          enum: [confirmed, manual_review, rejected, null]
+        cityName:
+          type: ["string", "null"]
+        stateName:
+          type: ["string", "null"]
+        postalCode:
+          type: ["string", "null"]
+        reviewedSuggestionServiceSlugs:
+          type: array
+          description: >
+            Slugs of the entry's current manual_review service suggestions to confirm.
+            Any current manual_review suggestion whose slug is omitted is rejected.
+          items:
+            type: string
+
+    EntryClassificationResult:
+      type: object
+      required: [entryId, services]
+      properties:
+        entryId:
+          type: integer
+        location:
+          oneOf:
+            - $ref: "#/components/schemas/NormalizedLocation"
+            - type: "null"
+        services:
+          type: array
+          items:
+            type: object
+            properties:
+              serviceTypeId:
+                type: integer
+              status:
+                type: string
+              slug:
+                type: ["string", "null"]
+              label:
+                type: ["string", "null"]
+
+    StateHub:
+      type: object
+      required: [entryCount]
+      properties:
+        stateSlug:
+          type: ["string", "null"]
+        stateName:
+          type: ["string", "null"]
+        entryCount:
+          type: integer
+
+    CityHub:
+      type: object
+      required: [entryCount]
+      properties:
+        citySlug:
+          type: ["string", "null"]
+        cityName:
+          type: ["string", "null"]
+        stateSlug:
+          type: ["string", "null"]
+        stateName:
+          type: ["string", "null"]
+        entryCount:
+          type: integer
+
+    GlobalServiceHub:
+      type: object
+      required: [entryCount]
+      properties:
+        serviceSlug:
+          type: ["string", "null"]
+        serviceLabel:
+          type: ["string", "null"]
+        entryCount:
+          type: integer
+
+    StateServiceHub:
+      type: object
+      required: [entryCount]
+      properties:
+        stateSlug:
+          type: ["string", "null"]
+        stateName:
+          type: ["string", "null"]
+        serviceSlug:
+          type: ["string", "null"]
+        serviceLabel:
+          type: ["string", "null"]
+        entryCount:
+          type: integer
+
+    CityServiceHub:
+      type: object
+      required: [entryCount]
+      properties:
+        citySlug:
+          type: string
+        cityName:
+          type: ["string", "null"]
+        stateSlug:
+          type: string
+        stateName:
+          type: ["string", "null"]
+        serviceSlug:
+          type: string
+        serviceLabel:
+          type: ["string", "null"]
+        entryCount:
+          type: integer
+
+    LocalSeoHubsResponse:
+      type: object
+      required: [states, cities, globalServices, stateServices, cityServices]
+      properties:
+        states:
+          type: array
+          items:
+            $ref: "#/components/schemas/StateHub"
+        cities:
+          type: array
+          items:
+            $ref: "#/components/schemas/CityHub"
+        globalServices:
+          type: array
+          items:
+            $ref: "#/components/schemas/GlobalServiceHub"
+        stateServices:
+          type: array
+          items:
+            $ref: "#/components/schemas/StateServiceHub"
+        cityServices:
+          type: array
+          items:
+            $ref: "#/components/schemas/CityServiceHub"
+
+    LocalSeoLandingEntry:
+      type: object
+      required: [id, title, published, createdAt, updatedAt, confirmedServices]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        slug:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        featured:
+          type: boolean
+        premium:
+          type: boolean
+        published:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        normalizedLocation:
+          oneOf:
+            - $ref: "#/components/schemas/NormalizedLocation"
+            - type: "null"
+        confirmedServices:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceTypeRef"
+
+    LocalSeoLandingMeta:
+      type: object
+      properties:
+        stateSlug:
+          type: ["string", "null"]
+        stateName:
+          type: ["string", "null"]
+        citySlug:
+          type: ["string", "null"]
+        cityName:
+          type: ["string", "null"]
+        serviceSlug:
+          type: ["string", "null"]
+        serviceLabel:
+          type: ["string", "null"]
+
+    LocalSeoLandingResponse:
+      type: object
+      required: [eligible, entries, total, page, totalPages]
+      properties:
+        eligible:
+          type: boolean
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/LocalSeoLandingEntry"
+        total:
+          type: integer
+        page:
+          type: integer
+        totalPages:
+          type: integer
+        meta:
+          oneOf:
+            - $ref: "#/components/schemas/LocalSeoLandingMeta"
+            - type: "null"
+        relatedHubs:
+          oneOf:
+            - $ref: "#/components/schemas/LocalSeoHubsResponse"
+            - type: "null"

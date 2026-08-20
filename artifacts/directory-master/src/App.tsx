@@ -18,6 +18,7 @@ import NotFound from "@/pages/not-found";
 import SetupPage from "@/pages/setup";
 // Public
 import HomePage from "@/pages/home";
+import LocalSeoLandingPage from "@/pages/local-seo-landing";
 import BrowsePage from "@/pages/browse";
 import EntryPage from "@/pages/entry";
 import PrivacyPolicyPage from "@/pages/privacy-policy";
@@ -41,6 +42,7 @@ import AdminSeoPage from "@/pages/admin/seo";
 import AdminContactsPage from "@/pages/admin/contacts";
 import AdminAdsPage from "@/pages/admin/ads";
 import AdminReviewsPage from "@/pages/admin/reviews";
+import AdminLocalSeoPage from "@/pages/admin/local-seo";
 import BuilderPage from "@/pages/admin/builder";
 
 const queryClient = new QueryClient();
@@ -117,6 +119,13 @@ function Router() {
           </AdminLayout>
         </RequireAuth>
       </Route>
+      <Route path="/admin/local-seo">
+        <RequireAuth>
+          <AdminLayout>
+            <AdminLocalSeoPage />
+          </AdminLayout>
+        </RequireAuth>
+      </Route>
       <Route path="/admin/reviews">
         <RequireAuth>
           <AdminLayout>
@@ -149,6 +158,35 @@ function Router() {
         <SetupGuard>
           <PublicLayout>
             <HomePage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      {/* Local SEO Landing Pages */}
+      <Route path="/services/:serviceSlug/:stateSlug/:citySlug">
+        <SetupGuard>
+          <PublicLayout>
+            <LocalSeoLandingPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/services/:serviceSlug/:stateSlug">
+        <SetupGuard>
+          <PublicLayout>
+            <LocalSeoLandingPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/services/:serviceSlug">
+        <SetupGuard>
+          <PublicLayout>
+            <LocalSeoLandingPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/locations/:stateSlug/:citySlug">
+        <SetupGuard>
+          <PublicLayout>
+            <LocalSeoLandingPage />
           </PublicLayout>
         </SetupGuard>
       </Route>

@@ -3,7 +3,8 @@ import { Link, useLocation, useParams } from "wouter";
 import { 
   useListPublicEntries,
   useGetPublicStats,
-  useGetPublicSettings
+  useGetPublicSettings,
+  useGetLocalSeoHubs
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ export default function BrowsePage() {
 
   const { data: settings } = useGetPublicSettings();
   const { data: stats } = useGetPublicStats();
+  const { data: seoHubs } = useGetLocalSeoHubs();
 
   // ── SEO: per-page title ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -156,7 +158,7 @@ export default function BrowsePage() {
           </div>
         ) : null;
       case "website":
-        return entry.website ? (
+        return entry.website && entry.website.startsWith("http") ? (
           <div key="website" className="flex items-center text-sm text-muted-foreground">
             <Globe className="mr-1 h-3.5 w-3.5 flex-shrink-0" />
             <span className="line-clamp-1 text-primary">{entry.website.replace(/^https?:\/\//, "")}</span>
@@ -308,6 +310,7 @@ export default function BrowsePage() {
         )}
         {(entry.featured || entry.premium) && (entry.website || (entry.customFields as any)?.website) && (() => {
           const url = entry.website || (entry.customFields as any)?.website;
+          if (!url || !url.startsWith("http")) return null;
           return (
             <div className="flex items-center text-sm text-muted-foreground">
               <Globe className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
@@ -561,6 +564,24 @@ export default function BrowsePage() {
                         <SelectItem value="z-a">Name (Z-A)</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+              )}
+
+              {categoryParam && seoHubs?.cities?.some(c => c.stateName === categoryParam) && (
+                <div className="mb-8">
+                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3">Popular Cities in {categoryParam}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {seoHubs.cities
+                      .filter(c => c.stateName === categoryParam)
+                      .sort((a, b) => b.entryCount - a.entryCount)
+                      .map(city => (
+                        <Link key={city.citySlug} href={`/locations/${city.stateSlug}/${city.citySlug}`}>
+                          <Badge variant="outline" className="hover:bg-primary/5 hover:border-primary/30 transition-colors text-sm py-1 font-normal cursor-pointer">
+                            {city.cityName} <span className="text-muted-foreground ml-1.5 text-xs">({city.entryCount})</span>
+                          </Badge>
+                        </Link>
+                      ))}
                   </div>
                 </div>
               )}

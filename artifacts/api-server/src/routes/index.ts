@@ -17,6 +17,7 @@ import reviewsRouter from "./reviewsRoute.js";
 import bizAuthRouter from "./bizAuthRoute.js";
 import businessRouter from "./businessRoute.js";
 import adminBizUsersRouter from "./adminBizUsersRoute.js";
+import { adminLocalSeoRouter, publicLocalSeoRouter } from "./localSeoRoute.js";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,8 @@ router.use("/settings", settingsRouter);
 router.use("/users", usersRouter);
 router.use("/import", importRouter);
 router.use("/public", publicRouter);
+router.use("/public/local-seo", publicLocalSeoRouter);
+router.use("/local-seo", adminLocalSeoRouter);
 router.use("/seo", seoRouter);
 router.use(storageRouter);
 router.use("/builder", builderRouter);

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { useGetPublicSettings, useGetPublicStats, useLogout, useGetCurrentUser } from "@workspace/api-client-react";
+import { useGetPublicSettings, useGetPublicStats, useLogout, useGetCurrentUser, useGetLocalSeoHubs } from "@workspace/api-client-react";
 import { Search, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const { data: currentUser } = useGetCurrentUser({ query: { enabled: isLoggedIn } });
   const isAdmin = isLoggedIn && currentUser?.role === "admin";
   const bizAuth = useBusinessAuth();
+  const { data: seoHubs } = useGetLocalSeoHubs();
   const navLinks = (settings as any)?.navLinks as Record<string, boolean> | null | undefined;
   const showNavLink = (key: string) => navLinks?.[key] !== false;
 
@@ -330,27 +331,71 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 py-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-sm text-gray-500 dark:text-gray-400">
-          {(publicStats?.categoryBreakdown?.length ?? 0) > 0 && (
-            <nav aria-label="Popular directory sections" className="pb-6 mb-6 border-b border-gray-200 dark:border-gray-800">
-              <p className="font-semibold text-gray-900 dark:text-white mb-3">Browse the directory</p>
-              <div className="flex flex-wrap gap-x-5 gap-y-2">
-                {[...(publicStats?.categoryBreakdown ?? [])]
-                  .sort((a, b) => b.count - a.count)
-                  .slice(0, 12)
-                  .map((category) => (
-                    <Link
-                      key={category.category}
-                      href={`/browse/${encodeURIComponent(category.category)}`}
-                      className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                    >
-                      {category.category}
+          {((publicStats?.categoryBreakdown?.length ?? 0) > 0 || (seoHubs?.globalServices?.length ?? 0) > 0 || (seoHubs?.cities?.length ?? 0) > 0) && (
+            <div className="pb-8 mb-6 border-b border-gray-200 dark:border-gray-800 space-y-6">
+              {(publicStats?.categoryBreakdown?.length ?? 0) > 0 && (
+                <nav aria-label="Popular states">
+                  <p className="font-semibold text-gray-900 dark:text-white mb-3">States</p>
+                  <div className="flex flex-wrap gap-x-5 gap-y-2">
+                    {[...(publicStats?.categoryBreakdown ?? [])]
+                      .sort((a, b) => b.count - a.count)
+                      .slice(0, 12)
+                      .map((category) => (
+                        <Link
+                          key={category.category}
+                          href={`/browse/${encodeURIComponent(category.category)}`}
+                          className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          {category.category}
+                        </Link>
+                      ))}
+                    <Link href="/browse" className="font-medium text-primary hover:underline">
+                      Browse all
                     </Link>
-                  ))}
-                <Link href="/browse" className="font-medium text-primary hover:underline">
-                  Browse all
-                </Link>
-              </div>
-            </nav>
+                  </div>
+                </nav>
+              )}
+
+              {(seoHubs?.cities?.length ?? 0) > 0 && (
+                <nav aria-label="Popular cities">
+                  <p className="font-semibold text-gray-900 dark:text-white mb-3">Top Cities</p>
+                  <div className="flex flex-wrap gap-x-5 gap-y-2">
+                    {[...(seoHubs?.cities ?? [])]
+                      .sort((a, b) => b.entryCount - a.entryCount)
+                      .slice(0, 12)
+                      .map((city) => (
+                        <Link
+                          key={`${city.stateSlug}-${city.citySlug}`}
+                          href={`/locations/${city.stateSlug}/${city.citySlug}`}
+                          className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          {city.cityName}, {city.stateName}
+                        </Link>
+                      ))}
+                  </div>
+                </nav>
+              )}
+
+              {(seoHubs?.globalServices?.length ?? 0) > 0 && (
+                <nav aria-label="Popular services">
+                  <p className="font-semibold text-gray-900 dark:text-white mb-3">Top Services</p>
+                  <div className="flex flex-wrap gap-x-5 gap-y-2">
+                    {[...(seoHubs?.globalServices ?? [])]
+                      .sort((a, b) => b.entryCount - a.entryCount)
+                      .slice(0, 12)
+                      .map((service) => (
+                        <Link
+                          key={service.serviceSlug}
+                          href={`/services/${service.serviceSlug}`}
+                          className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                          {service.serviceLabel}
+                        </Link>
+                      ))}
+                  </div>
+                </nav>
+              )}
+            </div>
           )}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>

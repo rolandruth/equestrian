@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { entries, categories, bizUsers } from "@workspace/db";
+import { entries, categories, bizUsers, entryLocations, entryServiceTypes, serviceTypes } from "@workspace/db";
 import { requireAuth, requireEditor, requireAdmin } from "../middlewares/auth.js";
 import { eq, ilike, and, or, desc, count, sql, inArray } from "drizzle-orm";
 import { expireStaleUpgrades } from "../lib/upgradeExpiry.js";
@@ -77,8 +77,10 @@ router.get("/", requireAuth, async (req, res) => {
 
     const ownersMap = await getOwnersMap(rows.map((r) => r.ownerId));
 
+    const formatted = await Promise.all(rows.map((r) => enrichEntry(r, ownersMap.get(r.ownerId ?? ""))));
+
     res.json({
-      entries: rows.map((r) => formatEntry(r, ownersMap.get(r.ownerId ?? ""))),
+      entries: formatted,
       total: Number(total.count),
       page,
       totalPages: Math.ceil(Number(total.count) / limit),
@@ -97,7 +99,7 @@ router.post("/", requireEditor, async (req, res) => {
       return;
     }
     const [entry] = await db.insert(entries).values({ title, ...normalizeUpgradeFields(rest) } as any).returning();
-    res.status(201).json(formatEntry(entry));
+    res.status(201).json(await enrichEntry(entry));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to create entry" });
@@ -110,7 +112,7 @@ router.get("/:id", requireAuth, async (req, res) => {
     const [entry] = await db.select().from(entries).where(eq(entries.id, id)).limit(1);
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     const ownersMap = await getOwnersMap([entry.ownerId]);
-    res.json(formatEntry(entry, ownersMap.get(entry.ownerId ?? "")));
+    res.json(await enrichEntry(entry, ownersMap.get(entry.ownerId ?? "")));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to get entry" });
@@ -127,7 +129,7 @@ router.patch("/:id", requireEditor, async (req, res) => {
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     const ownersMap = await getOwnersMap([entry.ownerId]);
-    res.json(formatEntry(entry, ownersMap.get(entry.ownerId ?? "")));
+    res.json(await enrichEntry(entry, ownersMap.get(entry.ownerId ?? "")));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update entry" });
@@ -152,7 +154,7 @@ router.patch("/:id/publish", requireEditor, async (req, res) => {
     const [entry] = await db.update(entries).set({ published, updatedAt: new Date() })
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
-    res.json(formatEntry(entry));
+    res.json(await enrichEntry(entry));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update entry" });
@@ -167,7 +169,7 @@ router.patch("/:id/featured", requireEditor, async (req, res) => {
     const [entry] = await db.update(entries).set({ featured, featuredUntil, updatedAt: new Date() })
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
-    res.json(formatEntry(entry));
+    res.json(await enrichEntry(entry));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update featured status" });
@@ -182,7 +184,7 @@ router.patch("/:id/premium", requireEditor, async (req, res) => {
     const [entry] = await db.update(entries).set({ premium, premiumUntil, updatedAt: new Date() })
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
-    res.json(formatEntry(entry));
+    res.json(await enrichEntry(entry));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to update premium status" });
@@ -197,7 +199,7 @@ router.delete("/:id/owner", requireAdmin, async (req, res) => {
       .where(eq(entries.id, id)).returning();
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     req.log.info({ entryId: id }, "Admin cleared entry owner");
-    res.json(formatEntry(entry));
+    res.json(await enrichEntry(entry));
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to clear entry owner" });
@@ -217,7 +219,12 @@ router.delete("/", requireAdmin, async (req, res) => {
   }
 });
 
-function formatEntry(e: typeof entries.$inferSelect, owner?: typeof bizUsers.$inferSelect) {
+function formatEntry(
+  e: typeof entries.$inferSelect,
+  owner?: typeof bizUsers.$inferSelect,
+  normalizedLocation?: typeof entryLocations.$inferSelect | null,
+  confirmedServices?: Array<{ slug: string | null; label: string | null }>,
+) {
   return {
     id: e.id,
     title: e.title,
@@ -253,9 +260,38 @@ function formatEntry(e: typeof entries.$inferSelect, owner?: typeof bizUsers.$in
           lastName: owner.lastName,
         }
       : null,
+    normalizedLocation: normalizedLocation
+      ? {
+          cityName: normalizedLocation.cityName,
+          citySlug: normalizedLocation.citySlug,
+          stateName: normalizedLocation.stateName,
+          stateSlug: normalizedLocation.stateSlug,
+          postalCode: normalizedLocation.postalCode,
+          locationStatus: normalizedLocation.locationStatus,
+          locationSource: normalizedLocation.locationSource,
+          locationConfidence: normalizedLocation.locationConfidence,
+        }
+      : null,
+    confirmedServices: confirmedServices ?? [],
     createdAt: e.createdAt.toISOString(),
     updatedAt: e.updatedAt.toISOString(),
   };
+}
+
+async function enrichEntry(e: typeof entries.$inferSelect, owner?: typeof bizUsers.$inferSelect) {
+  const [loc] = await db
+    .select()
+    .from(entryLocations)
+    .where(eq(entryLocations.entryId, e.id))
+    .limit(1);
+
+  const svcs = await db
+    .select({ slug: serviceTypes.slug, label: serviceTypes.label })
+    .from(entryServiceTypes)
+    .leftJoin(serviceTypes, eq(entryServiceTypes.serviceTypeId, serviceTypes.id))
+    .where(and(eq(entryServiceTypes.entryId, e.id), eq(entryServiceTypes.status, "confirmed")));
+
+  return formatEntry(e, owner, loc ?? null, svcs);
 }
 
 export default router;

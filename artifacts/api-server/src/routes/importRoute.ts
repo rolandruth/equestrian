@@ -7,6 +7,7 @@ import { eq, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
 import { mirrorEntryImages, isRemoteImageUrl } from "../lib/imageStore.js";
+import { applyImportLocation, applyImportServiceType } from "../lib/localSeo.js";
 
 const router = Router();
 
@@ -182,9 +183,16 @@ interface FieldMapping {
   approved: boolean;
 }
 
-function applyMappings(headers: string[], rowValues: string[], mappings: FieldMapping[]): Record<string, string | null> {
+interface MappingResult {
+  entry: Record<string, string | null>;
+  explicitLocationParts: { city?: string; state?: string; zip?: string };
+  hasExplicitLocation: boolean;
+}
+
+function applyMappings(headers: string[], rowValues: string[], mappings: FieldMapping[]): MappingResult {
   const entry: Record<string, string | null> = {};
   const locationParts: { city?: string; state?: string; country?: string; zip?: string } = {};
+  let hasExplicitLocation = false;
 
   for (let i = 0; i < headers.length; i++) {
     const header = headers[i];
@@ -195,10 +203,10 @@ function applyMappings(headers: string[], rowValues: string[], mappings: FieldMa
 
     const target = mapping.targetField;
 
-    if (target === "location_city") { locationParts.city = value ?? undefined; }
-    else if (target === "location_state") { locationParts.state = value ?? undefined; }
+    if (target === "location_city") { locationParts.city = value ?? undefined; hasExplicitLocation = !!value; }
+    else if (target === "location_state") { locationParts.state = value ?? undefined; hasExplicitLocation = hasExplicitLocation || !!value; }
     else if (target === "location_country") { locationParts.country = value ?? undefined; }
-    else if (target === "location_zip") { locationParts.zip = value ?? undefined; }
+    else if (target === "location_zip") { locationParts.zip = value ?? undefined; hasExplicitLocation = hasExplicitLocation || !!value; }
     else { entry[target] = value; }
   }
 
@@ -221,7 +229,11 @@ function applyMappings(headers: string[], rowValues: string[], mappings: FieldMa
       : (cityStateStr || null);
   }
 
-  return entry;
+  return {
+    entry,
+    explicitLocationParts: { city: locationParts.city, state: locationParts.state, zip: locationParts.zip },
+    hasExplicitLocation,
+  };
 }
 
 // Gemini enrichment: generate summary + tags for entries missing them
@@ -297,13 +309,18 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
     }).where(eq(importJobs.jobId, jobId));
 
     // Step 1: Parse all rows using confirmed mappings
-    const parsedEntries: Array<{ rowIndex: number; data: Record<string, string | null> }> = [];
+    const parsedEntries: Array<{
+      rowIndex: number;
+      data: Record<string, string | null>;
+      explicitLocationParts: { city?: string; state?: string; zip?: string };
+      hasExplicitLocation: boolean;
+    }> = [];
 
     for (let i = 0; i < dataRows.length; i++) {
       const rowValues = dataRows[i];
-      const data = applyMappings(headers, rowValues, fieldMappings);
+      const { entry: data, explicitLocationParts, hasExplicitLocation } = applyMappings(headers, rowValues, fieldMappings);
       if (data.title) {
-        parsedEntries.push({ rowIndex: i, data });
+        parsedEntries.push({ rowIndex: i, data, explicitLocationParts, hasExplicitLocation });
       }
     }
 
@@ -391,7 +408,13 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
       updatedAt: new Date(),
     }).where(eq(importJobs.jobId, jobId));
 
-    const insertedEntries: Array<{ id: number; customFields: Record<string, unknown> | null }> = [];
+    const insertedEntries: Array<{
+      id: number;
+      customFields: Record<string, unknown> | null;
+      explicitLocationParts: { city?: string; state?: string; zip?: string };
+      hasExplicitLocation: boolean;
+      ridingType: string | null;
+    }> = [];
 
     for (let chunkStart = 0; chunkStart < parsedEntries.length; chunkStart += INSERT_CHUNK) {
       const chunk = parsedEntries.slice(chunkStart, chunkStart + INSERT_CHUNK);
@@ -453,8 +476,18 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
         id: entries.id,
         customFields: entries.customFields,
       });
-      for (const row of inserted) {
-        insertedEntries.push({ id: row.id, customFields: row.customFields as Record<string, unknown> | null });
+      for (let i = 0; i < inserted.length; i++) {
+        const row = inserted[i];
+        const parsed = chunk[i];
+        const cf = row.customFields as Record<string, unknown> | null;
+        const ridingType = typeof cf?.ridingtype === "string" ? cf.ridingtype : null;
+        insertedEntries.push({
+          id: row.id,
+          customFields: cf,
+          explicitLocationParts: parsed.explicitLocationParts,
+          hasExplicitLocation: parsed.hasExplicitLocation,
+          ridingType,
+        });
       }
       entriesCreated += chunk.length;
 
@@ -488,6 +521,16 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
           message: `Downloading listing photos... (${imagesDone}/${withImages.length})`,
           updatedAt: new Date(),
         }).where(eq(importJobs.jobId, jobId));
+      }
+    }
+
+    // Step 6: Apply normalized location and service types for imported entries
+    for (const ie of insertedEntries) {
+      if (ie.hasExplicitLocation) {
+        await applyImportLocation(ie.id, ie.explicitLocationParts).catch(() => {});
+      }
+      if (ie.ridingType) {
+        await applyImportServiceType(ie.id, ie.ridingType).catch(() => {});
       }
     }
 

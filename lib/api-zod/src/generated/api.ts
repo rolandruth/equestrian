@@ -315,6 +315,31 @@ export const ListEntriesResponse = zod.object({
           lastName: zod.string().nullish(),
         })
         .nullish(),
+      normalizedLocation: zod
+        .union([
+          zod.object({
+            cityName: zod.string().nullish(),
+            citySlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            stateSlug: zod.string().nullish(),
+            postalCode: zod.string().nullish(),
+            locationStatus: zod
+              .enum(["confirmed", "manual_review", "rejected"])
+              .optional(),
+            locationSource: zod.string().nullish(),
+            locationConfidence: zod.number().nullish(),
+          }),
+          zod.null(),
+        ])
+        .optional(),
+      confirmedServices: zod
+        .array(
+          zod.object({
+            slug: zod.string().nullish(),
+            label: zod.string().nullish(),
+          }),
+        )
+        .optional(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -380,6 +405,31 @@ export const GetEntryResponse = zod.object({
       lastName: zod.string().nullish(),
     })
     .nullish(),
+  normalizedLocation: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  confirmedServices: zod
+    .array(
+      zod.object({
+        slug: zod.string().nullish(),
+        label: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -438,6 +488,31 @@ export const UpdateEntryResponse = zod.object({
       lastName: zod.string().nullish(),
     })
     .nullish(),
+  normalizedLocation: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  confirmedServices: zod
+    .array(
+      zod.object({
+        slug: zod.string().nullish(),
+        label: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -489,6 +564,31 @@ export const ClearEntryOwnerResponse = zod.object({
       lastName: zod.string().nullish(),
     })
     .nullish(),
+  normalizedLocation: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  confirmedServices: zod
+    .array(
+      zod.object({
+        slug: zod.string().nullish(),
+        label: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -532,6 +632,31 @@ export const ToggleEntryPublishedResponse = zod.object({
       lastName: zod.string().nullish(),
     })
     .nullish(),
+  normalizedLocation: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  confirmedServices: zod
+    .array(
+      zod.object({
+        slug: zod.string().nullish(),
+        label: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -890,6 +1015,9 @@ export const ListPublicEntriesQueryParams = zod.object({
   city: zod.coerce.string().nullish(),
   sort: zod.coerce.string().nullish(),
   ridingType: zod.coerce.string().nullish(),
+  stateSlug: zod.coerce.string().nullish(),
+  citySlug: zod.coerce.string().nullish(),
+  serviceSlug: zod.coerce.string().nullish(),
 });
 
 export const ListPublicEntriesResponse = zod.object({
@@ -922,6 +1050,31 @@ export const ListPublicEntriesResponse = zod.object({
           lastName: zod.string().nullish(),
         })
         .nullish(),
+      normalizedLocation: zod
+        .union([
+          zod.object({
+            cityName: zod.string().nullish(),
+            citySlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            stateSlug: zod.string().nullish(),
+            postalCode: zod.string().nullish(),
+            locationStatus: zod
+              .enum(["confirmed", "manual_review", "rejected"])
+              .optional(),
+            locationSource: zod.string().nullish(),
+            locationConfidence: zod.number().nullish(),
+          }),
+          zod.null(),
+        ])
+        .optional(),
+      confirmedServices: zod
+        .array(
+          zod.object({
+            slug: zod.string().nullish(),
+            label: zod.string().nullish(),
+          }),
+        )
+        .optional(),
       createdAt: zod.string(),
       updatedAt: zod.string(),
     }),
@@ -966,6 +1119,31 @@ export const GetPublicEntryResponse = zod.object({
       lastName: zod.string().nullish(),
     })
     .nullish(),
+  normalizedLocation: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  confirmedServices: zod
+    .array(
+      zod.object({
+        slug: zod.string().nullish(),
+        label: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1021,6 +1199,31 @@ export const GetFeaturedEntriesResponseItem = zod.object({
       lastName: zod.string().nullish(),
     })
     .nullish(),
+  normalizedLocation: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  confirmedServices: zod
+    .array(
+      zod.object({
+        slug: zod.string().nullish(),
+        label: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1059,6 +1262,31 @@ export const GetRecentEntriesResponseItem = zod.object({
       lastName: zod.string().nullish(),
     })
     .nullish(),
+  normalizedLocation: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  confirmedServices: zod
+    .array(
+      zod.object({
+        slug: zod.string().nullish(),
+        label: zod.string().nullish(),
+      }),
+    )
+    .optional(),
   createdAt: zod.string(),
   updatedAt: zod.string(),
 });
@@ -1129,4 +1357,346 @@ export const GetPublicSettingsResponse = zod.object({
   smtpFrom: zod.string().nullish(),
   smtpPassSet: zod.boolean().optional(),
   smtpPassHint: zod.string().nullish(),
+});
+
+/**
+ * @summary Get eligible local SEO hub pages (states and cities meeting thresholds)
+ */
+export const GetLocalSeoHubsResponse = zod.object({
+  states: zod.array(
+    zod.object({
+      stateSlug: zod.string().nullish(),
+      stateName: zod.string().nullish(),
+      entryCount: zod.number(),
+    }),
+  ),
+  cities: zod.array(
+    zod.object({
+      citySlug: zod.string().nullish(),
+      cityName: zod.string().nullish(),
+      stateSlug: zod.string().nullish(),
+      stateName: zod.string().nullish(),
+      entryCount: zod.number(),
+    }),
+  ),
+  globalServices: zod.array(
+    zod.object({
+      serviceSlug: zod.string().nullish(),
+      serviceLabel: zod.string().nullish(),
+      entryCount: zod.number(),
+    }),
+  ),
+  stateServices: zod.array(
+    zod.object({
+      stateSlug: zod.string().nullish(),
+      stateName: zod.string().nullish(),
+      serviceSlug: zod.string().nullish(),
+      serviceLabel: zod.string().nullish(),
+      entryCount: zod.number(),
+    }),
+  ),
+  cityServices: zod.array(
+    zod.object({
+      citySlug: zod.string().optional(),
+      cityName: zod.string().nullish(),
+      stateSlug: zod.string().optional(),
+      stateName: zod.string().nullish(),
+      serviceSlug: zod.string().optional(),
+      serviceLabel: zod.string().nullish(),
+      entryCount: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * Returns eligible landing page data for a given state/city/service combination. stateSlug is required when citySlug is provided. Unknown serviceSlug values and under-threshold combinations return eligible=false.
+
+ * @summary Get entries and metadata for a local SEO landing page
+ */
+export const GetLocalSeoLandingQueryParams = zod.object({
+  stateSlug: zod.coerce.string().nullish(),
+  citySlug: zod.coerce
+    .string()
+    .nullish()
+    .describe(
+      "Requires stateSlug to be provided as well to avoid same-name city collisions.",
+    ),
+  serviceSlug: zod.coerce.string().nullish(),
+  page: zod.coerce.number().nullish(),
+  limit: zod.coerce.number().nullish(),
+});
+
+export const GetLocalSeoLandingResponse = zod.object({
+  eligible: zod.boolean(),
+  entries: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      slug: zod.string().nullish(),
+      category: zod.string().nullish(),
+      summary: zod.string().nullish(),
+      location: zod.string().nullish(),
+      website: zod.string().nullish(),
+      contactPhone: zod.string().nullish(),
+      featured: zod.boolean().optional(),
+      premium: zod.boolean().optional(),
+      published: zod.boolean(),
+      createdAt: zod.string(),
+      updatedAt: zod.string(),
+      normalizedLocation: zod
+        .union([
+          zod.object({
+            cityName: zod.string().nullish(),
+            citySlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            stateSlug: zod.string().nullish(),
+            postalCode: zod.string().nullish(),
+            locationStatus: zod
+              .enum(["confirmed", "manual_review", "rejected"])
+              .optional(),
+            locationSource: zod.string().nullish(),
+            locationConfidence: zod.number().nullish(),
+          }),
+          zod.null(),
+        ])
+        .optional(),
+      confirmedServices: zod.array(
+        zod.object({
+          slug: zod.string().nullish(),
+          label: zod.string().nullish(),
+        }),
+      ),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  totalPages: zod.number(),
+  meta: zod
+    .union([
+      zod.object({
+        stateSlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        cityName: zod.string().nullish(),
+        serviceSlug: zod.string().nullish(),
+        serviceLabel: zod.string().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  relatedHubs: zod
+    .union([
+      zod.object({
+        states: zod.array(
+          zod.object({
+            stateSlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            entryCount: zod.number(),
+          }),
+        ),
+        cities: zod.array(
+          zod.object({
+            citySlug: zod.string().nullish(),
+            cityName: zod.string().nullish(),
+            stateSlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            entryCount: zod.number(),
+          }),
+        ),
+        globalServices: zod.array(
+          zod.object({
+            serviceSlug: zod.string().nullish(),
+            serviceLabel: zod.string().nullish(),
+            entryCount: zod.number(),
+          }),
+        ),
+        stateServices: zod.array(
+          zod.object({
+            stateSlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            serviceSlug: zod.string().nullish(),
+            serviceLabel: zod.string().nullish(),
+            entryCount: zod.number(),
+          }),
+        ),
+        cityServices: zod.array(
+          zod.object({
+            citySlug: zod.string().optional(),
+            cityName: zod.string().nullish(),
+            stateSlug: zod.string().optional(),
+            stateName: zod.string().nullish(),
+            serviceSlug: zod.string().optional(),
+            serviceLabel: zod.string().nullish(),
+            entryCount: zod.number(),
+          }),
+        ),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+});
+
+/**
+ * @summary Get local SEO coverage summary and queue counts
+ */
+export const GetLocalSeoSummaryResponse = zod.object({
+  totalEntries: zod.number(),
+  confirmedLocations: zod.number(),
+  locationReviewQueue: zod.number(),
+  confirmedServices: zod.number(),
+  serviceReviewQueue: zod.number(),
+  eligibleStateHubs: zod.number(),
+  eligibleCityHubs: zod.number(),
+});
+
+/**
+ * @summary Preview deterministic location and service suggestions (read-only)
+ */
+export const PreviewLocalSeoClassificationsBody = zod.object({
+  limit: zod.number().nullish(),
+});
+
+export const PreviewLocalSeoClassificationsResponse = zod.object({
+  previews: zod.array(
+    zod.object({
+      entryId: zod.number(),
+      entryTitle: zod.string(),
+      locationSuggestion: zod
+        .union([
+          zod.object({
+            cityName: zod.string().nullish(),
+            citySlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            stateSlug: zod.string().nullish(),
+            postalCode: zod.string().nullish(),
+            confidence: zod.number().optional(),
+            source: zod.string().optional(),
+          }),
+          zod.null(),
+        ])
+        .optional(),
+      serviceSuggestions: zod.array(
+        zod.object({
+          serviceSlug: zod.string(),
+          confidence: zod.number(),
+          source: zod.string(),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * @summary Idempotently apply high-confidence locations and queue service suggestions
+ */
+export const ApplyLocalSeoClassificationsResponse = zod.object({
+  success: zod.boolean(),
+  locationsApplied: zod.number(),
+  servicesQueued: zod.number(),
+});
+
+/**
+ * @summary Get paginated manual-review rows with service suggestions
+ */
+export const GetLocalSeoReviewQueryParams = zod.object({
+  page: zod.coerce.number().nullish(),
+  limit: zod.coerce.number().nullish(),
+});
+
+export const GetLocalSeoReviewResponse = zod.object({
+  rows: zod.array(
+    zod.object({
+      entryId: zod.number(),
+      entryTitle: zod.string().nullish(),
+      originalLocation: zod.string().nullish(),
+      location: zod
+        .union([
+          zod.object({
+            cityName: zod.string().nullish(),
+            citySlug: zod.string().nullish(),
+            stateName: zod.string().nullish(),
+            stateSlug: zod.string().nullish(),
+            postalCode: zod.string().nullish(),
+            locationStatus: zod
+              .enum(["confirmed", "manual_review", "rejected"])
+              .optional(),
+            locationSource: zod.string().nullish(),
+            locationConfidence: zod.number().nullish(),
+          }),
+          zod.null(),
+        ])
+        .optional(),
+      serviceSuggestions: zod.array(
+        zod.object({
+          serviceTypeId: zod.number().optional(),
+          serviceSlug: zod.string().nullish(),
+          serviceLabel: zod.string().nullish(),
+          confidence: zod.number().nullish(),
+        }),
+      ),
+    }),
+  ),
+  total: zod.number(),
+  page: zod.number(),
+  totalPages: zod.number(),
+});
+
+/**
+ * @summary Approve, edit, or reject normalized location and confirmed services for an entry
+ */
+export const UpdateEntryClassificationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const UpdateEntryClassificationBody = zod
+  .object({
+    locationStatus: zod
+      .union([
+        zod.literal("confirmed"),
+        zod.literal("manual_review"),
+        zod.literal("rejected"),
+        zod.literal(null),
+      ])
+      .nullish(),
+    cityName: zod.string().nullish(),
+    stateName: zod.string().nullish(),
+    postalCode: zod.string().nullish(),
+    reviewedSuggestionServiceSlugs: zod
+      .array(zod.string())
+      .optional()
+      .describe(
+        "Slugs of the entry's current manual_review service suggestions to confirm. Any current manual_review suggestion whose slug is omitted is rejected.\n",
+      ),
+  })
+  .describe(
+    "Reviews an entry's local SEO classification. citySlug and stateSlug are derived server-side from cityName\/stateName and must not be supplied by callers. reviewedSuggestionServiceSlugs decides ONLY the entry's current manual_review service suggestions: listed slugs are confirmed, the remaining manual_review suggestions on the entry are rejected (audit rows retained). It is NOT a full replacement of confirmed assignments — existing confirmed and rejected service rows are never modified or deleted. The location decision is independent.\n",
+  );
+
+export const UpdateEntryClassificationResponse = zod.object({
+  entryId: zod.number(),
+  location: zod
+    .union([
+      zod.object({
+        cityName: zod.string().nullish(),
+        citySlug: zod.string().nullish(),
+        stateName: zod.string().nullish(),
+        stateSlug: zod.string().nullish(),
+        postalCode: zod.string().nullish(),
+        locationStatus: zod
+          .enum(["confirmed", "manual_review", "rejected"])
+          .optional(),
+        locationSource: zod.string().nullish(),
+        locationConfidence: zod.number().nullish(),
+      }),
+      zod.null(),
+    ])
+    .optional(),
+  services: zod.array(
+    zod.object({
+      serviceTypeId: zod.number().optional(),
+      status: zod.string().optional(),
+      slug: zod.string().nullish(),
+      label: zod.string().nullish(),
+    }),
+  ),
 });

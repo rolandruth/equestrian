@@ -3,10 +3,17 @@ import { db } from "@workspace/db";
 import { entries } from "@workspace/db";
 import { requireAdmin } from "../middlewares/auth.js";
 import { getGeminiClient } from "../lib/gemini.js";
-import { eq, isNull, or, count, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
 import { ENTRY_SLUG_ADVISORY_LOCK_ID } from "../lib/entrySlugs.js";
+import {
+  buildListingSeo,
+  cleanListingText,
+  getListingSeoQuality,
+  isMeaningfulListingMetaDescription,
+  isMeaningfulListingMetaTitle,
+} from "@workspace/listing-seo";
 
 const router = Router();
 
@@ -44,8 +51,22 @@ function extractJson(text: string): any {
 
 const SEO_BATCH = 20;
 
+type SeoEntry = {
+  id: number;
+  title: string;
+  category: string | null;
+  summary: string | null;
+  description: string | null;
+  location: string | null;
+  slug: string | null;
+  metaTitle: string | null;
+  metaDescription: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+};
+
 async function generateSeoBatch(
-  batch: Array<{ id: number; title: string; category: string | null; summary: string | null; description: string | null }>
+  batch: SeoEntry[],
 ): Promise<Map<number, { metaTitle: string; metaDescription: string; ogTitle: string; ogDescription: string }>> {
   const prompt = `You are an SEO expert. For each directory entry below, generate SEO metadata.
 
@@ -62,8 +83,8 @@ Return ONLY valid JSON, no markdown fences:
   ]
 }
 
-Entries:
-${batch.map(e => `[${e.id}] Title: "${e.title}" | Category: ${e.category || "General"} | Summary: ${(e.summary || "").slice(0, 200)} | Description: ${(e.description || "").slice(0, 300)}`).join("\n")}`;
+  Entries:
+${batch.map(e => `[${e.id}] Title: "${e.title}" | Category: ${e.category || "General"} | Location: ${e.location || "Not provided"} | Summary: ${(e.summary || "").slice(0, 200)} | Description: ${(e.description || "").slice(0, 300)}`).join("\n")}`;
 
   const aiClient = await getGeminiClient();
   const response = await aiClient.models.generateContent({
@@ -93,11 +114,25 @@ ${batch.map(e => `[${e.id}] Title: "${e.title}" | Category: ${e.category || "Gen
 async function runBulkSeo(jobId: string, overwrite: boolean) {
   const job = seoJobs.get(jobId)!;
   try {
+    const publicEntries = await db
+      .select({
+        id: entries.id,
+        title: entries.title,
+        category: entries.category,
+        summary: entries.summary,
+        description: entries.description,
+        location: entries.location,
+        slug: entries.slug,
+        metaTitle: entries.metaTitle,
+        metaDescription: entries.metaDescription,
+        ogTitle: entries.ogTitle,
+        ogDescription: entries.ogDescription,
+      })
+      .from(entries)
+      .where(eq(entries.published, true));
     const allEntries = overwrite
-      ? await db.select({ id: entries.id, title: entries.title, category: entries.category, summary: entries.summary, description: entries.description, slug: entries.slug }).from(entries)
-      : await db.select({ id: entries.id, title: entries.title, category: entries.category, summary: entries.summary, description: entries.description, slug: entries.slug })
-          .from(entries)
-          .where(or(isNull(entries.metaTitle), isNull(entries.slug)));
+      ? publicEntries
+      : publicEntries.filter((entry) => !entry.slug || getListingSeoQuality(entry).needsImprovement);
 
     job.total = allEntries.length;
     job.message = `Processing ${allEntries.length} entries...`;
@@ -128,11 +163,12 @@ async function runBulkSeo(jobId: string, overwrite: boolean) {
       } catch (err) {
         logger.warn({ jobId, batch: b, err }, "SEO batch failed — using fallbacks");
         for (const entry of batchSlice) {
+          const fallback = buildListingSeo(entry);
           seoMap.set(entry.id, {
-            metaTitle: entry.title.slice(0, 60),
-            metaDescription: (entry.summary || entry.description || entry.title).slice(0, 160),
-            ogTitle: entry.title.slice(0, 60),
-            ogDescription: (entry.summary || entry.description || entry.title).slice(0, 160),
+            metaTitle: fallback.title,
+            metaDescription: fallback.description,
+            ogTitle: fallback.ogTitle,
+            ogDescription: fallback.ogDescription,
           });
         }
       }
@@ -200,14 +236,29 @@ async function runBulkSeo(jobId: string, overwrite: boolean) {
       }
 
       for (const entry of allEntries) {
-        const seo = seoMap.get(entry.id);
+        const generated = seoMap.get(entry.id);
+        const generatedSeo = buildListingSeo({
+          ...entry,
+          metaTitle: generated?.metaTitle ?? null,
+          metaDescription: generated?.metaDescription ?? null,
+          ogTitle: generated?.ogTitle ?? null,
+          ogDescription: generated?.ogDescription ?? null,
+        });
         const slug = slugMap.get(entry.id)!;
         await tx.update(entries).set({
           slug,
-          metaTitle: seo?.metaTitle || entry.title.slice(0, 60),
-          metaDescription: seo?.metaDescription || (entry.summary || "").slice(0, 160),
-          ogTitle: seo?.ogTitle || entry.title.slice(0, 60),
-          ogDescription: seo?.ogDescription || (entry.summary || "").slice(0, 160),
+          metaTitle: !overwrite && isMeaningfulListingMetaTitle(entry.metaTitle, entry.title)
+            ? cleanListingText(entry.metaTitle)
+            : generatedSeo.title,
+          metaDescription: !overwrite && isMeaningfulListingMetaDescription(entry.metaDescription, entry.title)
+            ? cleanListingText(entry.metaDescription)
+            : generatedSeo.description,
+          ogTitle: !overwrite && isMeaningfulListingMetaTitle(entry.ogTitle, entry.title)
+            ? cleanListingText(entry.ogTitle)
+            : generatedSeo.ogTitle,
+          ogDescription: !overwrite && isMeaningfulListingMetaDescription(entry.ogDescription, entry.title)
+            ? cleanListingText(entry.ogDescription)
+            : generatedSeo.ogDescription,
           updatedAt: new Date(),
         }).where(eq(entries.id, entry.id));
         saved++;
@@ -235,19 +286,32 @@ async function runBulkSeo(jobId: string, overwrite: boolean) {
 // GET /api/seo/summary
 router.get("/summary", requireAdmin, async (req, res) => {
   try {
-    const [totalRow] = await db.select({ count: count() }).from(entries);
-    const [missingSeoRow] = await db
-      .select({ count: count() })
+    const publicEntries = await db
+      .select({
+        title: entries.title,
+        metaTitle: entries.metaTitle,
+        metaDescription: entries.metaDescription,
+      })
       .from(entries)
-      .where(or(isNull(entries.slug), isNull(entries.metaTitle), isNull(entries.metaDescription)));
-
-    const totalCount = Number(totalRow?.count ?? 0);
-    const missingSeo = Number(missingSeoRow?.count ?? 0);
+      .where(eq(entries.published, true));
+    const qualities = publicEntries.map((entry) => getListingSeoQuality(entry));
+    const totalCount = publicEntries.length;
+    const missingSeo = qualities.filter(
+      (quality) => quality.missingTitle || quality.missingDescription,
+    ).length;
+    const weakSeo = qualities.filter(
+      (quality) => !quality.missingTitle
+        && !quality.missingDescription
+        && (quality.weakTitle || quality.weakDescription),
+    ).length;
+    const needsImprovement = qualities.filter((quality) => quality.needsImprovement).length;
 
     res.json({
       total: totalCount,
-      withSeo: totalCount - missingSeo,
+      withSeo: totalCount - needsImprovement,
       missingSeo,
+      weakSeo,
+      needsImprovement,
     });
   } catch (err) {
     req.log.error(err);

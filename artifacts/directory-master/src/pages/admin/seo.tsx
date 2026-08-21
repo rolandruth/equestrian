@@ -30,6 +30,8 @@ interface SeoSummary {
   total: number;
   withSeo: number;
   missingSeo: number;
+  weakSeo: number;
+  needsImprovement: number;
 }
 
 interface SeoJobStatus {
@@ -170,7 +172,7 @@ export default function AdminSeoPage() {
             SEO Manager
           </h1>
           <p className="text-muted-foreground mt-1">
-            Use Gemini AI to bulk-generate slugs, meta titles, meta descriptions, and Open Graph tags for every entry.
+            Review listing snippet quality and optionally use Gemini AI to improve weak or missing metadata.
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={loadSummary} disabled={summaryLoading}>
@@ -292,7 +294,9 @@ export default function AdminSeoPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">SEO Coverage</CardTitle>
-          <CardDescription>How many entries currently have SEO metadata</CardDescription>
+          <CardDescription>
+            Published entries with useful search snippets, not just non-empty fields
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {summaryLoading ? (
@@ -309,13 +313,17 @@ export default function AdminSeoPage() {
               <div className="flex gap-4 text-sm">
                 <div className="flex items-center gap-1.5 text-green-600 dark:text-green-500">
                   <CheckCircle2 className="h-4 w-4" />
-                  {summary.withSeo} with SEO
+                  {summary.withSeo} strong snippets
                 </div>
                 <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
                   <AlertCircle className="h-4 w-4" />
-                  {summary.missingSeo} missing SEO
+                  {summary.needsImprovement} need improvement
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {summary.weakSeo} have thin or duplicated metadata and {summary.missingSeo} are missing a title or description.
+                Public listing pages use safe, deterministic fallbacks immediately; this report does not rewrite stored metadata.
+              </p>
             </div>
           ) : (
             <p className="text-muted-foreground text-sm">Could not load stats.</p>
@@ -354,7 +362,7 @@ export default function AdminSeoPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Generate SEO with Gemini</CardTitle>
           <CardDescription>
-            By default only entries missing SEO data will be processed. Toggle below to regenerate all.
+            By default only published entries with missing, duplicated, or thin metadata are processed. Existing meaningful custom metadata is preserved.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -370,8 +378,8 @@ export default function AdminSeoPage() {
               {overwrite && (
                 <Badge variant="secondary" className="ml-2 text-xs">All {summary?.total ?? ""} entries</Badge>
               )}
-              {!overwrite && summary && summary.missingSeo > 0 && (
-                <Badge variant="outline" className="ml-2 text-xs">{summary.missingSeo} entries</Badge>
+              {!overwrite && summary && summary.needsImprovement > 0 && (
+                <Badge variant="outline" className="ml-2 text-xs">{summary.needsImprovement} entries</Badge>
               )}
             </Label>
           </div>
@@ -406,7 +414,7 @@ export default function AdminSeoPage() {
 
           <Button
             onClick={handleBulkGenerate}
-            disabled={isRunning || (summary?.missingSeo === 0 && !overwrite)}
+            disabled={isRunning || (summary?.needsImprovement === 0 && !overwrite)}
             size="lg"
             className="w-full sm:w-auto gap-2"
           >
@@ -416,10 +424,10 @@ export default function AdminSeoPage() {
               <><Sparkles className="h-4 w-4" /> Bulk Generate SEO with Gemini</>
             )}
           </Button>
-          {summary?.missingSeo === 0 && !overwrite && !isRunning && (
+          {summary?.needsImprovement === 0 && !overwrite && !isRunning && (
             <p className="text-sm text-green-600 dark:text-green-500 flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4" />
-              All entries already have SEO data. Toggle "Regenerate" above to refresh them.
+              All published entries already have strong search snippets. Toggle "Regenerate" above to refresh them.
             </p>
           )}
         </CardContent>

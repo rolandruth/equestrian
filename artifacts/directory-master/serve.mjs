@@ -14,6 +14,12 @@ import {
   getLessonGuideHttpStatus,
   injectLessonGuideSeoHtml,
 } from "../../lib/lesson-guides/src/index.ts";
+import {
+  buildListingSeo,
+  buildListingStructuredData,
+  getListingImageUrl,
+  injectListingCrawlerShell,
+} from "../../lib/listing-seo/src/index.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(__dirname, "dist/public");
@@ -874,52 +880,6 @@ async function handleServiceCityPage(reqPath, html, page) {
   return out;
 }
 
-function injectEntryShell(html, entry, categoryEligible) {
-  const categoryUrl = (entry.category && categoryEligible) ? `/browse/${encodeURIComponent(entry.category)}` : null;
-  const websiteUrl = toAbsoluteUrl(entry.website);
-  const details = [
-    entry.category ? `<dt>Category</dt><dd>${escapeHtml(entry.category)}</dd>` : "",
-    entry.location ? `<dt>Location</dt><dd>${escapeHtml(entry.location)}</dd>` : "",
-    entry.contact_phone ? `<dt>Phone</dt><dd>${escapeHtml(entry.contact_phone)}</dd>` : "",
-    websiteUrl
-      ? `<dt>Website</dt><dd><a href="${escapeHtml(websiteUrl)}" rel="noopener noreferrer">${escapeHtml(websiteUrl.replace(/^https?:\/\/(www\.)?/, ""))}</a></dd>`
-      : "",
-  ].filter(Boolean).join("");
-  const description = String(entry.description || "")
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-    .join("");
-  const breadcrumbs = [
-    `<a href="/">Home</a>`,
-    `<a href="/browse">Browse</a>`,
-    entry.category && categoryUrl ? `<a href="${escapeHtml(categoryUrl)}">${escapeHtml(entry.category)}</a>` : (entry.category ? `<span>${escapeHtml(entry.category)}</span>` : ""),
-    `<span aria-current="page">${escapeHtml(entry.title)}</span>`,
-  ].filter(Boolean).join("<span aria-hidden=\"true\"> / </span>");
-  const viewAllLink = categoryUrl
-    ? `<p><a href="${escapeHtml(categoryUrl)}">View all ${escapeHtml(entry.category)} listings</a></p>`
-    : "";
-  const shell = `<article class="seo-entry-shell">
-    <nav aria-label="Breadcrumb">${breadcrumbs}</nav>
-    <h1>${escapeHtml(entry.title)}</h1>
-    ${entry.summary ? `<p class="seo-entry-summary">${escapeHtml(entry.summary)}</p>` : ""}
-    ${details ? `<dl>${details}</dl>` : ""}
-    ${description ? `<section aria-label="About ${escapeHtml(entry.title)}">${description}</section>` : ""}
-    ${viewAllLink}
-  </article>`;
-  const root = /<div\s+id=["']root["']\s*><\/div>/i;
-  if (!root.test(html)) return html;
-  let out = html.replace(root, `<div id="root">${shell}</div>`);
-  if (!out.includes("id=\"seo-entry-shell-styles\"")) {
-    out = out.replace(
-      "</head>",
-      `    <style id="seo-entry-shell-styles">.seo-entry-shell{box-sizing:border-box;max-width:960px;margin:0 auto;padding:32px 24px;font:16px/1.6 system-ui,sans-serif;color:#292524}.seo-entry-shell nav{font-size:14px;margin-bottom:24px}.seo-entry-shell h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px}.seo-entry-summary{font-size:19px}.seo-entry-shell dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:24px 0}.seo-entry-shell dt{font-weight:700}.seo-entry-shell dd{margin:0}.seo-entry-shell a{color:#1d4ed8}</style>\n  </head>`,
-    );
-  }
-  return out;
-}
-
 async function injectSeoMeta(html, reqPath) {
   try {
     const lessonGuideHtml = injectLessonGuideSeoHtml(html, reqPath, publicOrigin);
@@ -935,6 +895,26 @@ async function injectSeoMeta(html, reqPath) {
                 e.location, e.contact_phone, e.website, e.custom_fields,
                 e.meta_title, e.meta_description, e.og_title, e.og_description,
                  e.latitude, e.longitude, s.site_title,
+                 (SELECT jsonb_build_object(
+                           'cityName', el.city_name,
+                           'stateName', el.state_name,
+                           'postalCode', el.postal_code
+                         )
+                    FROM entry_locations el
+                   WHERE el.entry_id = e.id
+                     AND el.location_status = 'confirmed'
+                   LIMIT 1) AS normalized_location,
+                 (SELECT COALESCE(
+                           jsonb_agg(
+                             jsonb_build_object('slug', st.slug, 'label', st.label)
+                             ORDER BY st.label
+                           ),
+                           '[]'::jsonb
+                         )
+                    FROM entry_service_types est
+                    JOIN service_types st ON st.id = est.service_type_id
+                   WHERE est.entry_id = e.id
+                     AND est.status = 'confirmed') AS confirmed_services,
                  (SELECT count(*)
                     FROM entries category_entries
                    WHERE category_entries.published = true
@@ -952,70 +932,57 @@ async function injectSeoMeta(html, reqPath) {
         r.category.trim().length > 0 &&
         Number(r.category_count ?? 0) >= THRESHOLD.stateCategory;
 
-      const title = r.meta_title || `${r.title} | ${r.site_title || "Directory"}`;
-      const desc = String(r.meta_description || r.summary || "").replace(/\s+/g, " ").trim().slice(0, 160);
       const canonicalUrl = `${publicOrigin}/entry/${encodeURIComponent(r.slug || String(r.id))}`;
       const categoryUrl = (r.category && categoryEligible)
         ? `${publicOrigin}/browse/${encodeURIComponent(r.category)}`
         : null;
-      const imageUrl = findImage(r.custom_fields);
-
-      // BreadcrumbList: only include category item if hub is eligible
-      const breadcrumbItems = [
-        { "@type": "ListItem", position: 1, name: "Home", item: `${publicOrigin}/` },
-        { "@type": "ListItem", position: 2, name: "Browse", item: `${publicOrigin}/browse` },
-        ...(r.category && categoryEligible && categoryUrl
-          ? [{ "@type": "ListItem", position: 3, name: r.category, item: categoryUrl }]
-          : []),
-        {
-          "@type": "ListItem",
-          position: (r.category && categoryEligible) ? 4 : 3,
-          name: r.title,
-          item: canonicalUrl,
-        },
-      ];
-
-      const structuredData = {
-        "@context": "https://schema.org",
-        "@graph": [
-          {
-            "@type": "LocalBusiness",
-            "@id": `${canonicalUrl}#business`,
-            name: r.title,
-            description: r.description || r.summary || undefined,
-            url: canonicalUrl,
-            image: imageUrl,
-            telephone: r.contact_phone || undefined,
-            address: r.location || undefined,
-            sameAs: toAbsoluteUrl(r.website) || undefined,
-            geo: r.latitude != null && r.longitude != null
-              ? {
-                  "@type": "GeoCoordinates",
-                  latitude: r.latitude,
-                  longitude: r.longitude,
-                }
-              : undefined,
-          },
-          {
-            "@type": "BreadcrumbList",
-            itemListElement: breadcrumbItems,
-          },
-        ],
+      const listingInput = {
+        title: r.title,
+        siteTitle: r.site_title,
+        category: r.category,
+        summary: r.summary,
+        description: r.description,
+        location: r.location,
+        normalizedLocation: r.normalized_location,
+        confirmedServices: r.confirmed_services,
+        metaTitle: r.meta_title,
+        metaDescription: r.meta_description,
+        ogTitle: r.og_title,
+        ogDescription: r.og_description,
+        contactPhone: r.contact_phone,
+        website: r.website,
+        customFields: r.custom_fields,
+        latitude: r.latitude,
+        longitude: r.longitude,
       };
-      let out = replaceTitle(html, title);
-      out = replaceMeta(out, "name", "description", desc);
-      out = replaceMeta(out, "property", "og:title", r.og_title || title);
-      out = replaceMeta(out, "property", "og:description", r.og_description || desc);
+      const seo = buildListingSeo(listingInput);
+      const imageUrl = getListingImageUrl(r.custom_fields, publicOrigin);
+
+      const structuredData = buildListingStructuredData(listingInput, {
+        canonicalUrl,
+        origin: publicOrigin,
+        categoryUrl,
+        imageUrl,
+      });
+      let out = replaceTitle(html, seo.title);
+      out = replaceMeta(out, "name", "description", seo.description);
+      out = replaceMeta(out, "property", "og:title", seo.ogTitle);
+      out = replaceMeta(out, "property", "og:description", seo.ogDescription);
       out = replaceMeta(out, "property", "og:type", "website");
       out = replaceMeta(out, "property", "og:url", canonicalUrl);
       out = replaceMeta(out, "property", "og:image", imageUrl);
       out = replaceMeta(out, "name", "twitter:card", "summary_large_image");
-      out = replaceMeta(out, "name", "twitter:title", r.og_title || title);
-      out = replaceMeta(out, "name", "twitter:description", r.og_description || desc);
+      out = replaceMeta(out, "name", "twitter:title", seo.ogTitle);
+      out = replaceMeta(out, "name", "twitter:description", seo.ogDescription);
       out = replaceMeta(out, "name", "twitter:image", imageUrl);
       out = replaceCanonical(out, canonicalUrl);
       out = injectJsonLd(out, structuredData);
-      out = injectEntryShell(out, r, categoryEligible);
+      out = injectListingCrawlerShell(out, listingInput, {
+        canonicalUrl,
+        categoryUrl: categoryEligible && r.category
+          ? `/browse/${encodeURIComponent(r.category)}`
+          : null,
+      });
       return out;
     }
     if (reqPath === "/browse" || reqPath.startsWith("/browse/")) {

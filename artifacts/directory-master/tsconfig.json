@@ -12,7 +12,8 @@
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./src/*"],
-      "@workspace/lesson-guides": ["../../lib/lesson-guides/src/index.ts"]
+      "@workspace/lesson-guides": ["../../lib/lesson-guides/src/index.ts"],
+      "@workspace/listing-seo": ["../../lib/listing-seo/src/index.ts"]
     }
   },
   "references": [
@@ -24,6 +25,9 @@
     },
     {
       "path": "../../lib/lesson-guides"
+    },
+    {
+      "path": "../../lib/listing-seo"
     },
     {
       "path": "../../lib/replit-auth-web"

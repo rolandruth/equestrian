@@ -23,6 +23,9 @@
     },
     {
       "path": "./lib/lesson-guides"
+    },
+    {
+      "path": "./lib/listing-seo"
     }
   ]
 }

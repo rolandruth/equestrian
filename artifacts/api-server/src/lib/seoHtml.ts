@@ -1,5 +1,18 @@
-import { db, entries, directorySettings } from "@workspace/db";
+import {
+  db,
+  entries,
+  directorySettings,
+  entryLocations,
+  entryServiceTypes,
+  serviceTypes,
+} from "@workspace/db";
 import { injectLessonGuideSeoHtml } from "@workspace/lesson-guides";
+import {
+  buildListingSeo,
+  buildListingStructuredData,
+  getListingImageUrl,
+  injectListingCrawlerShell,
+} from "@workspace/listing-seo";
 import { eq, and } from "drizzle-orm";
 
 const DEFAULT_PUBLIC_ORIGIN = "https://www.saddleupguide.com";
@@ -48,84 +61,6 @@ function normalizeOrigin(origin?: string): string {
   return (process.env.PUBLIC_SITE_URL || origin || DEFAULT_PUBLIC_ORIGIN).replace(/\/+$/, "");
 }
 
-function toAbsoluteUrl(value: string | null | undefined, origin: string): string | null {
-  if (!value) return null;
-  try {
-    const url = new URL(value, origin);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-function findImage(customFields: unknown, origin: string): string {
-  if (customFields && typeof customFields === "object") {
-    for (const value of Object.values(customFields as Record<string, unknown>)) {
-      if (typeof value !== "string") continue;
-      const url = toAbsoluteUrl(value, origin);
-      if (url && /\.(?:avif|gif|jpe?g|png|webp)(?:[?#].*)?$/i.test(url)) return url;
-    }
-  }
-  return `${origin}/opengraph.jpg`;
-}
-
-function injectEntryShell(
-  html: string,
-  entry: {
-    title: string;
-    category: string | null;
-    summary: string | null;
-    description: string | null;
-    location: string | null;
-    contactPhone: string | null;
-    website: string | null;
-  },
-  canonicalUrl: string,
-): string {
-  const categoryUrl = entry.category ? `/browse/${encodeURIComponent(entry.category)}` : null;
-  const websiteUrl = toAbsoluteUrl(entry.website, new URL(canonicalUrl).origin);
-  const details = [
-    entry.category
-      ? `<dt>Category</dt><dd><a href="${escapeHtml(categoryUrl!)}">${escapeHtml(entry.category)}</a></dd>`
-      : "",
-    entry.location ? `<dt>Location</dt><dd>${escapeHtml(entry.location)}</dd>` : "",
-    entry.contactPhone ? `<dt>Phone</dt><dd>${escapeHtml(entry.contactPhone)}</dd>` : "",
-    websiteUrl
-      ? `<dt>Website</dt><dd><a href="${escapeHtml(websiteUrl)}" rel="noopener noreferrer">${escapeHtml(websiteUrl.replace(/^https?:\/\/(www\.)?/, ""))}</a></dd>`
-      : "",
-  ].filter(Boolean).join("");
-  const description = (entry.description || "")
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-    .join("");
-  const breadcrumbs = [
-    `<a href="/">Home</a>`,
-    `<a href="/browse">Browse</a>`,
-    entry.category && categoryUrl ? `<a href="${escapeHtml(categoryUrl)}">${escapeHtml(entry.category)}</a>` : "",
-    `<span aria-current="page">${escapeHtml(entry.title)}</span>`,
-  ].filter(Boolean).join("<span aria-hidden=\"true\"> / </span>");
-  const shell = `<article class="seo-entry-shell">
-    <nav aria-label="Breadcrumb">${breadcrumbs}</nav>
-    <h1>${escapeHtml(entry.title)}</h1>
-    ${entry.summary ? `<p class="seo-entry-summary">${escapeHtml(entry.summary)}</p>` : ""}
-    ${details ? `<dl>${details}</dl>` : ""}
-    ${description ? `<section aria-label="About ${escapeHtml(entry.title)}">${description}</section>` : ""}
-    <p><a href="${escapeHtml(canonicalUrl)}">View the complete ${escapeHtml(entry.title)} listing</a></p>
-  </article>`;
-  const root = /<div\s+id=["']root["']\s*><\/div>/i;
-  if (!root.test(html)) return html;
-  let out = html.replace(root, `<div id="root">${shell}</div>`);
-  if (!out.includes("id=\"seo-entry-shell-styles\"")) {
-    out = out.replace(
-      "</head>",
-      `    <style id="seo-entry-shell-styles">.seo-entry-shell{box-sizing:border-box;max-width:960px;margin:0 auto;padding:32px 24px;font:16px/1.6 system-ui,sans-serif;color:#292524}.seo-entry-shell nav{font-size:14px;margin-bottom:24px}.seo-entry-shell h1{font-size:clamp(28px,5vw,42px);line-height:1.15;margin:0 0 16px}.seo-entry-summary{font-size:19px}.seo-entry-shell dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:24px 0}.seo-entry-shell dt{font-weight:700}.seo-entry-shell dd{margin:0}.seo-entry-shell a{color:#1d4ed8}</style>\n  </head>`,
-    );
-  }
-  return out;
-}
-
 /**
  * Rewrites the SPA index.html with route-specific metadata and meaningful
  * listing content so crawlers that don't execute JavaScript can understand it.
@@ -170,69 +105,70 @@ export async function injectSeoMeta(html: string, path: string, origin?: string)
         .limit(1);
       if (!entry) return html;
 
-      const [settings] = await db.select({ siteTitle: directorySettings.siteTitle }).from(directorySettings).limit(1);
+      const [settingsRows, locationRows, confirmedServices] = await Promise.all([
+        db.select({ siteTitle: directorySettings.siteTitle }).from(directorySettings).limit(1),
+        db
+          .select({
+            cityName: entryLocations.cityName,
+            stateName: entryLocations.stateName,
+            postalCode: entryLocations.postalCode,
+          })
+          .from(entryLocations)
+          .where(and(
+            eq(entryLocations.entryId, entry.id),
+            eq(entryLocations.locationStatus, "confirmed"),
+          ))
+          .limit(1),
+        db
+          .select({
+            slug: serviceTypes.slug,
+            label: serviceTypes.label,
+          })
+          .from(entryServiceTypes)
+          .innerJoin(serviceTypes, eq(entryServiceTypes.serviceTypeId, serviceTypes.id))
+          .where(and(
+            eq(entryServiceTypes.entryId, entry.id),
+            eq(entryServiceTypes.status, "confirmed"),
+          )),
+      ]);
+      const settings = settingsRows[0];
       const siteTitle = settings?.siteTitle || "Directory";
-      const title = entry.metaTitle || `${entry.title} | ${siteTitle}`;
-      const desc = (entry.metaDescription || entry.summary || "").replace(/\s+/g, " ").trim().slice(0, 160);
       const canonicalUrl = `${publicOrigin}/entry/${encodeURIComponent(entry.slug || String(entry.id))}`;
       const categoryUrl = entry.category
         ? `${publicOrigin}/browse/${encodeURIComponent(entry.category)}`
         : `${publicOrigin}/browse`;
-      const imageUrl = findImage(entry.customFields, publicOrigin);
-      const structuredData = {
-        "@context": "https://schema.org",
-        "@graph": [
-          {
-            "@type": "LocalBusiness",
-            "@id": `${canonicalUrl}#business`,
-            name: entry.title,
-            description: entry.description || entry.summary || undefined,
-            url: canonicalUrl,
-            image: imageUrl,
-            telephone: entry.contactPhone || undefined,
-            address: entry.location || undefined,
-            sameAs: toAbsoluteUrl(entry.website, publicOrigin) || undefined,
-            geo: entry.latitude != null && entry.longitude != null
-              ? {
-                  "@type": "GeoCoordinates",
-                  latitude: entry.latitude,
-                  longitude: entry.longitude,
-                }
-              : undefined,
-          },
-          {
-            "@type": "BreadcrumbList",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: `${publicOrigin}/` },
-              { "@type": "ListItem", position: 2, name: "Browse", item: `${publicOrigin}/browse` },
-              ...(entry.category
-                ? [{ "@type": "ListItem", position: 3, name: entry.category, item: categoryUrl }]
-                : []),
-              {
-                "@type": "ListItem",
-                position: entry.category ? 4 : 3,
-                name: entry.title,
-                item: canonicalUrl,
-              },
-            ],
-          },
-        ],
+      const listingInput = {
+        ...entry,
+        siteTitle,
+        normalizedLocation: locationRows[0] ?? null,
+        confirmedServices,
       };
+      const seo = buildListingSeo(listingInput);
+      const imageUrl = getListingImageUrl(entry.customFields, publicOrigin);
+      const structuredData = buildListingStructuredData(listingInput, {
+        canonicalUrl,
+        origin: publicOrigin,
+        categoryUrl,
+        imageUrl,
+      });
 
-      let out = replaceTitle(html, title);
-      out = replaceMeta(out, "name", "description", desc);
-      out = replaceMeta(out, "property", "og:title", entry.ogTitle || title);
-      out = replaceMeta(out, "property", "og:description", entry.ogDescription || desc);
+      let out = replaceTitle(html, seo.title);
+      out = replaceMeta(out, "name", "description", seo.description);
+      out = replaceMeta(out, "property", "og:title", seo.ogTitle);
+      out = replaceMeta(out, "property", "og:description", seo.ogDescription);
       out = replaceMeta(out, "property", "og:type", "website");
       out = replaceMeta(out, "property", "og:url", canonicalUrl);
       out = replaceMeta(out, "property", "og:image", imageUrl);
       out = replaceMeta(out, "name", "twitter:card", "summary_large_image");
-      out = replaceMeta(out, "name", "twitter:title", entry.ogTitle || title);
-      out = replaceMeta(out, "name", "twitter:description", entry.ogDescription || desc);
+      out = replaceMeta(out, "name", "twitter:title", seo.ogTitle);
+      out = replaceMeta(out, "name", "twitter:description", seo.ogDescription);
       out = replaceMeta(out, "name", "twitter:image", imageUrl);
       out = replaceCanonical(out, canonicalUrl);
       out = injectJsonLd(out, structuredData);
-      out = injectEntryShell(out, entry, canonicalUrl);
+      out = injectListingCrawlerShell(out, listingInput, {
+        canonicalUrl,
+        categoryUrl: entry.category ? `/browse/${encodeURIComponent(entry.category)}` : null,
+      });
       return out;
     }
 

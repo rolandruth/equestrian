@@ -117,6 +117,9 @@ importers:
       '@workspace/lesson-guides':
         specifier: workspace:*
         version: link:../../lib/lesson-guides
+      '@workspace/listing-seo':
+        specifier: workspace:*
+        version: link:../../lib/listing-seo
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -365,6 +368,9 @@ importers:
       '@workspace/lesson-guides':
         specifier: workspace:*
         version: link:../../lib/lesson-guides
+      '@workspace/listing-seo':
+        specifier: workspace:*
+        version: link:../../lib/listing-seo
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -681,6 +687,8 @@ importers:
         version: 25.3.5
 
   lib/lesson-guides: {}
+
+  lib/listing-seo: {}
 
   lib/object-storage-web:
     dependencies:

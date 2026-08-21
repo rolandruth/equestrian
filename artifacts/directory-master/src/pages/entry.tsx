@@ -9,6 +9,7 @@ import { SafeImage, CardImage, ImageWithFallback } from "@/components/directory/
 import genericHorseFallback from "@/assets/generic-horse-fallback.jpg";
 import { getPublicEntryPath } from "@/lib/entryPath";
 import { getCategoryHubPath, isCategoryQualified } from "@/lib/seoLinks";
+import { buildListingSeo, getListingImageUrl } from "@workspace/listing-seo";
 import {
   useGetPublicEntry,
   useListPublicEntries,
@@ -936,10 +937,10 @@ export default function EntryPage() {
   useEffect(() => {
     if (!displayEntry) return;
     const e = displayEntry as any;
-    const pageTitle = e.metaTitle || `${e.title} | ${siteTitle}`;
-    const description = e.metaDescription || e.summary || "";
+    const seo = buildListingSeo({ ...e, siteTitle });
     const canonicalUrl = `${window.location.origin}/entry/${encodeURIComponent(e.slug || String(e.id || idOrSlug))}`;
-    document.title = pageTitle;
+    const imageUrl = getListingImageUrl(e.customFields, window.location.origin);
+    document.title = seo.title;
     const setMeta = (attr: string, value: string, content: string) => {
       let el = document.querySelector(`meta[${attr}="${value}"]`) as HTMLMetaElement | null;
       if (!el) { el = document.createElement("meta"); el.setAttribute(attr, value); document.head.appendChild(el); }
@@ -952,15 +953,17 @@ export default function EntryPage() {
       document.head.appendChild(canonical);
     }
     canonical.href = canonicalUrl;
-    setMeta("name", "description", description);
-    setMeta("property", "og:title", e.ogTitle || pageTitle);
-    setMeta("property", "og:description", e.ogDescription || description);
+    setMeta("name", "description", seo.description);
+    setMeta("property", "og:title", seo.ogTitle);
+    setMeta("property", "og:description", seo.ogDescription);
     setMeta("property", "og:site_name", siteTitle);
     setMeta("property", "og:type", "website");
     setMeta("property", "og:url", canonicalUrl);
+    setMeta("property", "og:image", imageUrl);
     setMeta("name", "twitter:card", "summary_large_image");
-    setMeta("name", "twitter:title", e.ogTitle || pageTitle);
-    setMeta("name", "twitter:description", e.ogDescription || description);
+    setMeta("name", "twitter:title", seo.ogTitle);
+    setMeta("name", "twitter:description", seo.ogDescription);
+    setMeta("name", "twitter:image", imageUrl);
     return () => { document.title = siteTitle; };
   }, [displayEntry, siteTitle, idOrSlug]);
 

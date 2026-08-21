@@ -21,7 +21,7 @@ import { CardImage } from "@/components/directory/CardImage";
 import { AdSlot } from "@/components/ads/AdSlot";
 import { AdSenseSlot } from "@/components/directory/AdSenseSlot";
 import { getPublicEntryPath } from "@/lib/entryPath";
-import { getCategoryHubPath, getQualifiedCategoryHubs, isCategoryQualified } from "@/lib/seoLinks";
+import { getCategoryHubPath, isCategoryQualified } from "@/lib/seoLinks";
 
 export default function BrowsePage() {
   const [location, setLocation] = useLocation();
@@ -48,7 +48,7 @@ export default function BrowsePage() {
   const { data: settings } = useGetPublicSettings();
   const { data: stats } = useGetPublicStats();
   const { data: seoHubs } = useGetLocalSeoHubs();
-  const qualifiedCategoryHubs = getQualifiedCategoryHubs(stats?.categoryBreakdown ?? []);
+  const stateBreakdown = stats?.categoryBreakdown ?? [];
 
   // ── SEO: per-page title ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -483,23 +483,44 @@ export default function BrowsePage() {
                 </Select>
               </div>
 
-              {qualifiedCategoryHubs.length > 0 && (
+              {stateBreakdown.length > 0 && (
                 <nav aria-label="Browse by state">
                   <h3 className="font-semibold mb-3 text-lg">Browse States</h3>
                   <ul className="space-y-1.5 text-sm">
-                    {[...qualifiedCategoryHubs]
+                    {[...stateBreakdown]
                       .sort((a, b) => a.category.localeCompare(b.category))
-                      .map((cat) => (
-                        <li key={cat.category}>
-                          <Link
-                            href={getCategoryHubPath(cat.category)}
-                            className="flex items-center justify-between gap-3 text-muted-foreground hover:text-primary transition-colors"
-                          >
+                      .map((cat) => {
+                        const className =
+                          "flex w-full items-center justify-between gap-3 text-left text-muted-foreground hover:text-primary transition-colors";
+                        const content = (
+                          <>
                             <span>{cat.category}</span>
                             <span className="text-xs">{cat.count}</span>
-                          </Link>
-                        </li>
-                      ))}
+                          </>
+                        );
+
+                        return (
+                          <li key={cat.category}>
+                            {isCategoryQualified(cat.category, stateBreakdown) ? (
+                              <Link
+                                href={getCategoryHubPath(cat.category)}
+                                className={className}
+                              >
+                                {content}
+                              </Link>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setLocation(getCategoryHubPath(cat.category))}
+                                className={className}
+                                aria-label={`Browse ${cat.category} listings`}
+                              >
+                                {content}
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
                   </ul>
                 </nav>
               )}

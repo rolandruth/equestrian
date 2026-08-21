@@ -1011,6 +1011,7 @@ export const PreviewDuplicateLocationRepairResponse = zod.object({
   totalMatches: zod.number(),
   fullStateMatches: zod.number(),
   abbreviatedMatches: zod.number(),
+  abbreviationOnlyMatches: zod.number(),
   sample: zod.array(
     zod.object({
       id: zod.number(),

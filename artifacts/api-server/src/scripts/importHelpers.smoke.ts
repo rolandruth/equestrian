@@ -25,15 +25,15 @@ function assert(label: string, actual: unknown, expected: unknown): void {
 
 console.log("\n── composeLocation ──────────────────────────────────────────");
 
-// 1. Full address already contains city, state abbrev, and ZIP → unchanged
+// 1. Full address with state abbreviation → canonical full state name
 assert(
-  "Alaska full address, abbrev state, matching city/state/ZIP → unchanged",
+  "Alaska full address, abbrev state, matching city/state/ZIP → full state name",
   composeLocation("11120 Birch Rd, Anchorage, AK 99516", {
     city: "Anchorage",
     state: "Alaska",
     zip: "99516",
   }),
-  "11120 Birch Rd, Anchorage, AK 99516",
+  "11120 Birch Rd, Anchorage, Alaska 99516",
 );
 
 // 2. Street only → appends city + full state name + ZIP
@@ -58,7 +58,7 @@ assert(
   "11120 Birch Rd, Anchorage, Alaska 99516",
 );
 
-// 4. ZIP+4 in existing, 5-digit zip part → unchanged
+// 4. ZIP+4 in existing, 5-digit zip part → preserve ZIP+4 and expand state
 assert(
   "ZIP+4 in existing, plain ZIP in parts → unchanged",
   composeLocation("123 Main St, Springfield, IL 62701-1234", {
@@ -66,7 +66,7 @@ assert(
     state: "IL",
     zip: "62701",
   }),
-  "123 Main St, Springfield, IL 62701-1234",
+  "123 Main St, Springfield, Illinois 62701-1234",
 );
 
 // 5. Partial location (city missing) → appends city
@@ -77,7 +77,7 @@ assert(
     state: "Alaska",
     zip: "99516",
   }),
-  "AK 99516, Anchorage",
+  "Alaska 99516, Anchorage",
 );
 
 // 6. No existing location → built from parts
@@ -126,7 +126,7 @@ assert(
   "Chicago, Illinois 60601, USA",
 );
 
-// 10. Case differences (city in different case)
+// 10. Case differences (city in different case), state still canonicalized
 assert(
   "City present in different case → unchanged",
   composeLocation("11120 Birch Rd, ANCHORAGE, AK 99516", {
@@ -134,7 +134,7 @@ assert(
     state: "AK",
     zip: "99516",
   }),
-  "11120 Birch Rd, ANCHORAGE, AK 99516",
+  "11120 Birch Rd, ANCHORAGE, Alaska 99516",
 );
 
 // 11. A business/street name beginning with "AR" is not an Arkansas state token

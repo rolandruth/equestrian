@@ -346,7 +346,7 @@ export default function AdminImportPage() {
       });
       setRepairAcknowledged(false);
       toast({
-        title: "Duplicate addresses repaired",
+        title: "Legacy addresses normalized",
         description: `${result.repairedCount} listing address${result.repairedCount === 1 ? "" : "es"} corrected.`,
       });
       queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
@@ -963,9 +963,9 @@ export default function AdminImportPage() {
               <Wrench className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle className="text-lg">Repair legacy duplicate addresses</CardTitle>
+              <CardTitle className="text-lg">Normalize legacy addresses</CardTitle>
               <CardDescription className="mt-1">
-                Scan for listings where an older import duplicated the city, state, and postal code.
+                Fix duplicated localities and replace two-letter state abbreviations with full state names.
               </CardDescription>
             </div>
           </div>
@@ -995,7 +995,7 @@ export default function AdminImportPage() {
               <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-medium text-green-900 dark:text-green-100">
-                  No duplicated addresses found
+                  No legacy address formatting found
                 </p>
                 <p className="text-xs text-green-700 dark:text-green-300 mt-1">
                   The current database does not contain either known legacy duplication pattern.
@@ -1016,12 +1016,17 @@ export default function AdminImportPage() {
                   )}
                   {(duplicateLocationPreview.data?.abbreviatedMatches ?? 0) > 0 && (
                     <Badge variant="outline">
-                      {duplicateLocationPreview.data?.abbreviatedMatches} abbreviated
+                      {duplicateLocationPreview.data?.abbreviatedMatches} abbreviated duplicates
+                    </Badge>
+                  )}
+                  {(duplicateLocationPreview.data?.abbreviationOnlyMatches ?? 0) > 0 && (
+                    <Badge variant="outline">
+                      {duplicateLocationPreview.data?.abbreviationOnlyMatches} abbreviation-only
                     </Badge>
                   )}
                 </div>
                 <p className="text-sm text-amber-900 dark:text-amber-100 mt-3">
-                  Each match will be reduced to one city, the full state name, and one postal code.
+                  Each match will use one city, the full state name, and one postal code.
                   Titles, contacts, descriptions, images, coordinates, and normalized location fields
                   are not changed.
                 </p>
@@ -1056,9 +1061,9 @@ export default function AdminImportPage() {
                 disabled={!repairAcknowledged || duplicateLocationRepair.isPending}
               >
                 {duplicateLocationRepair.isPending ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Repairing addresses…</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Normalizing addresses…</>
                 ) : (
-                  <><Wrench className="mr-2 h-4 w-4" /> Repair duplicate addresses</>
+                  <><Wrench className="mr-2 h-4 w-4" /> Normalize legacy addresses</>
                 )}
               </Button>
             </>

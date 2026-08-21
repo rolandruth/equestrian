@@ -66,13 +66,14 @@ type RepairRow = {
   title: string;
   before: string;
   after: string;
-  repair_kind: "full_state" | "abbreviated";
+  repair_kind: "full_state" | "abbreviated" | "abbreviation_only";
 };
 
 type PreviewRow = {
   total_matches: number | string;
   full_state_matches: number | string;
   abbreviated_matches: number | string;
+  abbreviation_only_matches: number | string;
   sample: Array<{
     id: number;
     title: string;
@@ -85,6 +86,7 @@ export type DuplicateLocationRepairPreview = {
   totalMatches: number;
   fullStateMatches: number;
   abbreviatedMatches: number;
+  abbreviationOnlyMatches: number;
   sample: Array<{
     id: number;
     title: string;
@@ -167,10 +169,35 @@ function duplicateLocationCandidatesSql() {
         '^(.*), ([^,]+), ' || state.abbreviation || ' ([0-9]{5}(?:-[0-9]{4})?), \\2, ' || state.abbreviation || ' \\3$'
       )
     ),
+    abbreviation_only_candidates AS (
+      SELECT
+        e.id,
+        e.title,
+        e.location AS before,
+        regexp_replace(
+          e.location,
+          '^(.*), ([^,]+), ' || state.abbreviation || ' ([0-9]{5}(?:-[0-9]{4})?)$',
+          '\\1, \\2, ' || state.state_name || ' \\3',
+          'i'
+        ) AS after,
+        'abbreviation_only'::text AS repair_kind
+      FROM entries e
+      INNER JOIN state_abbreviations state ON e.location ~* (
+        '^(.*), ([^,]+), ' || state.abbreviation || ' ([0-9]{5}(?:-[0-9]{4})?)$'
+      )
+      WHERE NOT EXISTS (
+        SELECT 1 FROM full_state_candidates candidate WHERE candidate.id = e.id
+      )
+        AND NOT EXISTS (
+          SELECT 1 FROM abbreviated_candidates candidate WHERE candidate.id = e.id
+        )
+    ),
     candidates AS (
       SELECT * FROM full_state_candidates
       UNION ALL
       SELECT * FROM abbreviated_candidates
+      UNION ALL
+      SELECT * FROM abbreviation_only_candidates
     )
   `;
 }
@@ -182,6 +209,7 @@ async function queryPreview(executor: SqlExecutor): Promise<DuplicateLocationRep
       count(*)::int AS total_matches,
       count(*) FILTER (WHERE repair_kind = 'full_state')::int AS full_state_matches,
       count(*) FILTER (WHERE repair_kind = 'abbreviated')::int AS abbreviated_matches,
+      count(*) FILTER (WHERE repair_kind = 'abbreviation_only')::int AS abbreviation_only_matches,
       COALESCE(
         (
           SELECT json_agg(sample_row ORDER BY sample_row.id)
@@ -203,6 +231,7 @@ async function queryPreview(executor: SqlExecutor): Promise<DuplicateLocationRep
     totalMatches: Number(row.total_matches),
     fullStateMatches: Number(row.full_state_matches),
     abbreviatedMatches: Number(row.abbreviated_matches),
+    abbreviationOnlyMatches: Number(row.abbreviation_only_matches),
     sample: parseSample(row.sample),
   };
 }

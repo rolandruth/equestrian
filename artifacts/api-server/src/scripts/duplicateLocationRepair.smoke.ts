@@ -59,9 +59,10 @@ try {
 
   const preview = await previewDuplicateLocationRepair();
   if (
-    preview.totalMatches !== 2 ||
+    preview.totalMatches !== 3 ||
     preview.fullStateMatches !== 1 ||
-    preview.abbreviatedMatches !== 1
+    preview.abbreviatedMatches !== 1 ||
+    preview.abbreviationOnlyMatches !== 1
   ) {
     throw new Error(`Unexpected repair preview: ${JSON.stringify(preview)}`);
   }
@@ -72,14 +73,14 @@ try {
   } catch (error) {
     conflictObserved =
       error instanceof DuplicateLocationRepairConflictError &&
-      error.currentCount === 2;
+      error.currentCount === 3;
   }
   if (!conflictObserved) {
     throw new Error("Expected-count mismatch did not abort the repair");
   }
 
-  const result = await repairDuplicateLocations(2);
-  if (result.repairedCount !== 2 || result.remainingMatches !== 0) {
+  const result = await repairDuplicateLocations(3);
+  if (result.repairedCount !== 3 || result.remainingMatches !== 0) {
     throw new Error(`Unexpected repair result: ${JSON.stringify(result)}`);
   }
 
@@ -97,7 +98,7 @@ try {
     repaired[0] !== "10 Test Rd, Chester, Arkansas 72934" ||
     repaired[1] !== "20 Test Rd, Chester, Arkansas 72934" ||
     repaired[2] !== "30 Test Rd, Chester, Arkansas 72934" ||
-    repaired[3] !== "40 Test Rd, Chester, AR 72934"
+    repaired[3] !== "40 Test Rd, Chester, Arkansas 72934"
   ) {
     throw new Error(`Unexpected repaired locations: ${repaired.join(" | ")}`);
   }

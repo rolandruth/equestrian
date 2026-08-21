@@ -526,6 +526,7 @@ export interface DuplicateLocationRepairPreview {
   totalMatches: number;
   fullStateMatches: number;
   abbreviatedMatches: number;
+  abbreviationOnlyMatches: number;
   sample: DuplicateLocationRepairSample[];
 }
 

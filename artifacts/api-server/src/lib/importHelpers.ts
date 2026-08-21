@@ -78,10 +78,25 @@ function containsStateAbbreviation(location: string, abbreviation: string): bool
   ).test(location);
 }
 
+function normalizeStateNames(location: string): string {
+  let normalized = location;
+  for (const [abbreviation, fullName] of Object.entries(US_STATES)) {
+    normalized = normalized.replace(
+      new RegExp(
+        `(^|[,\\s])${escapeRegExp(abbreviation)}(?=\\s+\\d{5}(?:-\\d{4})?\\b)`,
+        "gi",
+      ),
+      (_match, prefix: string) => `${prefix}${fullName}`,
+    );
+  }
+  return normalized;
+}
+
 /**
  * Given the existing location string and optional loose city/state/zip parts,
  * return a possibly-amended location that:
- *   - Never overwrites existing data (original wins).
+ *   - Canonicalizes US state abbreviations to full state names.
+ *   - Otherwise preserves existing data.
  *   - Appends only components that are not already represented.
  *
  * Matching is case-insensitive; state abbreviations and full names are treated
@@ -96,10 +111,14 @@ export function composeLocation(
   const zip     = parts.zip?.trim()     || "";
   const country = parts.country?.trim() || "";
 
-  // Nothing extra to add
-  if (!city && !state && !zip && !country) return existing ?? null;
+  const normalizedExisting = existing?.trim()
+    ? normalizeStateNames(existing.trim())
+    : null;
 
-  if (!existing || !existing.trim()) {
+  // Nothing extra to add
+  if (!city && !state && !zip && !country) return normalizedExisting;
+
+  if (!normalizedExisting) {
     // Build from scratch
     const stateName = stateFullName(state) || state;
     const stateZip = [stateName, zip].filter(Boolean).join(" ");
@@ -107,7 +126,7 @@ export function composeLocation(
     return segments.length ? segments.join(", ") : null;
   }
 
-  const loc = existing.trim();
+  const loc = normalizedExisting;
   // Pre-compute what the existing string already "contains" for each part.
   const cityPresent = city
     ? containsPhrase(loc, city)

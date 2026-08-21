@@ -1924,11 +1924,13 @@ components:
           type: integer
         abbreviatedMatches:
           type: integer
+        abbreviationOnlyMatches:
+          type: integer
         sample:
           type: array
           items:
             $ref: "#/components/schemas/DuplicateLocationRepairSample"
-      required: [totalMatches, fullStateMatches, abbreviatedMatches, sample]
+      required: [totalMatches, fullStateMatches, abbreviatedMatches, abbreviationOnlyMatches, sample]
 
     DuplicateLocationRepairInput:
       type: object

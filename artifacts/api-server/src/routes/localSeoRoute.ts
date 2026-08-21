@@ -20,6 +20,7 @@ import {
   getLandingEntries,
   seedServiceTypes,
   reviewServiceSuggestions,
+  resolveState,
 } from "../lib/localSeo.js";
 import { eq, and } from "drizzle-orm";
 
@@ -240,8 +241,21 @@ adminLocalSeoRouter.patch("/entries/:id/classification", async (req, res) => {
       locUpdate.citySlug = body.cityName ? slugify(body.cityName) : null;
     }
     if (body.stateName !== undefined) {
-      locUpdate.stateName = body.stateName;
-      locUpdate.stateSlug = body.stateName ? slugify(body.stateName) : null;
+      const stateName = body.stateName?.trim() || null;
+      if (stateName === null) {
+        locUpdate.stateName = null;
+        locUpdate.stateSlug = null;
+      } else {
+        const canonicalState = resolveState(stateName);
+        if (!canonicalState) {
+          res.status(400).json({
+            error: "stateName must be a recognized US state name or abbreviation",
+          });
+          return;
+        }
+        locUpdate.stateName = canonicalState.name;
+        locUpdate.stateSlug = canonicalState.slug;
+      }
     }
     if (body.postalCode !== undefined) locUpdate.postalCode = body.postalCode;
 

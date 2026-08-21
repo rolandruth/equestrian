@@ -334,7 +334,8 @@ function ReviewRow({ row, onUpdate, isSaving }: { row: LocalSeoReviewRow; onUpda
         </div>
         <div>
           <label htmlFor={`state-${row.entryId}`} className="text-xs font-medium text-muted-foreground mb-1 block">State</label>
-          <Input id={`state-${row.entryId}`} value={stateName} onChange={e => setStateName(e.target.value)} placeholder="State" className="h-8" />
+          <Input id={`state-${row.entryId}`} value={stateName} onChange={e => setStateName(e.target.value)} placeholder="Full state name or abbreviation" className="h-8" />
+          <p className="mt-1 text-[11px] text-muted-foreground">Abbreviations are saved as full state names.</p>
         </div>
         <div>
           <label htmlFor={`postal-${row.entryId}`} className="text-xs font-medium text-muted-foreground mb-1 block">Postal Code</label>

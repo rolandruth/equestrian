@@ -139,7 +139,7 @@ for (const [abbr, rec] of Object.entries(US_STATES)) {
  * Resolve a raw state token (abbreviation or full name) to a canonical
  * { name, slug } pair. Returns null if unrecognised.
  */
-function resolveState(raw: string): { name: string; slug: string } | null {
+export function resolveState(raw: string): { name: string; slug: string } | null {
   const trimmed = raw.trim();
   // Try exact abbreviation (2-letter uppercase)
   const upper = trimmed.toUpperCase();

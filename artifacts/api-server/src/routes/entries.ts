@@ -8,6 +8,11 @@ import {
   ENTRY_SLUG_ADVISORY_LOCK_ID,
   isEntrySlugUniqueViolation,
 } from "../lib/entrySlugs.js";
+import {
+  getListingImageOptimizationJob,
+  getListingImageOptimizationPreview,
+  startListingImageOptimization,
+} from "../lib/listingImageOptimization.js";
 
 // Normalize featured/premium fields on generic create/update payloads so the
 // 30-day auto-expiry cannot be bypassed: enabling a flag always sets its
@@ -117,6 +122,46 @@ router.post("/", requireEditor, async (req, res) => {
     }
     req.log.error(err);
     res.status(500).json({ error: "Failed to create entry" });
+  }
+});
+
+router.post("/image-optimization/preview", requireAdmin, async (req, res) => {
+  try {
+    res.json(await getListingImageOptimizationPreview());
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to inspect listing images" });
+  }
+});
+
+router.post("/image-optimization/apply", requireAdmin, async (req, res) => {
+  try {
+    const snapshot = typeof req.body?.snapshot === "string" ? req.body.snapshot : "";
+    const confirmation = typeof req.body?.confirmation === "string" ? req.body.confirmation : "";
+    const result = await startListingImageOptimization(snapshot, confirmation);
+    if (!result.job) {
+      res.status(result.status ?? 400).json({ error: result.error ?? "Could not start image optimization" });
+      return;
+    }
+    res.status(202).json(result.job);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to start listing image optimization" });
+  }
+});
+
+router.get("/image-optimization/status/:jobId", requireAdmin, async (req, res) => {
+  try {
+    const jobId = Array.isArray(req.params.jobId) ? req.params.jobId[0] : req.params.jobId;
+    const job = await getListingImageOptimizationJob(jobId);
+    if (!job) {
+      res.status(404).json({ error: "Image optimization job not found" });
+      return;
+    }
+    res.json(job);
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to load image optimization status" });
   }
 });
 

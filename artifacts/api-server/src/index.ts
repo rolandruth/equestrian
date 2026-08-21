@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { getSetupToken } from "./lib/setupToken.js";
+import { resumeListingImageOptimizationJobs } from "./lib/listingImageOptimization.js";
 
 const rawPort = process.env["PORT"];
 
@@ -23,6 +24,9 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+  void resumeListingImageOptimizationJobs().catch((err) => {
+    logger.error({ err }, "Failed to resume listing image optimization jobs");
+  });
 
   const setupToken = getSetupToken();
   if (setupToken) {

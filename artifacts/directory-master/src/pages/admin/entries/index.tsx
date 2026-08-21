@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { 
   useListEntries, 
@@ -25,10 +25,31 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert, Star, Crown, UserX, UserCheck } from "lucide-react";
+import { Plus, Search, Edit, Trash2, FilterX, Loader2, TriangleAlert, Star, Crown, UserX, UserCheck, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+
+interface ImageOptimizationPreview {
+  totalEntries: number;
+  totalImages: number;
+  snapshot: string;
+  sample: Array<{ id: number; title: string; imageCount: number }>;
+}
+
+interface ImageOptimizationJob {
+  jobId: string;
+  status: "running" | "complete" | "error";
+  total: number;
+  processed: number;
+  optimized: number;
+  removed: number;
+  skipped: number;
+  failed: number;
+  remaining?: number;
+  message: string;
+  error?: string;
+}
 
 export default function AdminEntriesPage() {
   const queryClient = useQueryClient();
@@ -44,6 +65,10 @@ export default function AdminEntriesPage() {
   const [togglingFeatured, setTogglingFeatured] = useState<number | null>(null);
   const [togglingPremium, setTogglingPremium] = useState<number | null>(null);
   const [clearOwnerId, setClearOwnerId] = useState<number | null>(null);
+  const [imagePreview, setImagePreview] = useState<ImageOptimizationPreview | null>(null);
+  const [imagePreviewLoading, setImagePreviewLoading] = useState(false);
+  const [imageConfirmText, setImageConfirmText] = useState("");
+  const [imageJob, setImageJob] = useState<ImageOptimizationJob | null>(null);
 
   const { data: publicSettings } = useGetPublicSettings();
   const primaryColor = (publicSettings as any)?.primaryColor as string | undefined;
@@ -58,6 +83,80 @@ export default function AdminEntriesPage() {
   const deleteMutation = useDeleteEntry();
   const togglePublishMutation = useToggleEntryPublished();
   const clearOwnerMutation = useClearEntryOwner();
+
+  const imageAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
+
+  const loadImagePreview = async () => {
+    setImagePreviewLoading(true);
+    try {
+      const res = await fetch("/api/entries/image-optimization/preview", {
+        method: "POST",
+        headers: imageAuthHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not inspect listing images");
+      setImagePreview(data);
+      setImageConfirmText("");
+    } catch (e: any) {
+      toast({ title: "Image check failed", description: e.message, variant: "destructive" });
+    } finally {
+      setImagePreviewLoading(false);
+    }
+  };
+
+  const startImageOptimization = async () => {
+    if (!imagePreview) return;
+    try {
+      const res = await fetch("/api/entries/image-optimization/apply", {
+        method: "POST",
+        headers: imageAuthHeaders(),
+        body: JSON.stringify({
+          snapshot: imagePreview.snapshot,
+          confirmation: imageConfirmText,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not start image optimization");
+      setImageJob(data);
+      setImageConfirmText("");
+      toast({ title: "Image optimization started", description: "Original files are kept while optimized replacements are created." });
+    } catch (e: any) {
+      toast({ title: "Could not start optimization", description: e.message, variant: "destructive" });
+    }
+  };
+
+  useEffect(() => {
+    if (!imageJob || imageJob.status !== "running") return;
+    const timer = window.setInterval(async () => {
+      try {
+        const res = await fetch(`/api/entries/image-optimization/status/${imageJob.jobId}`, {
+          headers: imageAuthHeaders(),
+        });
+        if (!res.ok) return;
+        const next: ImageOptimizationJob = await res.json();
+        setImageJob(next);
+        if (next.status === "complete") {
+          toast({
+            title: "Image optimization complete",
+            description: `${next.optimized} optimized, ${next.removed} unsafe hotlinks removed, ${next.failed} failed, ${next.remaining ?? 0} remaining.`,
+          });
+          queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+          void loadImagePreview();
+        } else if (next.status === "error") {
+          toast({ title: "Image optimization stopped", description: next.error || next.message, variant: "destructive" });
+        }
+      } catch {
+        // Keep polling; a brief network interruption should not hide server progress.
+      }
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, [imageJob?.jobId, imageJob?.status]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -178,6 +277,17 @@ export default function AdminEntriesPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={loadImagePreview}
+            disabled={imagePreviewLoading || imageJob?.status === "running"}
+          >
+            {imagePreviewLoading
+              ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              : <ImageIcon className="h-4 w-4 mr-1.5" />}
+            Optimize Images
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300 dark:border-red-900 dark:hover:bg-red-950/30"
             onClick={() => { setClearConfirmText(""); setShowClearAll(true); }}
           >
@@ -192,6 +302,96 @@ export default function AdminEntriesPage() {
           </Link>
         </div>
       </div>
+
+      {(imagePreview || imageJob) && (
+        <div className="bg-white dark:bg-gray-900 border rounded-xl p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+              <h2 className="font-semibold flex items-center gap-2">
+                <ImageIcon className="h-4 w-4 text-primary" />
+                Listing image optimization
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+                Photos are auto-oriented, resized to fit within 1600 × 1200, and converted to WebP. Original objects remain available; listing references change only after a replacement is saved successfully. Paid API image hotlinks are removed without being requested.
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={loadImagePreview}
+              disabled={imagePreviewLoading || imageJob?.status === "running"}
+            >
+              <RefreshCw className={`h-4 w-4 mr-1.5 ${imagePreviewLoading ? "animate-spin" : ""}`} />
+              Refresh preview
+            </Button>
+          </div>
+
+          {imageJob?.status === "running" ? (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>{imageJob.message}</span>
+                <span className="text-muted-foreground">{imageJob.processed} / {imageJob.total}</span>
+              </div>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.round((imageJob.processed / Math.max(imageJob.total, 1)) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ) : imagePreview ? (
+            <>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <Badge variant={imagePreview.totalImages > 0 ? "secondary" : "outline"}>
+                  {imagePreview.totalImages} image{imagePreview.totalImages === 1 ? "" : "s"}
+                </Badge>
+                <span className="text-muted-foreground">
+                  across {imagePreview.totalEntries} listing{imagePreview.totalEntries === 1 ? "" : "s"}
+                </span>
+                {imageJob?.status === "complete" && (
+                  <span className="text-emerald-700 dark:text-emerald-400">
+                    Last run: {imageJob.optimized} optimized, {imageJob.removed} unsafe hotlinks removed, {imageJob.failed} failed
+                  </span>
+                )}
+              </div>
+
+              {imagePreview.totalImages === 0 ? (
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                  All stored and remote listing photos are already in the optimized image path.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {imagePreview.sample.length > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Preview: {imagePreview.sample.map((entry) => `${entry.title} (${entry.imageCount})`).join(", ")}
+                    </div>
+                  )}
+                  <div className="flex flex-col md:flex-row md:items-end gap-3">
+                    <div className="space-y-1.5 flex-1 max-w-xl">
+                      <label htmlFor="image-optimization-confirm" className="text-sm font-medium">
+                        Type <span className="font-mono">OPTIMIZE {imagePreview.totalImages} IMAGES</span> to confirm
+                      </label>
+                      <Input
+                        id="image-optimization-confirm"
+                        value={imageConfirmText}
+                        onChange={(event) => setImageConfirmText(event.target.value)}
+                        placeholder={`OPTIMIZE ${imagePreview.totalImages} IMAGES`}
+                      />
+                    </div>
+                    <Button
+                      onClick={startImageOptimization}
+                      disabled={imageConfirmText.trim().toUpperCase() !== `OPTIMIZE ${imagePreview.totalImages} IMAGES`}
+                    >
+                      <ImageIcon className="h-4 w-4 mr-2" />
+                      Optimize existing images
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border flex flex-col sm:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">

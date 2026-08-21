@@ -6,6 +6,15 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 
 const router = Router();
 const PUBLIC_ORIGIN = (process.env.PUBLIC_SITE_URL || "https://www.saddleupguide.com").replace(/\/+$/, "");
+const EARLIEST_REASONABLE_LASTMOD = Date.UTC(2000, 0, 1);
+const FUTURE_DATE_TOLERANCE_MS = 24 * 60 * 60 * 1000;
+
+export type SitemapPage = {
+  loc: string;
+  priority: string;
+  changefreq: string;
+  lastmod?: string;
+};
 
 // ── Thresholds (must match serve.mjs) ───────────────────────────────────────
 const THRESHOLD = {
@@ -24,6 +33,64 @@ function escapeXml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+}
+
+export function formatSitemapLastmod(
+  value: unknown,
+  nowMs: number = Date.now(),
+): string | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  if (
+    !(value instanceof Date)
+    && typeof value !== "string"
+    && typeof value !== "number"
+  ) {
+    return undefined;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  const timestamp = date.getTime();
+  if (
+    !Number.isFinite(timestamp)
+    || timestamp < EARLIEST_REASONABLE_LASTMOD
+    || timestamp > nowMs + FUTURE_DATE_TOLERANCE_MS
+  ) {
+    return undefined;
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+export function dedupeSitemapPages(pages: SitemapPage[]): SitemapPage[] {
+  const seen = new Set<string>();
+  return pages.filter((page) => {
+    if (seen.has(page.loc)) return false;
+    seen.add(page.loc);
+    return true;
+  });
+}
+
+export function buildSitemapXml(
+  pages: SitemapPage[],
+  publicOrigin: string = PUBLIC_ORIGIN,
+): string {
+  const origin = publicOrigin.replace(/\/+$/, "");
+  const urlElements = pages
+    .map((page) => {
+      const lastmod = page.lastmod
+        ? `\n    <lastmod>${escapeXml(page.lastmod)}</lastmod>`
+        : "";
+      return `  <url>
+    <loc>${escapeXml(origin + page.loc)}</loc>${lastmod}
+    <changefreq>${page.changefreq}</changefreq>
+    <priority>${page.priority}</priority>
+  </url>`;
+    })
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urlElements}
+</urlset>`;
 }
 
 // ── Safe raw query wrapper ───────────────────────────────────────────────────
@@ -63,26 +130,23 @@ Sitemap: ${PUBLIC_ORIGIN}/sitemap.xml
 
 router.get("/sitemap.xml", async (req, res) => {
   try {
-    const now = new Date().toISOString().split("T")[0];
-
     // ── Static pages ─────────────────────────────────────────────────────────
     const staticPages = [
-      { loc: "/", priority: "1.0", changefreq: "daily", lastmod: now },
-      { loc: "/browse", priority: "0.8", changefreq: "daily", lastmod: now },
-      { loc: "/listing-plans", priority: "0.5", changefreq: "monthly", lastmod: now },
-      { loc: "/advertise", priority: "0.5", changefreq: "monthly", lastmod: now },
-      { loc: "/contact", priority: "0.4", changefreq: "monthly", lastmod: now },
-      { loc: "/privacy-policy", priority: "0.2", changefreq: "yearly", lastmod: now },
-      { loc: "/terms", priority: "0.2", changefreq: "yearly", lastmod: now },
+      { loc: "/", priority: "1.0", changefreq: "daily" },
+      { loc: "/browse", priority: "0.8", changefreq: "daily" },
+      { loc: "/listing-plans", priority: "0.5", changefreq: "monthly" },
+      { loc: "/advertise", priority: "0.5", changefreq: "monthly" },
+      { loc: "/contact", priority: "0.4", changefreq: "monthly" },
+      { loc: "/privacy-policy", priority: "0.2", changefreq: "yearly" },
+      { loc: "/terms", priority: "0.2", changefreq: "yearly" },
     ];
 
     const guidePages = [
-      { loc: LESSON_GUIDE_BASE_PATH, priority: "0.75", changefreq: "monthly", lastmod: now },
+      { loc: LESSON_GUIDE_BASE_PATH, priority: "0.75", changefreq: "monthly" },
       ...lessonGuides.map((guide) => ({
         loc: getLessonGuidePath(guide.slug),
         priority: "0.65",
         changefreq: "monthly",
-        lastmod: now,
       })),
     ];
 
@@ -96,7 +160,7 @@ router.get("/sitemap.xml", async (req, res) => {
       loc: `/entry/${encodeURIComponent(e.slug || String(e.id))}`,
       priority: "0.6",
       changefreq: "weekly",
-      lastmod: e.updatedAt ? new Date(e.updatedAt).toISOString().split("T")[0] : now,
+      lastmod: formatSitemapLastmod(e.updatedAt),
     }));
 
     // ── Category (browse) pages – only those with >= threshold entries ───────
@@ -126,7 +190,6 @@ router.get("/sitemap.xml", async (req, res) => {
         loc: `/browse/${encodeURIComponent(row.category)}`,
         priority: "0.7",
         changefreq: "daily",
-        lastmod: now,
       }));
 
     // ── New local SEO pages (fail-safe: return [] if schema not applied) ─────
@@ -149,7 +212,6 @@ router.get("/sitemap.xml", async (req, res) => {
       loc: `/locations/${encodeURIComponent(r.state_slug)}/${encodeURIComponent(r.city_slug)}`,
       priority: "0.7",
       changefreq: "weekly",
-      lastmod: now,
     }));
 
     // Global service pages (/services/:serviceSlug)
@@ -169,7 +231,6 @@ router.get("/sitemap.xml", async (req, res) => {
       loc: `/services/${encodeURIComponent(r.service_slug)}`,
       priority: "0.7",
       changefreq: "weekly",
-      lastmod: now,
     }));
 
     // State-service pages (/services/:serviceSlug/:stateSlug)
@@ -192,7 +253,6 @@ router.get("/sitemap.xml", async (req, res) => {
       loc: `/services/${encodeURIComponent(r.service_slug)}/${encodeURIComponent(r.state_slug)}`,
       priority: "0.65",
       changefreq: "weekly",
-      lastmod: now,
     }));
 
     // City-service pages (/services/:serviceSlug/:stateSlug/:citySlug)
@@ -217,12 +277,10 @@ router.get("/sitemap.xml", async (req, res) => {
       loc: `/services/${encodeURIComponent(r.service_slug)}/${encodeURIComponent(r.state_slug)}/${encodeURIComponent(r.city_slug)}`,
       priority: "0.6",
       changefreq: "weekly",
-      lastmod: now,
     }));
 
     // ── Deduplicate and assemble ──────────────────────────────────────────────
-    const seen = new Set<string>();
-    const allPages = [
+    const allPages = dedupeSitemapPages([
       ...staticPages,
       ...guidePages,
       ...categoryPages,
@@ -231,27 +289,9 @@ router.get("/sitemap.xml", async (req, res) => {
       ...servicePages,
       ...stateServicePages,
       ...cityServicePages,
-    ].filter((p) => {
-      if (seen.has(p.loc)) return false;
-      seen.add(p.loc);
-      return true;
-    });
+    ] satisfies SitemapPage[]);
 
-    const urlElements = allPages
-      .map(
-        (p) => `  <url>
-    <loc>${escapeXml(PUBLIC_ORIGIN + p.loc)}</loc>
-    <lastmod>${p.lastmod}</lastmod>
-    <changefreq>${p.changefreq}</changefreq>
-    <priority>${p.priority}</priority>
-  </url>`
-      )
-      .join("\n");
-
-    const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urlElements}
-</urlset>`;
+    const xml = buildSitemapXml(allPages);
 
     res.set("Content-Type", "application/xml; charset=utf-8");
     res.set("Cache-Control", "public, max-age=3600");

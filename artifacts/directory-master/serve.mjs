@@ -11,8 +11,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
 import {
+  getLessonGuidePath,
   getLessonGuideHttpStatus,
   injectLessonGuideSeoHtml,
+  lessonGuides,
+  LESSON_GUIDE_BASE_PATH,
 } from "../../lib/lesson-guides/src/index.ts";
 import {
   buildListingSeo,
@@ -33,6 +36,8 @@ const distDir = path.join(__dirname, "dist/public");
 const port = Number(process.env.PORT);
 if (!port) throw new Error("PORT environment variable is required");
 const publicOrigin = (process.env.PUBLIC_SITE_URL || "https://www.saddleupguide.com").replace(/\/+$/, "");
+const EARLIEST_REASONABLE_LASTMOD = Date.UTC(2000, 0, 1);
+const FUTURE_DATE_TOLERANCE_MS = 24 * 60 * 60 * 1000;
 
 const pool = process.env.DATABASE_URL
   ? new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 })
@@ -71,6 +76,44 @@ const escapeXml = (s) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
+
+function formatSitemapLastmod(value, nowMs = Date.now()) {
+  if (value === null || value === undefined || value === "") return undefined;
+  if (!(value instanceof Date) && typeof value !== "string" && typeof value !== "number") {
+    return undefined;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  const timestamp = date.getTime();
+  if (
+    !Number.isFinite(timestamp)
+    || timestamp < EARLIEST_REASONABLE_LASTMOD
+    || timestamp > nowMs + FUTURE_DATE_TOLERANCE_MS
+  ) {
+    return undefined;
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function hasQueryParameters(requestSearch) {
+  const raw = requestSearch.startsWith("?") ? requestSearch.slice(1) : requestSearch;
+  return raw.length > 0;
+}
+
+function getRequestSearch(requestUrl) {
+  try {
+    return new URL(requestUrl, "http://localhost").search;
+  } catch {
+    return "";
+  }
+}
+
+function isParameterizedBrowseRequest(reqPath, requestSearch) {
+  const normalizedPath = normalizePublicPathname(reqPath);
+  return (
+    (normalizedPath === "/browse" || normalizedPath.startsWith("/browse/"))
+    && hasQueryParameters(requestSearch)
+  );
+}
 
 const replaceTitle = (html, title) =>
   html.replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)}</title>`);
@@ -910,7 +953,7 @@ async function handleServiceCityPage(reqPath, html, page) {
   return out;
 }
 
-async function injectSeoMeta(html, reqPath) {
+async function injectSeoMeta(html, reqPath, requestSearch = "") {
   try {
     const lessonGuideHtml = injectLessonGuideSeoHtml(html, reqPath, publicOrigin);
     if (lessonGuideHtml !== null) return lessonGuideHtml;
@@ -1021,13 +1064,28 @@ async function injectSeoMeta(html, reqPath) {
       const category = reqPath.startsWith("/browse/")
         ? decodeURIComponent(reqPath.slice("/browse/".length))
         : null;
+      let categoryQualified = true;
+      if (category) {
+        const { rows: categoryCountRows } = await pool.query(
+          `SELECT count(*)::int AS count
+             FROM entries
+            WHERE published = true
+              AND category = $1`,
+          [category],
+        );
+        categoryQualified = Number(categoryCountRows[0]?.count ?? 0) >= THRESHOLD.stateCategory;
+      }
       const title = category ? `${category} | Browse ${siteTitle}` : `Browse All Listings | ${siteTitle}`;
       const desc = category
         ? `Browse ${category} equestrian businesses, services, riding programs, and local resources on ${siteTitle}.`
         : `Browse equestrian businesses, riding programs, trainers, stables, and local services on ${siteTitle}.`;
       const canonicalUrl = `${publicOrigin}${category ? `/browse/${encodeURIComponent(category)}` : "/browse"}`;
+      const robots = hasQueryParameters(requestSearch) || !categoryQualified
+        ? "noindex,follow"
+        : "index,follow";
       let out = replaceTitle(html, title);
       out = replaceMeta(out, "name", "description", desc);
+      out = replaceMeta(out, "name", "robots", robots);
       out = replaceMeta(out, "property", "og:title", title);
       out = replaceMeta(out, "property", "og:description", desc);
       out = replaceMeta(out, "property", "og:url", canonicalUrl);
@@ -1067,8 +1125,6 @@ async function injectSeoMeta(html, reqPath) {
 async function fetchLocalSitemapPages() {
   if (!pool) return { cityPages: [], servicePages: [], stateServicePages: [], cityServicePages: [] };
 
-  const now = new Date().toISOString().split("T")[0];
-
   // City pages — join entry_locations; location_status lives on that table
   const cityPages = await safeQuery(async () => {
     const { rows } = await pool.query(
@@ -1086,7 +1142,6 @@ async function fetchLocalSitemapPages() {
       loc: `/locations/${encodeURIComponent(r.state_slug)}/${encodeURIComponent(r.city_slug)}`,
       priority: "0.7",
       changefreq: "weekly",
-      lastmod: now,
     }));
   }) || [];
 
@@ -1105,7 +1160,6 @@ async function fetchLocalSitemapPages() {
       loc: `/services/${encodeURIComponent(r.service_slug)}`,
       priority: "0.7",
       changefreq: "weekly",
-      lastmod: now,
     }));
   }) || [];
 
@@ -1126,7 +1180,6 @@ async function fetchLocalSitemapPages() {
       loc: `/services/${encodeURIComponent(r.service_slug)}/${encodeURIComponent(r.state_slug)}`,
       priority: "0.65",
       changefreq: "weekly",
-      lastmod: now,
     }));
   }) || [];
 
@@ -1149,7 +1202,6 @@ async function fetchLocalSitemapPages() {
       loc: `/services/${encodeURIComponent(r.service_slug)}/${encodeURIComponent(r.state_slug)}/${encodeURIComponent(r.city_slug)}`,
       priority: "0.6",
       changefreq: "weekly",
-      lastmod: now,
     }));
   }) || [];
 
@@ -1159,7 +1211,6 @@ async function fetchLocalSitemapPages() {
 // ── State browse pages qualified for sitemap (>=10 published category entries) ──
 async function fetchQualifiedStateBrowsePages() {
   if (!pool) return [];
-  const now = new Date().toISOString().split("T")[0];
   const result = await safeQuery(async () => {
     // Category pages with >=10 published entries qualify
     const { rows } = await pool.query(
@@ -1174,7 +1225,6 @@ async function fetchQualifiedStateBrowsePages() {
       loc: `/browse/${encodeURIComponent(r.category)}`,
       priority: "0.7",
       changefreq: "daily",
-      lastmod: now,
     }));
   }) || [];
   return result;
@@ -1196,15 +1246,22 @@ Sitemap: ${publicOrigin}/sitemap.xml
 
 app.get("/sitemap.xml", async (_req, res) => {
   try {
-    const now = new Date().toISOString().split("T")[0];
     const staticPages = [
-      { loc: "/", priority: "1.0", changefreq: "daily", lastmod: now },
-      { loc: "/browse", priority: "0.8", changefreq: "daily", lastmod: now },
-      { loc: "/listing-plans", priority: "0.5", changefreq: "monthly", lastmod: now },
-      { loc: "/advertise", priority: "0.5", changefreq: "monthly", lastmod: now },
-      { loc: "/contact", priority: "0.4", changefreq: "monthly", lastmod: now },
-      { loc: "/privacy-policy", priority: "0.2", changefreq: "yearly", lastmod: now },
-      { loc: "/terms", priority: "0.2", changefreq: "yearly", lastmod: now },
+      { loc: "/", priority: "1.0", changefreq: "daily" },
+      { loc: "/browse", priority: "0.8", changefreq: "daily" },
+      { loc: "/listing-plans", priority: "0.5", changefreq: "monthly" },
+      { loc: "/advertise", priority: "0.5", changefreq: "monthly" },
+      { loc: "/contact", priority: "0.4", changefreq: "monthly" },
+      { loc: "/privacy-policy", priority: "0.2", changefreq: "yearly" },
+      { loc: "/terms", priority: "0.2", changefreq: "yearly" },
+    ];
+    const guidePages = [
+      { loc: LESSON_GUIDE_BASE_PATH, priority: "0.75", changefreq: "monthly" },
+      ...lessonGuides.map((guide) => ({
+        loc: getLessonGuidePath(guide.slug),
+        priority: "0.65",
+        changefreq: "monthly",
+      })),
     ];
     let categoryPages = [];
     let entryPages = [];
@@ -1220,9 +1277,7 @@ app.get("/sitemap.xml", async (_req, res) => {
         loc: `/entry/${encodeURIComponent(row.slug || String(row.id))}`,
         priority: "0.6",
         changefreq: "weekly",
-        lastmod: row.updated_at
-          ? new Date(row.updated_at).toISOString().split("T")[0]
-          : now,
+        lastmod: formatSitemapLastmod(row.updated_at),
       }));
     }
 
@@ -1234,6 +1289,7 @@ app.get("/sitemap.xml", async (_req, res) => {
     const seen = new Set();
     const allPages = [
       ...staticPages,
+      ...guidePages,
       ...categoryPages,
       ...entryPages,
       ...cityPages,
@@ -1247,14 +1303,16 @@ app.get("/sitemap.xml", async (_req, res) => {
     });
 
     const urls = allPages
-      .map(
-        (page) => `  <url>
-    <loc>${escapeXml(publicOrigin + page.loc)}</loc>
-    <lastmod>${page.lastmod}</lastmod>
+      .map((page) => {
+        const lastmod = page.lastmod
+          ? `\n    <lastmod>${escapeXml(page.lastmod)}</lastmod>`
+          : "";
+        return `  <url>
+    <loc>${escapeXml(publicOrigin + page.loc)}</loc>${lastmod}
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
-  </url>`,
-      )
+  </url>`;
+      })
       .join("\n");
     res
       .type("application/xml")
@@ -1289,6 +1347,7 @@ app.get("/{*path}", async (req, res) => {
   try {
     const html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
     const reqPath = normalizePublicPathname(req.path);
+    const requestSearch = getRequestSearch(req.originalUrl);
 
     // ── Local SEO routes – check eligibility before serving HTML ────────────
     // These routes must 404 when under-threshold rather than serving thin 200s.
@@ -1342,10 +1401,13 @@ app.get("/{*path}", async (req, res) => {
     }
 
     // Existing routes
-    res
+    const response = res
       .status(pageStatus)
-      .type("html")
-      .send(await injectSeoMeta(html, reqPath));
+      .type("html");
+    if (isParameterizedBrowseRequest(reqPath, requestSearch)) {
+      response.set("X-Robots-Tag", "noindex, follow");
+    }
+    response.send(await injectSeoMeta(html, reqPath, requestSearch));
   } catch {
     res
       .status(500)

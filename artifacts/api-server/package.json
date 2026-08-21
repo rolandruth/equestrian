@@ -15,6 +15,7 @@
     "smoke:lesson-guides": "tsx src/scripts/lessonGuideSeo.smoke.ts",
     "smoke:listing-seo": "tsx src/scripts/listingSeo.smoke.ts",
     "smoke:soft-404": "tsx src/scripts/soft404.smoke.ts",
+    "smoke:sitemap-indexation": "tsx src/scripts/sitemapIndexation.smoke.ts",
     "smoke:image-optimization": "tsx src/scripts/imageOptimization.smoke.ts",
     "smoke:image-queue": "tsx src/scripts/imageOptimizationQueue.smoke.ts"
   },

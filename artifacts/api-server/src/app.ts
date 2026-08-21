@@ -6,7 +6,7 @@ import http from "http";
 import fs from "fs";
 import path from "path";
 import router from "./routes";
-import { injectSeoMeta } from "./lib/seoHtml";
+import { hasQueryParameters, injectSeoMeta } from "./lib/seoHtml";
 import sitemapRouter from "./routes/sitemapRoute";
 import { logger } from "./lib/logger";
 import { bizAuthMiddleware } from "./middlewares/bizAuthMiddleware.js";
@@ -69,6 +69,22 @@ app.use("/api", router);
 
 const fallbackAppShell = `<!doctype html><html lang="en"><head><title>SaddleUpGuide</title><meta name="description" content="" /></head><body><div id="root"></div></body></html>`;
 
+function getRequestSearch(requestUrl: string): string {
+  try {
+    return new URL(requestUrl, "http://localhost").search;
+  } catch {
+    return "";
+  }
+}
+
+function isParameterizedBrowseRequest(reqPath: string, requestSearch: string): boolean {
+  const normalizedPath = normalizePublicPathname(reqPath);
+  return (
+    (normalizedPath === "/browse" || normalizedPath.startsWith("/browse/"))
+    && hasQueryParameters(requestSearch)
+  );
+}
+
 app.use((req: Request, res: Response, next) => {
   if (req.method !== "GET" || isSafePublicPathname(req.path)) {
     next();
@@ -130,15 +146,19 @@ if (process.env.NODE_ENV !== "production") {
             const html = Buffer.concat(chunks).toString("utf8");
             const pageStatus = await getPublicPageHttpStatus(req.path);
             const normalizedPath = normalizePublicPathname(req.path);
+            const requestSearch = getRequestSearch(req.url);
             const out = pageStatus === 404
               ? injectNotFoundSeoHtml(html)
-              : await injectSeoMeta(html, normalizedPath);
+              : await injectSeoMeta(html, normalizedPath, undefined, requestSearch);
             const {
               "content-length": _cl,
               etag: _etag,
               ...rest
             } = proxyRes.headers;
             if (pageStatus >= 400) rest["cache-control"] = "no-store";
+            if (isParameterizedBrowseRequest(normalizedPath, requestSearch)) {
+              rest["x-robots-tag"] = "noindex, follow";
+            }
             res.writeHead(pageStatus, rest);
             res.end(out);
           } catch (error) {
@@ -176,13 +196,17 @@ if (process.env.NODE_ENV !== "production") {
         const html = fs.readFileSync(path.join(webDist, "index.html"), "utf8");
         const pageStatus = await getPublicPageHttpStatus(req.path);
         const normalizedPath = normalizePublicPathname(req.path);
-        res
+        const requestSearch = getRequestSearch(req.url);
+        const response = res
           .status(pageStatus)
           .set(pageStatus >= 400 ? { "Cache-Control": "no-store" } : {})
-          .type("html")
-          .send(pageStatus === 404
+          .type("html");
+        if (isParameterizedBrowseRequest(normalizedPath, requestSearch)) {
+          response.set("X-Robots-Tag", "noindex, follow");
+        }
+        response.send(pageStatus === 404
             ? injectNotFoundSeoHtml(html)
-            : await injectSeoMeta(html, normalizedPath));
+            : await injectSeoMeta(html, normalizedPath, undefined, requestSearch));
       } catch (error) {
         req.log.error(error);
         res

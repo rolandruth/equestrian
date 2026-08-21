@@ -28,7 +28,8 @@ export default function BrowsePage() {
   const params = useParams();
   const categoryParam = params.category ? decodeURIComponent(params.category) : null;
   
-  const searchParams = new URLSearchParams(window.location.search);
+  const currentSearch = window.location.search;
+  const searchParams = new URLSearchParams(currentSearch);
   const initialSearch = searchParams.get("search") || "";
   const initialCity = searchParams.get("city") || "";
   const initialRidingType = searchParams.get("ridingType") || "";
@@ -61,6 +62,45 @@ export default function BrowsePage() {
       document.title = prevTitle;
     };
   }, [categoryParam, (settings as any)?.siteTitle]);
+
+  useEffect(() => {
+    const canonicalPath = categoryParam
+      ? `/browse/${encodeURIComponent(categoryParam)}`
+      : "/browse";
+    const canonicalUrl = `${window.location.origin}${canonicalPath}`;
+    const hasParameters = currentSearch.replace(/^\?/, "").length > 0;
+    const categoryEligibilityKnown = !categoryParam || stats !== undefined;
+    const categoryQualified = !categoryParam
+      || (stats !== undefined && isCategoryQualified(categoryParam, stats.categoryBreakdown ?? []));
+
+    let robotsMeta: HTMLMetaElement | null = null;
+    if (hasParameters || categoryEligibilityKnown) {
+      robotsMeta = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+      if (!robotsMeta) {
+        robotsMeta = document.createElement("meta");
+        robotsMeta.name = "robots";
+        document.head.appendChild(robotsMeta);
+      }
+      robotsMeta.content = hasParameters || !categoryQualified
+        ? "noindex,follow"
+        : "index,follow";
+      robotsMeta.dataset.browseSeo = "true";
+    }
+
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = canonicalUrl;
+    canonical.dataset.browseSeo = "true";
+
+    return () => {
+      if (robotsMeta?.dataset.browseSeo === "true") robotsMeta.remove();
+      if (canonical?.dataset.browseSeo === "true") canonical.remove();
+    };
+  }, [categoryParam, currentSearch, stats]);
   
   const { data: entriesData, isLoading } = useListPublicEntries({
     page,

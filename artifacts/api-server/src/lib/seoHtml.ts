@@ -13,9 +13,10 @@ import {
   getListingImageUrl,
   injectListingCrawlerShell,
 } from "@workspace/listing-seo";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 const DEFAULT_PUBLIC_ORIGIN = "https://www.saddleupguide.com";
+const BROWSE_HUB_MIN_COUNT = 10;
 
 function escapeHtml(s: string): string {
   return s
@@ -61,12 +62,22 @@ function normalizeOrigin(origin?: string): string {
   return (process.env.PUBLIC_SITE_URL || origin || DEFAULT_PUBLIC_ORIGIN).replace(/\/+$/, "");
 }
 
+export function hasQueryParameters(requestSearch: string): boolean {
+  const raw = requestSearch.startsWith("?") ? requestSearch.slice(1) : requestSearch;
+  return raw.length > 0;
+}
+
 /**
  * Rewrites the SPA index.html with route-specific metadata and meaningful
  * listing content so crawlers that don't execute JavaScript can understand it.
  * Returns the original HTML when the route needs no rewriting or on error.
  */
-export async function injectSeoMeta(html: string, path: string, origin?: string): Promise<string> {
+export async function injectSeoMeta(
+  html: string,
+  path: string,
+  origin?: string,
+  requestSearch: string = "",
+): Promise<string> {
   try {
     const publicOrigin = normalizeOrigin(origin);
     const lessonGuideHtml = injectLessonGuideSeoHtml(html, path, publicOrigin);
@@ -176,13 +187,25 @@ export async function injectSeoMeta(html: string, path: string, origin?: string)
       const [settings] = await db.select({ siteTitle: directorySettings.siteTitle }).from(directorySettings).limit(1);
       const siteTitle = settings?.siteTitle || "Directory";
       const category = path.startsWith("/browse/") ? decodeURIComponent(path.slice("/browse/".length)) : null;
+      let categoryQualified = true;
+      if (category) {
+        const [categoryCount] = await db
+          .select({ count: sql<number>`cast(count(*) as int)` })
+          .from(entries)
+          .where(and(eq(entries.published, true), eq(entries.category, category)));
+        categoryQualified = Number(categoryCount?.count ?? 0) >= BROWSE_HUB_MIN_COUNT;
+      }
       const title = category ? `${category} | Browse ${siteTitle}` : `Browse All Listings | ${siteTitle}`;
       const desc = category
         ? `Browse ${category} equestrian businesses, services, riding programs, and local resources on ${siteTitle}.`
         : `Browse equestrian businesses, riding programs, trainers, stables, and local services on ${siteTitle}.`;
       const canonicalUrl = `${publicOrigin}${category ? `/browse/${encodeURIComponent(category)}` : "/browse"}`;
+      const robots = hasQueryParameters(requestSearch) || !categoryQualified
+        ? "noindex,follow"
+        : "index,follow";
       let out = replaceTitle(html, title);
       out = replaceMeta(out, "name", "description", desc);
+      out = replaceMeta(out, "name", "robots", robots);
       out = replaceMeta(out, "property", "og:title", title);
       out = replaceMeta(out, "property", "og:description", desc);
       out = replaceMeta(out, "property", "og:url", canonicalUrl);

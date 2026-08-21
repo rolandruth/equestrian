@@ -4,6 +4,10 @@ import { entries, categories, bizUsers, entryLocations, entryServiceTypes, servi
 import { requireAuth, requireEditor, requireAdmin } from "../middlewares/auth.js";
 import { eq, ilike, and, or, desc, count, sql, inArray } from "drizzle-orm";
 import { expireStaleUpgrades } from "../lib/upgradeExpiry.js";
+import {
+  ENTRY_SLUG_ADVISORY_LOCK_ID,
+  isEntrySlugUniqueViolation,
+} from "../lib/entrySlugs.js";
 
 // Normalize featured/premium fields on generic create/update payloads so the
 // 30-day auto-expiry cannot be bypassed: enabling a flag always sets its
@@ -98,9 +102,19 @@ router.post("/", requireEditor, async (req, res) => {
       res.status(400).json({ error: "Title is required" });
       return;
     }
-    const [entry] = await db.insert(entries).values({ title, ...normalizeUpgradeFields(rest) } as any).returning();
+    const values = { title, ...normalizeUpgradeFields(rest) } as any;
+    const [entry] = await db.transaction(async (tx) => {
+      if (typeof values.slug === "string" && values.slug.trim()) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${ENTRY_SLUG_ADVISORY_LOCK_ID})`);
+      }
+      return tx.insert(entries).values(values).returning();
+    });
     res.status(201).json(await enrichEntry(entry));
   } catch (err) {
+    if (isEntrySlugUniqueViolation(err)) {
+      res.status(409).json({ error: "That public URL slug is already in use" });
+      return;
+    }
     req.log.error(err);
     res.status(500).json({ error: "Failed to create entry" });
   }
@@ -125,12 +139,21 @@ router.patch("/:id", requireEditor, async (req, res) => {
     const [existing] = await db.select({ featured: entries.featured, premium: entries.premium })
       .from(entries).where(eq(entries.id, id)).limit(1);
     if (!existing) { res.status(404).json({ error: "Entry not found" }); return; }
-    const [entry] = await db.update(entries).set({ ...normalizeUpgradeFields(req.body, existing), updatedAt: new Date() } as any)
-      .where(eq(entries.id, id)).returning();
+    const updates = { ...normalizeUpgradeFields(req.body, existing), updatedAt: new Date() } as any;
+    const [entry] = await db.transaction(async (tx) => {
+      if (typeof updates.slug === "string" && updates.slug.trim()) {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${ENTRY_SLUG_ADVISORY_LOCK_ID})`);
+      }
+      return tx.update(entries).set(updates).where(eq(entries.id, id)).returning();
+    });
     if (!entry) { res.status(404).json({ error: "Entry not found" }); return; }
     const ownersMap = await getOwnersMap([entry.ownerId]);
     res.json(await enrichEntry(entry, ownersMap.get(entry.ownerId ?? "")));
   } catch (err) {
+    if (isEntrySlugUniqueViolation(err)) {
+      res.status(409).json({ error: "That public URL slug is already in use" });
+      return;
+    }
     req.log.error(err);
     res.status(500).json({ error: "Failed to update entry" });
   }

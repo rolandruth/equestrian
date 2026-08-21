@@ -25,7 +25,7 @@ export const entries = pgTable("entries", {
   premium: boolean("premium").notNull().default(false),
   featuredUntil: timestamp("featured_until", { withTimezone: true }),
   premiumUntil: timestamp("premium_until", { withTimezone: true }),
-  slug: text("slug"),
+  slug: text("slug").unique(),
   metaTitle: text("meta_title"),
   metaDescription: text("meta_description"),
   ogTitle: text("og_title"),

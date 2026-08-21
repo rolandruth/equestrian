@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link } from "wouter";
 import {
   useAnalyzeImport,
@@ -16,11 +16,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import {
+  buildImportDestinationBreakdown,
+  parseCSVRows,
+} from "@/lib/importDestinationReview";
 import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2,
   CloudUpload, X, ArrowRight, ArrowLeft, Eye, Tag, FolderOpen, Info,
-  Sparkles, Wand2, Pencil
+  Sparkles, Wand2, Pencil, MapPin, ShieldAlert
 } from "lucide-react";
 
 type Step = "upload" | "map" | "progress";
@@ -40,44 +45,6 @@ interface AvailableField {
   label: string;
   description: string;
   isCustom?: boolean;
-}
-
-// Full CSV parser — handles quoted fields that contain embedded newlines and commas.
-// Returns rows as arrays of field strings.
-function parseCSVRows(content: string): string[][] {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentField = "";
-  let inQuotes = false;
-  const text = content.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (text[i + 1] === '"') { currentField += '"'; i++; }
-        else inQuotes = false;
-      } else {
-        currentField += ch;
-      }
-    } else {
-      if (ch === '"') {
-        inQuotes = true;
-      } else if (ch === ',') {
-        currentRow.push(currentField.trim());
-        currentField = "";
-      } else if (ch === '\n') {
-        currentRow.push(currentField.trim());
-        currentField = "";
-        if (currentRow.some(f => f !== "")) rows.push(currentRow);
-        currentRow = [];
-      } else {
-        currentField += ch;
-      }
-    }
-  }
-  currentRow.push(currentField.trim());
-  if (currentRow.some(f => f !== "")) rows.push(currentRow);
-  return rows;
 }
 
 function ConfidenceDot({ confidence }: { confidence: number }) {
@@ -105,6 +72,7 @@ export default function AdminImportPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [isAiMapping, setIsAiMapping] = useState(false);
   const [editingLabel, setEditingLabel] = useState<{ csvColumn: string; value: string } | null>(null);
+  const [destinationAcknowledged, setDestinationAcknowledged] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -135,6 +103,18 @@ export default function AdminImportPage() {
       });
     }
   }, [statusData?.status, statusData?.error, toast, queryClient]);
+
+  // Reset acknowledgement whenever CSV or approved mappings change
+  useEffect(() => {
+    setDestinationAcknowledged(false);
+  }, [csvContent, mappings]);
+
+  // Derive destination breakdown from parsed rows + currently approved mappings.
+  // Priority: approved location_state mapping → approved category mapping (mirrors server fallback).
+  const destinationBreakdown = useMemo(
+    () => buildImportDestinationBreakdown(csvContent, mappings),
+    [csvContent, mappings],
+  );
 
   const readFileAsText = (file: File): Promise<string> =>
     new Promise((resolve, reject) => {
@@ -207,6 +187,14 @@ export default function AdminImportPage() {
 
   // Step 2 → Step 3: run import
   const handleImport = async () => {
+    if (!destinationAcknowledged) {
+      toast({
+        title: "Review import destinations",
+        description: "Confirm the destination summary before starting this import.",
+        variant: "destructive",
+      });
+      return;
+    }
     const hasTitleMapping = mappings.some(m => m.approved && m.targetField === "title");
     if (!hasTitleMapping) {
       toast({
@@ -743,6 +731,140 @@ export default function AdminImportPage() {
           </CardContent>
         </Card>
 
+        {/* ── Destination Review Panel ─────────────────────────────── */}
+        {(() => {
+          const bd = destinationBreakdown;
+          const hasNoMapping = !bd || bd.columns.length === 0;
+          const hasDestinations = bd && bd.counts.size > 0;
+          const hasNoDestinationValues = !!bd && bd.counts.size === 0;
+          const multipleDestinations = hasDestinations && bd.counts.size > 1;
+          const sortedEntries = hasDestinations
+            ? Array.from(bd.counts.entries()).sort((a, b) => b[1] - a[1])
+            : [];
+
+          return (
+            <Card className={`border-2 ${hasNoDestinationValues ? "border-amber-300 dark:border-amber-700" : multipleDestinations ? "border-orange-300 dark:border-orange-700" : "border-blue-200 dark:border-blue-800"}`}>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className={`h-4 w-4 ${hasNoDestinationValues ? "text-amber-500" : multipleDestinations ? "text-orange-500" : "text-blue-500"}`} />
+                  Review import destinations
+                </CardTitle>
+                <CardDescription>
+                  {hasNoMapping
+                    ? "No destination column detected. Entries will be imported without a state or category destination."
+                    : hasNoDestinationValues
+                      ? `The mapped destination columns contain no values for importable rows.`
+                      : bd.columns.length > 1
+                        ? `State is checked per row, then category is used as a fallback (${bd.columns.join(" → ")}).`
+                        : `Detected from mapped ${bd.type === "state" ? "state" : "category"} column "${bd.columns[0]}".`}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Summary line */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="text-sm font-semibold">
+                    {bd?.totalRows ?? rowCount} row{(bd?.totalRows ?? rowCount) === 1 ? "" : "s"} to import
+                  </Badge>
+                  {!!bd?.skippedUntitledRows && (
+                    <Badge variant="outline" className="text-sm text-slate-600">
+                      {bd.skippedUntitledRows} blank-title row{bd.skippedUntitledRows === 1 ? "" : "s"} skipped
+                    </Badge>
+                  )}
+                  {hasDestinations && (
+                    <Badge variant="secondary" className="text-sm">
+                      {bd.counts.size} distinct destination{bd.counts.size !== 1 ? "s" : ""}
+                    </Badge>
+                  )}
+                  {bd && bd.noDestCount > 0 && (
+                    <Badge variant="outline" className="text-sm text-amber-600 border-amber-300">
+                      {bd.noDestCount} row{bd.noDestCount !== 1 ? "s" : ""} with no destination
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Warning for multiple destinations */}
+                {multipleDestinations && (
+                  <div className="flex items-start gap-2 rounded-md bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800 p-3">
+                    <ShieldAlert className="h-4 w-4 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+                    <div className="text-sm text-orange-800 dark:text-orange-200">
+                      <span className="font-semibold">This file contains multiple destinations.</span>
+                      {" "}Confirm below that these destinations match the file you intend to import.
+                    </div>
+                  </div>
+                )}
+
+                {/* Warning for no mapping */}
+                {hasNoDestinationValues && (
+                  <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3">
+                    <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <div className="text-sm text-amber-800 dark:text-amber-200">
+                      <span className="font-semibold">
+                        {hasNoMapping ? "No destination mapping found." : "No destination values found."}
+                      </span>
+                      {" "}Map a populated column to <em>Location State</em> or <em>Category</em> above, or acknowledge below to proceed without one.
+                    </div>
+                  </div>
+                )}
+
+                {/* Destination counts table */}
+                {hasDestinations && (
+                  <div className="rounded-md border overflow-hidden">
+                    <div className="max-h-64 overflow-y-auto">
+                      <table className="w-full text-sm" data-testid="destination-breakdown-table">
+                        <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800/80">
+                          <tr className="text-xs text-muted-foreground uppercase border-b">
+                            <th className="px-3 py-2 text-left font-medium">
+                              {bd.type === "state" ? "State / Location" : bd.type === "category" ? "Category" : "State / Category"}
+                            </th>
+                            <th className="px-3 py-2 text-right font-medium">Rows</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {sortedEntries.map(([dest, count]) => (
+                            <tr key={dest} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30" data-testid={`destination-row-${dest}`}>
+                              <td className="px-3 py-2 font-medium">{dest}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">
+                                <Badge variant="secondary" className="text-xs">{count}</Badge>
+                              </td>
+                            </tr>
+                          ))}
+                          {bd.noDestCount > 0 && (
+                            <tr className="bg-amber-50/40 dark:bg-amber-950/10">
+                              <td className="px-3 py-2 text-amber-700 dark:text-amber-300 italic">(no destination)</td>
+                              <td className="px-3 py-2 text-right tabular-nums">
+                                <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">{bd.noDestCount}</Badge>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Acknowledgement checkbox */}
+                <div className={`flex items-start gap-3 rounded-md p-3 border ${destinationAcknowledged ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800" : "bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700"}`}>
+                  <Checkbox
+                    id="destination-ack"
+                    checked={destinationAcknowledged}
+                    onCheckedChange={(checked) => setDestinationAcknowledged(checked === true)}
+                    data-testid="checkbox-destination-ack"
+                    className="mt-0.5"
+                  />
+                  <label
+                    htmlFor="destination-ack"
+                    className="text-sm cursor-pointer select-none leading-snug"
+                  >
+                    {hasNoDestinationValues
+                      ? "I reviewed the destination settings and understand this import has no state or category destination."
+                      : "I reviewed these destinations and they match the file I intend to import."}
+                  </label>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
         {/* Navigation */}
         <div className="flex justify-between">
           <Button variant="outline" onClick={() => setStep("upload")}>
@@ -751,8 +873,9 @@ export default function AdminImportPage() {
           </Button>
           <Button
             onClick={handleImport}
-            disabled={importMutation.isPending || approvedCount === 0}
+            disabled={importMutation.isPending || approvedCount === 0 || !destinationAcknowledged}
             size="lg"
+            data-testid="button-start-import"
           >
             {importMutation.isPending ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting…</>

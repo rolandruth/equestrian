@@ -3,11 +3,13 @@ import { db } from "@workspace/db";
 import { importJobs, entries, categories } from "@workspace/db";
 import { requireEditor } from "../middlewares/auth.js";
 import { getGeminiClient } from "../lib/gemini.js";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
 import { mirrorEntryImages, isRemoteImageUrl } from "../lib/imageStore.js";
 import { applyImportLocation, applyImportServiceType } from "../lib/localSeo.js";
+import { composeLocation, allocateSlugs } from "../lib/importHelpers.js";
+import { ENTRY_SLUG_ADVISORY_LOCK_ID } from "../lib/entrySlugs.js";
 
 const router = Router();
 
@@ -219,14 +221,15 @@ function applyMappings(headers: string[], rowValues: string[], mappings: FieldMa
     entry["category"] = locationParts.state;
   }
 
-  // Combine location parts — build "Street, City, State ZIP, Country"
+  // Combine location parts — preserve any existing location string and only
+  // append components that are not already represented in it.
   if (locationParts.city || locationParts.state || locationParts.country || locationParts.zip) {
-    const stateZip = [locationParts.state, locationParts.zip].filter(Boolean).join(" ");
-    const parts = [locationParts.city, stateZip, locationParts.country].filter(Boolean);
-    const cityStateStr = parts.join(", ");
-    entry["location"] = entry["location"]
-      ? `${entry["location"]}, ${cityStateStr}`
-      : (cityStateStr || null);
+    entry["location"] = composeLocation(entry["location"] ?? null, {
+      city: locationParts.city,
+      state: locationParts.state,
+      zip: locationParts.zip,
+      country: locationParts.country,
+    });
   }
 
   return {
@@ -416,89 +419,111 @@ async function processImport(jobId: string, csvContent: string, fieldMappings: F
       ridingType: string | null;
     }> = [];
 
-    for (let chunkStart = 0; chunkStart < parsedEntries.length; chunkStart += INSERT_CHUNK) {
-      const chunk = parsedEntries.slice(chunkStart, chunkStart + INSERT_CHUNK);
+    // Slug allocation and entry insertion share one transaction-level advisory
+    // lock. This serializes only the short save phase across API processes, so
+    // concurrent imports cannot prefetch the same slug set and insert duplicate
+    // public slugs. Enrichment and image mirroring remain concurrent.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${ENTRY_SLUG_ADVISORY_LOCK_ID})`);
 
-      const rows = chunk.map(({ data }) => {
-        const customFields: Record<string, string> = {};
-        const parseCoord = (v: string | null | undefined): number | null => {
-          if (!v) return null;
-          const n = parseFloat(v);
-          return Number.isFinite(n) ? n : null;
-        };
-        let latitude: number | null = parseCoord(data.latitude);
-        let longitude: number | null = parseCoord(data.longitude);
-        delete data.latitude;
-        delete data.longitude;
-        const customKeys = Object.keys(data).filter(k => k.startsWith("custom_"));
-        for (const k of customKeys) {
-          const value = data[k];
-          delete data[k];
-          if (!value) continue;
-          const rawKey = k.replace("custom_", "");
-          if (INTERNAL_COLUMN_RE.test(rawKey)) continue;
-          if (LAT_KEY_RE.test(rawKey)) {
-            if (latitude === null) latitude = parseCoord(value);
-            continue;
-          }
-          if (LNG_KEY_RE.test(rawKey)) {
-            if (longitude === null) longitude = parseCoord(value);
-            continue;
-          }
-          // First non-empty value wins if two columns canonicalize to the same key.
-          const canonKey = canonicalizeCustomKey(rawKey);
-          if (!(canonKey in customFields)) customFields[canonKey] = value;
-        }
-        return {
-          latitude,
-          longitude,
-          title: String(data.title || "Untitled").slice(0, 500),
-          category: data.category?.slice(0, 200) ?? null,
-          summary: data.summary?.slice(0, 1000) ?? null,
-          description: data.description ?? null,
-          contactEmail: data.contactEmail?.slice(0, 200) ?? null,
-          contactPhone: data.contactPhone?.slice(0, 50) ?? null,
-          website: data.website?.slice(0, 500) ?? null,
-          location: data.location?.slice(0, 200) ?? null,
-          venue: data.venue?.slice(0, 300) ?? null,
-          eventType: data.eventType?.slice(0, 100) ?? null,
-          startDate: data.startDate?.slice(0, 50) ?? null,
-          endDate: data.endDate?.slice(0, 50) ?? null,
-          tags: data.tags?.slice(0, 500) ?? null,
-          moreDetails: data.moreDetails ?? null,
-          customFields: Object.keys(customFields).length > 0 ? customFields : null,
-          sourceCsvRow: null,
-          published: true,
-        };
-      });
+      const existingSlugRows = await tx
+        .select({ slug: entries.slug })
+        .from(entries)
+        .where(isNotNull(entries.slug));
+      const usedSlugs = new Set<string>(
+        existingSlugRows.map(r => r.slug!).filter(Boolean),
+      );
+      const allocatedSlugs = allocateSlugs(
+        parsedEntries.map(({ data }) => String(data.title || "")),
+        usedSlugs,
+      );
 
-      const inserted = await db.insert(entries).values(rows).returning({
-        id: entries.id,
-        customFields: entries.customFields,
-      });
-      for (let i = 0; i < inserted.length; i++) {
-        const row = inserted[i];
-        const parsed = chunk[i];
-        const cf = row.customFields as Record<string, unknown> | null;
-        const ridingType = typeof cf?.ridingtype === "string" ? cf.ridingtype : null;
-        insertedEntries.push({
-          id: row.id,
-          customFields: cf,
-          explicitLocationParts: parsed.explicitLocationParts,
-          hasExplicitLocation: parsed.hasExplicitLocation,
-          ridingType,
+      for (let chunkStart = 0; chunkStart < parsedEntries.length; chunkStart += INSERT_CHUNK) {
+        const chunk = parsedEntries.slice(chunkStart, chunkStart + INSERT_CHUNK);
+
+        const rows = chunk.map(({ data }, chunkIdx) => {
+          const entrySlug = allocatedSlugs[chunkStart + chunkIdx];
+          const customFields: Record<string, string> = {};
+          const parseCoord = (v: string | null | undefined): number | null => {
+            if (!v) return null;
+            const n = parseFloat(v);
+            return Number.isFinite(n) ? n : null;
+          };
+          let latitude: number | null = parseCoord(data.latitude);
+          let longitude: number | null = parseCoord(data.longitude);
+          delete data.latitude;
+          delete data.longitude;
+          const customKeys = Object.keys(data).filter(k => k.startsWith("custom_"));
+          for (const k of customKeys) {
+            const value = data[k];
+            delete data[k];
+            if (!value) continue;
+            const rawKey = k.replace("custom_", "");
+            if (INTERNAL_COLUMN_RE.test(rawKey)) continue;
+            if (LAT_KEY_RE.test(rawKey)) {
+              if (latitude === null) latitude = parseCoord(value);
+              continue;
+            }
+            if (LNG_KEY_RE.test(rawKey)) {
+              if (longitude === null) longitude = parseCoord(value);
+              continue;
+            }
+            // First non-empty value wins if two columns canonicalize to the same key.
+            const canonKey = canonicalizeCustomKey(rawKey);
+            if (!(canonKey in customFields)) customFields[canonKey] = value;
+          }
+          return {
+            latitude,
+            longitude,
+            slug: entrySlug,
+            title: String(data.title || "Untitled").slice(0, 500),
+            category: data.category?.slice(0, 200) ?? null,
+            summary: data.summary?.slice(0, 1000) ?? null,
+            description: data.description ?? null,
+            contactEmail: data.contactEmail?.slice(0, 200) ?? null,
+            contactPhone: data.contactPhone?.slice(0, 50) ?? null,
+            website: data.website?.slice(0, 500) ?? null,
+            location: data.location?.slice(0, 200) ?? null,
+            venue: data.venue?.slice(0, 300) ?? null,
+            eventType: data.eventType?.slice(0, 100) ?? null,
+            startDate: data.startDate?.slice(0, 50) ?? null,
+            endDate: data.endDate?.slice(0, 50) ?? null,
+            tags: data.tags?.slice(0, 500) ?? null,
+            moreDetails: data.moreDetails ?? null,
+            customFields: Object.keys(customFields).length > 0 ? customFields : null,
+            sourceCsvRow: null,
+            published: true,
+          };
         });
-      }
-      entriesCreated += chunk.length;
 
-      const insertProgress = 70 + Math.round((entriesCreated / totalEntries) * 30);
-      await db.update(importJobs).set({
-        processedRows: entriesCreated,
-        progress: insertProgress,
-        message: `Saving entries... (${entriesCreated}/${totalEntries})`,
-        updatedAt: new Date(),
-      }).where(eq(importJobs.jobId, jobId));
-    }
+        const inserted = await tx.insert(entries).values(rows).returning({
+          id: entries.id,
+          customFields: entries.customFields,
+        });
+        for (let i = 0; i < inserted.length; i++) {
+          const row = inserted[i];
+          const parsed = chunk[i];
+          const cf = row.customFields as Record<string, unknown> | null;
+          const ridingType = typeof cf?.ridingtype === "string" ? cf.ridingtype : null;
+          insertedEntries.push({
+            id: row.id,
+            customFields: cf,
+            explicitLocationParts: parsed.explicitLocationParts,
+            hasExplicitLocation: parsed.hasExplicitLocation,
+            ridingType,
+          });
+        }
+        entriesCreated += chunk.length;
+
+        const insertProgress = 70 + Math.round((entriesCreated / totalEntries) * 30);
+        await tx.update(importJobs).set({
+          processedRows: entriesCreated,
+          progress: insertProgress,
+          message: `Saving entries... (${entriesCreated}/${totalEntries})`,
+          updatedAt: new Date(),
+        }).where(eq(importJobs.jobId, jobId));
+      }
+    });
 
     // Step 5: Download remote listing images into our own storage so we
     // never hot-link paid/external image URLs (Google Places etc.).

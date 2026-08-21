@@ -7,7 +7,9 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke:import-helpers": "tsx src/scripts/importHelpers.smoke.ts",
+    "smoke:slug-concurrency": "tsx src/scripts/entrySlugConcurrency.smoke.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",

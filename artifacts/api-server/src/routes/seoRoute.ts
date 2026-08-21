@@ -3,9 +3,10 @@ import { db } from "@workspace/db";
 import { entries } from "@workspace/db";
 import { requireAdmin } from "../middlewares/auth.js";
 import { getGeminiClient } from "../lib/gemini.js";
-import { eq, isNull, or, count } from "drizzle-orm";
+import { eq, isNull, or, count, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { logger } from "../lib/logger.js";
+import { ENTRY_SLUG_ADVISORY_LOCK_ID } from "../lib/entrySlugs.js";
 
 const router = Router();
 
@@ -106,35 +107,8 @@ async function runBulkSeo(jobId: string, overwrite: boolean) {
       return;
     }
 
-    // Step 1: Generate slugs deterministically and ensure uniqueness
-    const existingSlugs = await db.select({ id: entries.id, slug: entries.slug }).from(entries).where(isNull(entries.slug));
-    const usedSlugs = new Set<string>();
-
-    // Pre-load existing non-null slugs to avoid collisions
-    const allSlugs = await db.select({ slug: entries.slug }).from(entries);
-    for (const row of allSlugs) {
-      if (row.slug) usedSlugs.add(row.slug);
-    }
-
-    const slugMap = new Map<number, string>();
-    for (const entry of allEntries) {
-      if (!overwrite && entry.slug) {
-        slugMap.set(entry.id, entry.slug);
-        continue;
-      }
-      let base = slugify(entry.title);
-      if (!base) base = `entry-${entry.id}`;
-      let slug = base;
-      let counter = 2;
-      while (usedSlugs.has(slug)) {
-        slug = `${base}-${counter++}`;
-      }
-      usedSlugs.add(slug);
-      slugMap.set(entry.id, slug);
-    }
-
     job.progress = 10;
-    job.message = "Slugs generated, calling Gemini for meta content...";
+    job.message = "Entries prepared, calling Gemini for meta content...";
 
     // Step 2: Generate meta titles/descriptions in batches via Gemini
     const totalBatches = Math.ceil(allEntries.length / SEO_BATCH);
@@ -169,23 +143,80 @@ async function runBulkSeo(jobId: string, overwrite: boolean) {
     job.message = "Saving SEO data to database...";
 
     let saved = 0;
-    for (const entry of allEntries) {
-      const seo = seoMap.get(entry.id);
-      const slug = slugMap.get(entry.id)!;
-      await db.update(entries).set({
-        slug,
-        metaTitle: seo?.metaTitle || entry.title.slice(0, 60),
-        metaDescription: seo?.metaDescription || (entry.summary || "").slice(0, 160),
-        ogTitle: seo?.ogTitle || entry.title.slice(0, 60),
-        ogDescription: seo?.ogDescription || (entry.summary || "").slice(0, 160),
-        updatedAt: new Date(),
-      }).where(eq(entries.id, entry.id));
-      saved++;
-      job.processed = saved;
-      if (saved % 10 === 0 || saved === allEntries.length) {
-        job.progress = 85 + Math.round((saved / allEntries.length) * 15);
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(${ENTRY_SLUG_ADVISORY_LOCK_ID})`);
+
+      // Recompute slug availability immediately before writing. Imports and
+      // manual slug edits use the same lock, while the DB unique constraint is
+      // the final invariant for any writer outside the application.
+      const targetIds = new Set(allEntries.map((entry) => entry.id));
+      const currentSlugs = await tx.select({ id: entries.id, slug: entries.slug }).from(entries);
+      const usedSlugs = new Set<string>();
+      for (const row of currentSlugs) {
+        if (row.slug && (!overwrite || !targetIds.has(row.id))) {
+          usedSlugs.add(row.slug);
+        }
       }
-    }
+
+      const slugMap = new Map<number, string>();
+      const orderedEntries = [...allEntries].sort((a, b) => a.id - b.id);
+      for (const entry of orderedEntries) {
+        if (!overwrite && entry.slug) {
+          slugMap.set(entry.id, entry.slug);
+          continue;
+        }
+        let base = slugify(entry.title);
+        if (!base) base = `entry-${entry.id}`;
+        let slug = base;
+        let counter = 2;
+        while (usedSlugs.has(slug)) {
+          slug = `${base}-${counter++}`;
+        }
+        usedSlugs.add(slug);
+        slugMap.set(entry.id, slug);
+      }
+
+      if (overwrite) {
+        // The unique constraint is immediate, so slug swaps cannot be written
+        // directly one row at a time (A→B would collide while B still owns B).
+        // Move every target to a transaction-local unique value first, then
+        // apply the final slug map below. These values never commit.
+        const occupiedSlugs = new Set(
+          currentSlugs.map((row) => row.slug).filter((slug): slug is string => !!slug),
+        );
+        for (const finalSlug of slugMap.values()) occupiedSlugs.add(finalSlug);
+
+        for (const entry of orderedEntries) {
+          let temporarySlug = `seo-tmp-${jobId}-${entry.id}`;
+          let counter = 2;
+          while (occupiedSlugs.has(temporarySlug)) {
+            temporarySlug = `seo-tmp-${jobId}-${entry.id}-${counter++}`;
+          }
+          occupiedSlugs.add(temporarySlug);
+          await tx.update(entries)
+            .set({ slug: temporarySlug })
+            .where(eq(entries.id, entry.id));
+        }
+      }
+
+      for (const entry of allEntries) {
+        const seo = seoMap.get(entry.id);
+        const slug = slugMap.get(entry.id)!;
+        await tx.update(entries).set({
+          slug,
+          metaTitle: seo?.metaTitle || entry.title.slice(0, 60),
+          metaDescription: seo?.metaDescription || (entry.summary || "").slice(0, 160),
+          ogTitle: seo?.ogTitle || entry.title.slice(0, 60),
+          ogDescription: seo?.ogDescription || (entry.summary || "").slice(0, 160),
+          updatedAt: new Date(),
+        }).where(eq(entries.id, entry.id));
+        saved++;
+        job.processed = saved;
+        if (saved % 10 === 0 || saved === allEntries.length) {
+          job.progress = 85 + Math.round((saved / allEntries.length) * 15);
+        }
+      }
+    });
 
     Object.assign(job, {
       status: "complete",

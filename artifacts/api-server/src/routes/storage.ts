@@ -61,7 +61,7 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
       return;
     }
 
-    const response = await objectStorageService.downloadObject(file);
+    const response = await objectStorageService.downloadObject(file, 3600, true);
 
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));

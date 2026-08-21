@@ -94,8 +94,8 @@ try {
     }),
   );
   if (
-    repaired[0] !== "10 Test Rd, Chester, AR 72934" ||
-    repaired[1] !== "20 Test Rd, Chester, AR 72934" ||
+    repaired[0] !== "10 Test Rd, Chester, Arkansas 72934" ||
+    repaired[1] !== "20 Test Rd, Chester, Arkansas 72934" ||
     repaired[2] !== "30 Test Rd, Chester, Arkansas 72934" ||
     repaired[3] !== "40 Test Rd, Chester, AR 72934"
   ) {

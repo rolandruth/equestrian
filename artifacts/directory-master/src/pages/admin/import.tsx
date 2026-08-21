@@ -965,7 +965,7 @@ export default function AdminImportPage() {
             <div>
               <CardTitle className="text-lg">Repair legacy duplicate addresses</CardTitle>
               <CardDescription className="mt-1">
-                Scan for listings where the same city, state, and postal code were appended twice by an older import.
+                Scan for listings where an older import duplicated the city, state, and postal code.
               </CardDescription>
             </div>
           </div>
@@ -1021,8 +1021,9 @@ export default function AdminImportPage() {
                   )}
                 </div>
                 <p className="text-sm text-amber-900 dark:text-amber-100 mt-3">
-                  Only the second identical locality suffix will be removed. Titles, contacts,
-                  descriptions, images, coordinates, and normalized location fields are not changed.
+                  Each match will be reduced to one city, the full state name, and one postal code.
+                  Titles, contacts, descriptions, images, coordinates, and normalized location fields
+                  are not changed.
                 </p>
               </div>
 

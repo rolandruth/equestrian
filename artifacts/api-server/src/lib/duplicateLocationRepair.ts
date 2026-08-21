@@ -3,6 +3,60 @@ import { sql, type SQL } from "drizzle-orm";
 
 const DUPLICATE_LOCATION_REPAIR_LOCK_ID = 73492752;
 
+const STATE_ABBREVIATIONS = [
+  ["Alabama", "AL"],
+  ["Alaska", "AK"],
+  ["Arizona", "AZ"],
+  ["Arkansas", "AR"],
+  ["California", "CA"],
+  ["Colorado", "CO"],
+  ["Connecticut", "CT"],
+  ["Delaware", "DE"],
+  ["Florida", "FL"],
+  ["Georgia", "GA"],
+  ["Hawaii", "HI"],
+  ["Idaho", "ID"],
+  ["Illinois", "IL"],
+  ["Indiana", "IN"],
+  ["Iowa", "IA"],
+  ["Kansas", "KS"],
+  ["Kentucky", "KY"],
+  ["Louisiana", "LA"],
+  ["Maine", "ME"],
+  ["Maryland", "MD"],
+  ["Massachusetts", "MA"],
+  ["Michigan", "MI"],
+  ["Minnesota", "MN"],
+  ["Mississippi", "MS"],
+  ["Missouri", "MO"],
+  ["Montana", "MT"],
+  ["Nebraska", "NE"],
+  ["Nevada", "NV"],
+  ["New Hampshire", "NH"],
+  ["New Jersey", "NJ"],
+  ["New Mexico", "NM"],
+  ["New York", "NY"],
+  ["North Carolina", "NC"],
+  ["North Dakota", "ND"],
+  ["Ohio", "OH"],
+  ["Oklahoma", "OK"],
+  ["Oregon", "OR"],
+  ["Pennsylvania", "PA"],
+  ["Rhode Island", "RI"],
+  ["South Carolina", "SC"],
+  ["South Dakota", "SD"],
+  ["Tennessee", "TN"],
+  ["Texas", "TX"],
+  ["Utah", "UT"],
+  ["Vermont", "VT"],
+  ["Virginia", "VA"],
+  ["Washington", "WA"],
+  ["West Virginia", "WV"],
+  ["Wisconsin", "WI"],
+  ["Wyoming", "WY"],
+  ["District of Columbia", "DC"],
+] as const;
+
 type SqlExecutor = {
   execute(query: SQL): Promise<unknown>;
 };
@@ -69,50 +123,32 @@ function parseSample(value: PreviewRow["sample"]): DuplicateLocationRepairPrevie
   return [];
 }
 
+function stateAbbreviationsSql() {
+  const rows = STATE_ABBREVIATIONS.map(([stateName, abbreviation]) =>
+    sql`(${stateName}, ${abbreviation})`
+  );
+  return sql`state_abbreviations(state_name, abbreviation) AS (VALUES ${sql.join(rows, sql`, `)})`;
+}
+
 function duplicateLocationCandidatesSql() {
   return sql`
-    WITH full_state_suffixes AS (
+    WITH ${stateAbbreviationsSql()},
+    full_state_candidates AS (
       SELECT
         e.id,
         e.title,
         e.location AS before,
-        left(
+        regexp_replace(
           e.location,
-          length(e.location) - length(', ' || el.city_name || ', ' || el.state_name || ' ' || el.postal_code)
+          '^(.*), ([^,]+), ' || state.abbreviation || ' ([0-9]{5}(?:-[0-9]{4})?), \\2, ' || state.state_name || ' \\3$',
+          '\\1, \\2, ' || state.state_name || ' \\3',
+          'i'
         ) AS after,
-        el.city_name,
-        el.postal_code
-      FROM entries e
-      INNER JOIN entry_locations el ON el.entry_id = e.id
-      WHERE e.location IS NOT NULL
-        AND btrim(e.location) <> ''
-        AND el.city_name IS NOT NULL
-        AND btrim(el.city_name) <> ''
-        AND el.state_name IS NOT NULL
-        AND btrim(el.state_name) <> ''
-        AND el.postal_code IS NOT NULL
-        AND btrim(el.postal_code) <> ''
-        AND lower(right(e.location, length(', ' || el.city_name || ', ' || el.state_name || ' ' || el.postal_code))) =
-            lower(', ' || el.city_name || ', ' || el.state_name || ' ' || el.postal_code)
-    ),
-    full_state_candidates AS (
-      SELECT
-        suffix.id,
-        suffix.title,
-        suffix.before,
-        suffix.after,
         'full_state'::text AS repair_kind
-      FROM full_state_suffixes suffix
-      CROSS JOIN LATERAL (
-        SELECT regexp_match(
-          suffix.after,
-          ', ([^,]+), ([^,]+) ([0-9]{5}(?:-[0-9]{4})?)$'
-        ) AS parts
-      ) parsed
-      WHERE parsed.parts IS NOT NULL
-        AND lower(btrim((parsed.parts)[1])) = lower(btrim(suffix.city_name))
-        AND btrim((parsed.parts)[2]) <> ''
-        AND btrim((parsed.parts)[3]) = btrim(suffix.postal_code)
+      FROM entries e
+      INNER JOIN state_abbreviations state ON e.location ~* (
+        '^(.*), ([^,]+), ' || state.abbreviation || ' ([0-9]{5}(?:-[0-9]{4})?), \\2, ' || state.state_name || ' \\3$'
+      )
     ),
     abbreviated_candidates AS (
       SELECT
@@ -121,12 +157,15 @@ function duplicateLocationCandidatesSql() {
         e.location AS before,
         regexp_replace(
           e.location,
-          '(, [^,]+, [A-Z]{2} [0-9]{5}(?:-[0-9]{4})?)\\1$',
-          '\\1'
+          '^(.*), ([^,]+), ' || state.abbreviation || ' ([0-9]{5}(?:-[0-9]{4})?), \\2, ' || state.abbreviation || ' \\3$',
+          '\\1, \\2, ' || state.state_name || ' \\3',
+          'i'
         ) AS after,
         'abbreviated'::text AS repair_kind
       FROM entries e
-      WHERE e.location ~ '(, [^,]+, [A-Z]{2} [0-9]{5}(?:-[0-9]{4})?)\\1$'
+      INNER JOIN state_abbreviations state ON e.location ~* (
+        '^(.*), ([^,]+), ' || state.abbreviation || ' ([0-9]{5}(?:-[0-9]{4})?), \\2, ' || state.abbreviation || ' \\3$'
+      )
     ),
     candidates AS (
       SELECT * FROM full_state_candidates

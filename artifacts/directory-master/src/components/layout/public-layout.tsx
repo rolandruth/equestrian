@@ -85,6 +85,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleHomeNavigation = () => {
+    setIsMenuOpen(false);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <ThemeColorInjector themeColor={(settings as any)?.themeColor} />
@@ -99,7 +106,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex-shrink-0 flex items-center gap-2">
+              <Link
+                href="/"
+                onClick={handleHomeNavigation}
+                className="flex-shrink-0 flex items-center gap-2"
+              >
                 {settings?.logoUrl ? (
                   <img src={settings.logoUrl} alt={settings.siteTitle} className="max-h-[60px] max-w-[170px] w-auto h-auto object-contain" />
                 ) : (
@@ -115,6 +126,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               {showNavLink("home") && (
                 <Link
                   href="/"
+                  onClick={handleHomeNavigation}
                   className={linkClass}
                   style={textStyle}
                 >
@@ -227,7 +239,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               {showNavLink("home") && (
                 <Link
                   href="/"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={handleHomeNavigation}
                   className="block px-3 py-2 rounded-md text-base font-medium"
                   style={navbarText ? textStyle : undefined}
                 >

@@ -11,6 +11,15 @@ import sitemapRouter from "./routes/sitemapRoute";
 import { logger } from "./lib/logger";
 import { bizAuthMiddleware } from "./middlewares/bizAuthMiddleware.js";
 import { getLessonGuideHttpStatus } from "@workspace/lesson-guides";
+import { db, entries } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import {
+  getEntryRouteIdentifier,
+  getPublicRouteKind,
+  injectNotFoundSeoHtml,
+  isSafePublicPathname,
+  normalizePublicPathname,
+} from "@workspace/public-route-status";
 
 const app: Express = express();
 
@@ -58,8 +67,41 @@ app.use(sitemapRouter);
 
 app.use("/api", router);
 
-// Routes whose HTML gets server-side SEO meta injection for crawlers.
-const SEO_PATH_RE = /^\/($|browse(\/|$)|entry\/|horse-riding-lessons(\/|$))/;
+const fallbackAppShell = `<!doctype html><html lang="en"><head><title>SaddleUpGuide</title><meta name="description" content="" /></head><body><div id="root"></div></body></html>`;
+
+app.use((req: Request, res: Response, next) => {
+  if (req.method !== "GET" || isSafePublicPathname(req.path)) {
+    next();
+    return;
+  }
+  res
+    .status(404)
+    .set("Cache-Control", "no-store")
+    .type("html")
+    .send(injectNotFoundSeoHtml(fallbackAppShell));
+});
+
+async function getPublicPageHttpStatus(reqPath: string): Promise<number> {
+  const normalizedPath = normalizePublicPathname(reqPath);
+  const guideStatus = getLessonGuideHttpStatus(normalizedPath);
+  if (guideStatus !== null) return guideStatus;
+
+  const routeKind = getPublicRouteKind(normalizedPath);
+  if (routeKind === "unknown") return 404;
+  if (routeKind !== "entry") return 200;
+
+  const identifier = getEntryRouteIdentifier(normalizedPath);
+  if (!identifier) return 404;
+  const condition = identifier.kind === "id"
+    ? and(eq(entries.id, identifier.value), eq(entries.published, true))
+    : and(eq(entries.slug, identifier.value), eq(entries.published, true));
+  const [entry] = await db
+    .select({ id: entries.id })
+    .from(entries)
+    .where(condition)
+    .limit(1);
+  return entry ? 200 : 404;
+}
 
 // Dev-only: proxy all non-API requests to the Vite frontend (port 19179).
 // This makes the canvas iframe work when it hits the API server directly.
@@ -68,9 +110,9 @@ const SEO_PATH_RE = /^\/($|browse(\/|$)|entry\/|horse-riding-lessons(\/|$))/;
 if (process.env.NODE_ENV !== "production") {
   const VITE_PORT = 19179;
   app.use((req: Request, res: Response) => {
-    const wantsSeo = req.method === "GET" && SEO_PATH_RE.test(req.path);
+    const wantsHtmlTransform = req.method === "GET";
     const headers = { ...req.headers, host: `127.0.0.1:${VITE_PORT}` };
-    if (wantsSeo) delete headers["accept-encoding"]; // need plain text to transform
+    if (wantsHtmlTransform) delete headers["accept-encoding"]; // need plain text to transform
     const options = {
       hostname: "127.0.0.1",
       port: VITE_PORT,
@@ -80,15 +122,33 @@ if (process.env.NODE_ENV !== "production") {
     };
     const proxy = http.request(options, (proxyRes) => {
       const isHtml = String(proxyRes.headers["content-type"] || "").includes("text/html");
-      if (wantsSeo && isHtml) {
+      if (wantsHtmlTransform && isHtml) {
         const chunks: Buffer[] = [];
         proxyRes.on("data", (c) => chunks.push(c));
         proxyRes.on("end", async () => {
-          const html = Buffer.concat(chunks).toString("utf8");
-          const out = await injectSeoMeta(html, req.path);
-          const { "content-length": _cl, ...rest } = proxyRes.headers;
-          res.writeHead(getLessonGuideHttpStatus(req.path) ?? proxyRes.statusCode ?? 200, rest);
-          res.end(out);
+          try {
+            const html = Buffer.concat(chunks).toString("utf8");
+            const pageStatus = await getPublicPageHttpStatus(req.path);
+            const normalizedPath = normalizePublicPathname(req.path);
+            const out = pageStatus === 404
+              ? injectNotFoundSeoHtml(html)
+              : await injectSeoMeta(html, normalizedPath);
+            const {
+              "content-length": _cl,
+              etag: _etag,
+              ...rest
+            } = proxyRes.headers;
+            if (pageStatus >= 400) rest["cache-control"] = "no-store";
+            res.writeHead(pageStatus, rest);
+            res.end(out);
+          } catch (error) {
+            req.log.error(error);
+            res
+              .status(500)
+              .set("Cache-Control", "no-store")
+              .type("text")
+              .send("Unable to render page");
+          }
         });
         return;
       }
@@ -96,7 +156,11 @@ if (process.env.NODE_ENV !== "production") {
       proxyRes.pipe(res, { end: true });
     });
     proxy.on("error", () => {
-      res.status(502).send("Vite server unavailable");
+      res
+        .status(502)
+        .set("Cache-Control", "no-store")
+        .type("text")
+        .send("Vite server unavailable");
     });
     req.pipe(proxy, { end: true });
   });
@@ -110,12 +174,22 @@ if (process.env.NODE_ENV !== "production") {
     app.get("/{*path}", async (req: Request, res: Response) => {
       try {
         const html = fs.readFileSync(path.join(webDist, "index.html"), "utf8");
+        const pageStatus = await getPublicPageHttpStatus(req.path);
+        const normalizedPath = normalizePublicPathname(req.path);
         res
-          .status(getLessonGuideHttpStatus(req.path) ?? 200)
+          .status(pageStatus)
+          .set(pageStatus >= 400 ? { "Cache-Control": "no-store" } : {})
           .type("html")
-          .send(await injectSeoMeta(html, req.path));
-      } catch {
-        res.status(404).send("Not found");
+          .send(pageStatus === 404
+            ? injectNotFoundSeoHtml(html)
+            : await injectSeoMeta(html, normalizedPath));
+      } catch (error) {
+        req.log.error(error);
+        res
+          .status(500)
+          .set("Cache-Control", "no-store")
+          .type("text")
+          .send("Unable to render page");
       }
     });
   }

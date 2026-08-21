@@ -120,6 +120,9 @@ importers:
       '@workspace/listing-seo':
         specifier: workspace:*
         version: link:../../lib/listing-seo
+      '@workspace/public-route-status':
+        specifier: workspace:*
+        version: link:../../lib/public-route-status
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -708,6 +711,8 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
+
+  lib/public-route-status: {}
 
   lib/replit-auth-web:
     dependencies:

@@ -13,7 +13,8 @@
     "smoke:duplicate-location-repair": "tsx src/scripts/duplicateLocationRepair.smoke.ts",
     "smoke:local-seo-state": "tsx src/scripts/localSeoStateNormalization.smoke.ts",
     "smoke:lesson-guides": "tsx src/scripts/lessonGuideSeo.smoke.ts",
-    "smoke:listing-seo": "tsx src/scripts/listingSeo.smoke.ts"
+    "smoke:listing-seo": "tsx src/scripts/listingSeo.smoke.ts",
+    "smoke:soft-404": "tsx src/scripts/soft404.smoke.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
@@ -23,6 +24,7 @@
     "@workspace/integrations-gemini-ai": "workspace:*",
     "@workspace/lesson-guides": "workspace:*",
     "@workspace/listing-seo": "workspace:*",
+    "@workspace/public-route-status": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",

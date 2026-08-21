@@ -26,6 +26,9 @@
     },
     {
       "path": "./lib/listing-seo"
+    },
+    {
+      "path": "./lib/public-route-status"
     }
   ]
 }

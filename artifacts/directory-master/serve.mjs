@@ -20,6 +20,13 @@ import {
   getListingImageUrl,
   injectListingCrawlerShell,
 } from "../../lib/listing-seo/src/index.ts";
+import {
+  getEntryRouteIdentifier,
+  getPublicRouteKind,
+  injectNotFoundSeoHtml,
+  isSafePublicPathname,
+  normalizePublicPathname,
+} from "../../lib/public-route-status/src/index.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(__dirname, "dist/public");
@@ -30,6 +37,29 @@ const publicOrigin = (process.env.PUBLIC_SITE_URL || "https://www.saddleupguide.
 const pool = process.env.DATABASE_URL
   ? new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 3 })
   : null;
+
+async function getPublicPageHttpStatus(reqPath) {
+  const normalizedPath = normalizePublicPathname(reqPath);
+  const guideStatus = getLessonGuideHttpStatus(normalizedPath);
+  if (guideStatus !== null) return guideStatus;
+
+  const routeKind = getPublicRouteKind(normalizedPath);
+  if (routeKind === "unknown") return 404;
+  if (routeKind !== "entry") return 200;
+  if (!pool) throw new Error("DATABASE_URL is required to validate listing routes");
+
+  const identifier = getEntryRouteIdentifier(normalizedPath);
+  if (!identifier) return 404;
+  const { rows } = await pool.query(
+    `SELECT 1
+       FROM entries
+      WHERE published = true
+        AND ${identifier.kind === "id" ? "id = $1" : "slug = $1"}
+      LIMIT 1`,
+    [identifier.value],
+  );
+  return rows.length > 0 ? 200 : 404;
+}
 
 const escapeHtml = (s) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -1151,6 +1181,7 @@ async function fetchQualifiedStateBrowsePages() {
 }
 
 const app = express();
+app.set("etag", false);
 
 app.get("/robots.txt", (_req, res) => {
   res.type("text").send(`User-agent: *
@@ -1237,11 +1268,27 @@ ${urls}
   }
 });
 
+app.use((req, res, next) => {
+  if (req.method !== "GET" || isSafePublicPathname(req.path)) {
+    next();
+    return;
+  }
+  try {
+    const html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
+    res
+      .status(404)
+      .set("Cache-Control", "no-store")
+      .type("html")
+      .send(injectNotFoundSeoHtml(html));
+  } catch {
+    res.status(404).set("Cache-Control", "no-store").type("text").send("Not found");
+  }
+});
 app.use(express.static(distDir, { index: false }));
 app.get("/{*path}", async (req, res) => {
   try {
     const html = fs.readFileSync(path.join(distDir, "index.html"), "utf8");
-    const reqPath = req.path;
+    const reqPath = normalizePublicPathname(req.path);
 
     // ── Local SEO routes – check eligibility before serving HTML ────────────
     // These routes must 404 when under-threshold rather than serving thin 200s.
@@ -1271,7 +1318,11 @@ app.get("/{*path}", async (req, res) => {
         // Under-threshold, nonexistent, or page > totalPages: 404 + noindex.
         // Prevents out-of-range pages from being indexed as duplicate content.
         const noindexHtml = injectRobotsNoindex(html);
-        return res.status(404).type("html").send(noindexHtml);
+        return res
+          .status(404)
+          .set("Cache-Control", "no-store")
+          .type("html")
+          .send(noindexHtml);
       }
       if (result === null) {
         // Schema not yet applied: serve plain SPA (no crash, no 404).
@@ -1281,13 +1332,26 @@ app.get("/{*path}", async (req, res) => {
       return res.type("html").send(result);
     }
 
+    const pageStatus = await getPublicPageHttpStatus(reqPath);
+    if (pageStatus === 404) {
+      return res
+        .status(404)
+        .set("Cache-Control", "no-store")
+        .type("html")
+        .send(injectNotFoundSeoHtml(html));
+    }
+
     // Existing routes
     res
-      .status(getLessonGuideHttpStatus(reqPath) ?? 200)
+      .status(pageStatus)
       .type("html")
       .send(await injectSeoMeta(html, reqPath));
   } catch {
-    res.status(404).send("Not found");
+    res
+      .status(500)
+      .set("Cache-Control", "no-store")
+      .type("text")
+      .send("Unable to render page");
   }
 });
 

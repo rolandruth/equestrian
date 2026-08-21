@@ -29,6 +29,9 @@ import ListingPlansPage from "@/pages/listing-plans";
 import BusinessDashboardPage from "@/pages/business/dashboard";
 import BusinessLoginPage from "@/pages/business/login";
 import BusinessResetPasswordPage from "@/pages/business/reset-password";
+// Guides
+import GuideHubPage from "@/pages/guides/hub";
+import GuideArticlePage from "@/pages/guides/article";
 // Admin
 import LoginPage from "@/pages/admin/login";
 import DashboardPage from "@/pages/admin/dashboard";
@@ -241,6 +244,20 @@ function Router() {
       </Route>
       <Route path="/business/login" component={BusinessLoginPage} />
       <Route path="/business/reset-password" component={BusinessResetPasswordPage} />
+      <Route path="/horse-riding-lessons">
+        <SetupGuard>
+          <PublicLayout>
+            <GuideHubPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/horse-riding-lessons/:slug">
+        <SetupGuard>
+          <PublicLayout>
+            <GuideArticlePage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
       <Route path="/privacy-policy">
         <SetupGuard>
           <PublicLayout>

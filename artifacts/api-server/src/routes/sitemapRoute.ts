@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { entries } from "@workspace/db";
+import { getLessonGuidePath, lessonGuides, LESSON_GUIDE_BASE_PATH } from "@workspace/lesson-guides";
 import { and, eq, isNotNull, sql } from "drizzle-orm";
 
 const router = Router();
@@ -73,6 +74,16 @@ router.get("/sitemap.xml", async (req, res) => {
       { loc: "/contact", priority: "0.4", changefreq: "monthly", lastmod: now },
       { loc: "/privacy-policy", priority: "0.2", changefreq: "yearly", lastmod: now },
       { loc: "/terms", priority: "0.2", changefreq: "yearly", lastmod: now },
+    ];
+
+    const guidePages = [
+      { loc: LESSON_GUIDE_BASE_PATH, priority: "0.75", changefreq: "monthly", lastmod: now },
+      ...lessonGuides.map((guide) => ({
+        loc: getLessonGuidePath(guide.slug),
+        priority: "0.65",
+        changefreq: "monthly",
+        lastmod: now,
+      })),
     ];
 
     // ── Entry pages ──────────────────────────────────────────────────────────
@@ -213,6 +224,7 @@ router.get("/sitemap.xml", async (req, res) => {
     const seen = new Set<string>();
     const allPages = [
       ...staticPages,
+      ...guidePages,
       ...categoryPages,
       ...entryPages,
       ...cityPages,

@@ -10,6 +10,7 @@ import { injectSeoMeta } from "./lib/seoHtml";
 import sitemapRouter from "./routes/sitemapRoute";
 import { logger } from "./lib/logger";
 import { bizAuthMiddleware } from "./middlewares/bizAuthMiddleware.js";
+import { getLessonGuideHttpStatus } from "@workspace/lesson-guides";
 
 const app: Express = express();
 
@@ -58,7 +59,7 @@ app.use(sitemapRouter);
 app.use("/api", router);
 
 // Routes whose HTML gets server-side SEO meta injection for crawlers.
-const SEO_PATH_RE = /^\/($|browse(\/|$)|entry\/)/;
+const SEO_PATH_RE = /^\/($|browse(\/|$)|entry\/|horse-riding-lessons(\/|$))/;
 
 // Dev-only: proxy all non-API requests to the Vite frontend (port 19179).
 // This makes the canvas iframe work when it hits the API server directly.
@@ -86,7 +87,7 @@ if (process.env.NODE_ENV !== "production") {
           const html = Buffer.concat(chunks).toString("utf8");
           const out = await injectSeoMeta(html, req.path);
           const { "content-length": _cl, ...rest } = proxyRes.headers;
-          res.writeHead(proxyRes.statusCode ?? 200, rest);
+          res.writeHead(getLessonGuideHttpStatus(req.path) ?? proxyRes.statusCode ?? 200, rest);
           res.end(out);
         });
         return;
@@ -109,7 +110,10 @@ if (process.env.NODE_ENV !== "production") {
     app.get("/{*path}", async (req: Request, res: Response) => {
       try {
         const html = fs.readFileSync(path.join(webDist, "index.html"), "utf8");
-        res.type("html").send(await injectSeoMeta(html, req.path));
+        res
+          .status(getLessonGuideHttpStatus(req.path) ?? 200)
+          .type("html")
+          .send(await injectSeoMeta(html, req.path));
       } catch {
         res.status(404).send("Not found");
       }

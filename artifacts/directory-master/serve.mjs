@@ -1,7 +1,7 @@
 // Production server for the built SPA.
 // Serves dist/public and injects per-route SEO meta tags (title, description,
 // OG tags) into index.html so crawlers that don't run JavaScript see correct
-// metadata for the homepage, browse pages, and individual entry pages.
+// metadata for the homepage, browse pages, guide pages, and individual entries.
 // Task #38: adds local SEO rendering for /locations/:stateSlug/:citySlug,
 // /services/:serviceSlug, /services/:serviceSlug/:stateSlug,
 // /services/:serviceSlug/:stateSlug/:citySlug with eligibility thresholds.
@@ -10,6 +10,10 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
+import {
+  getLessonGuideHttpStatus,
+  injectLessonGuideSeoHtml,
+} from "../../lib/lesson-guides/src/index.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(__dirname, "dist/public");
@@ -917,8 +921,11 @@ function injectEntryShell(html, entry, categoryEligible) {
 }
 
 async function injectSeoMeta(html, reqPath) {
-  if (!pool) return html;
   try {
+    const lessonGuideHtml = injectLessonGuideSeoHtml(html, reqPath, publicOrigin);
+    if (lessonGuideHtml !== null) return lessonGuideHtml;
+    if (!pool) return html;
+
     const entryMatch = reqPath.match(/^\/entry\/([^/?#]+)$/);
     if (entryMatch) {
       const idOrSlug = decodeURIComponent(entryMatch[1]);
@@ -1308,7 +1315,10 @@ app.get("/{*path}", async (req, res) => {
     }
 
     // Existing routes
-    res.type("html").send(await injectSeoMeta(html, reqPath));
+    res
+      .status(getLessonGuideHttpStatus(reqPath) ?? 200)
+      .type("html")
+      .send(await injectSeoMeta(html, reqPath));
   } catch {
     res.status(404).send("Not found");
   }

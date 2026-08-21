@@ -1,4 +1,5 @@
 import { db, entries, directorySettings } from "@workspace/db";
+import { injectLessonGuideSeoHtml } from "@workspace/lesson-guides";
 import { eq, and } from "drizzle-orm";
 
 const DEFAULT_PUBLIC_ORIGIN = "https://www.saddleupguide.com";
@@ -29,13 +30,16 @@ function replaceCanonical(html: string, href: string): string {
   return html.replace("</head>", `    <link rel="canonical" href="${esc}" />\n  </head>`);
 }
 
-function injectJsonLd(html: string, data: unknown): string {
+function injectJsonLd(html: string, data: unknown, scriptId = "listing-structured-data"): string {
   const json = JSON.stringify(data)
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e")
     .replace(/&/g, "\\u0026");
-  const script = `    <script id="listing-structured-data" type="application/ld+json">${json}</script>\n`;
-  const existing = /<script\s+id=["']listing-structured-data["'][^>]*>[\s\S]*?<\/script>\s*/i;
+  const script = `    <script id="${scriptId}" type="application/ld+json">${json}</script>\n`;
+  const existing = new RegExp(
+    `<script\\s+id=["']${scriptId}["'][^>]*>[\\s\\S]*?<\\/script>\\s*`,
+    "i",
+  );
   if (existing.test(html)) return html.replace(existing, script);
   return html.replace("</head>", `${script}  </head>`);
 }
@@ -130,6 +134,9 @@ function injectEntryShell(
 export async function injectSeoMeta(html: string, path: string, origin?: string): Promise<string> {
   try {
     const publicOrigin = normalizeOrigin(origin);
+    const lessonGuideHtml = injectLessonGuideSeoHtml(html, path, publicOrigin);
+    if (lessonGuideHtml !== null) return lessonGuideHtml;
+
     const entryMatch = path.match(/^\/entry\/([^/?#]+)$/);
     if (entryMatch) {
       const idOrSlug = decodeURIComponent(entryMatch[1]);

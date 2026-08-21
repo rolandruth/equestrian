@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&family=Fraunces:ital,opsz,wght@0,9..144,300..800;1,9..144,300..800&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -100,7 +101,6 @@
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-border: 220 13% 91%;
   --sidebar-ring: 217.2 91.2% 59.8%;
-  
   --card-border: 214.3 31.8% 91.4%;
   --popover-border: 214.3 31.8% 91.4%;
   --app-font-sans: 'Inter', sans-serif;
@@ -141,9 +141,48 @@
   --sidebar-accent-foreground: 240 4.8% 95.9%;
   --sidebar-border: 240 3.7% 15.9%;
   --sidebar-ring: 217.2 91.2% 59.8%;
-  
   --card-border: 217.2 32.6% 17.5%;
   --popover-border: 217.2 32.6% 17.5%;
+}
+
+.lesson-guide-surface {
+  --background: 40 33% 98.5%;
+  --foreground: 30 20% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 30 20% 15%;
+  --primary: 26 42% 35%;
+  --primary-foreground: 40 33% 98.5%;
+  --secondary: 100 15% 90%;
+  --secondary-foreground: 100 30% 25%;
+  --muted: 40 20% 93%;
+  --muted-foreground: 30 15% 45%;
+  --accent: 35 25% 90%;
+  --accent-foreground: 26 42% 35%;
+  --border: 40 20% 88%;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.lesson-guide-surface h1,
+.lesson-guide-surface h2,
+.lesson-guide-surface h3,
+.lesson-guide-surface h4 {
+  font-family: 'Fraunces', Georgia, serif;
+}
+
+.dark .lesson-guide-surface {
+  --background: 30 15% 10%;
+  --foreground: 40 20% 93%;
+  --card: 30 15% 12%;
+  --card-foreground: 40 20% 93%;
+  --primary: 35 45% 60%;
+  --primary-foreground: 30 15% 10%;
+  --secondary: 100 15% 20%;
+  --secondary-foreground: 100 20% 85%;
+  --muted: 30 15% 18%;
+  --muted-foreground: 40 10% 65%;
+  --accent: 30 20% 20%;
+  --accent-foreground: 35 45% 60%;
+  --border: 30 15% 20%;
 }
 
 @layer base {

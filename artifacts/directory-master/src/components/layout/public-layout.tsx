@@ -416,7 +416,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               {(settings as any)?.footerText ||
                 `\u00a9 ${new Date().getFullYear()} ${settings?.siteTitle || "Directory Master"}. All rights reserved.`}
             </p>
-            <nav className="flex items-center gap-5">
+            <nav className="flex flex-wrap items-center gap-5 justify-center">
+              <Link href="/horse-riding-lessons" className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
+                Riding Lesson Guides
+              </Link>
               <a href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Contact Us
               </a>

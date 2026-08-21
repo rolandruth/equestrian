@@ -11,7 +11,8 @@
     "smoke:import-helpers": "tsx src/scripts/importHelpers.smoke.ts",
     "smoke:slug-concurrency": "tsx src/scripts/entrySlugConcurrency.smoke.ts",
     "smoke:duplicate-location-repair": "tsx src/scripts/duplicateLocationRepair.smoke.ts",
-    "smoke:local-seo-state": "tsx src/scripts/localSeoStateNormalization.smoke.ts"
+    "smoke:local-seo-state": "tsx src/scripts/localSeoStateNormalization.smoke.ts",
+    "smoke:lesson-guides": "tsx src/scripts/lessonGuideSeo.smoke.ts"
   },
   "dependencies": {
     "@google-cloud/storage": "^7.19.0",
@@ -19,6 +20,7 @@
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-gemini-ai": "workspace:*",
+    "@workspace/lesson-guides": "workspace:*",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",

@@ -515,6 +515,36 @@ export interface ImportJob {
   error?: string | null;
 }
 
+export interface DuplicateLocationRepairSample {
+  id: number;
+  title: string;
+  before: string;
+  after: string;
+}
+
+export interface DuplicateLocationRepairPreview {
+  totalMatches: number;
+  fullStateMatches: number;
+  abbreviatedMatches: number;
+  sample: DuplicateLocationRepairSample[];
+}
+
+export interface DuplicateLocationRepairInput {
+  /** @minimum 1 */
+  expectedCount: number;
+  confirm: boolean;
+}
+
+export interface DuplicateLocationRepairResult {
+  repairedCount: number;
+  remainingMatches: number;
+}
+
+export interface DuplicateLocationRepairConflict {
+  error: string;
+  currentCount: number;
+}
+
 export interface CategoryCount {
   category: string;
   count: number;

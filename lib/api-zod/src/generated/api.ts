@@ -1005,6 +1005,37 @@ export const GetImportStatusResponse = zod.object({
 });
 
 /**
+ * @summary Preview legacy duplicate-location repairs (admin)
+ */
+export const PreviewDuplicateLocationRepairResponse = zod.object({
+  totalMatches: zod.number(),
+  fullStateMatches: zod.number(),
+  abbreviatedMatches: zod.number(),
+  sample: zod.array(
+    zod.object({
+      id: zod.number(),
+      title: zod.string(),
+      before: zod.string(),
+      after: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * @summary Repair legacy duplicate locations after preview confirmation (admin)
+ */
+
+export const RepairDuplicateLocationsBody = zod.object({
+  expectedCount: zod.number().min(1),
+  confirm: zod.literal(true),
+});
+
+export const RepairDuplicateLocationsResponse = zod.object({
+  repairedCount: zod.number(),
+  remainingMatches: zod.number(),
+});
+
+/**
  * @summary List published entries for public directory
  */
 export const ListPublicEntriesQueryParams = zod.object({

@@ -36,6 +36,10 @@ import type {
   CreateReviewBody,
   CreateUserBody,
   DirectorySettings,
+  DuplicateLocationRepairConflict,
+  DuplicateLocationRepairInput,
+  DuplicateLocationRepairPreview,
+  DuplicateLocationRepairResult,
   Entry,
   EntryClassificationResult,
   EntryClassificationUpdate,
@@ -3654,6 +3658,177 @@ export function useGetImportStatus<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Preview legacy duplicate-location repairs (admin)
+ */
+export const getPreviewDuplicateLocationRepairUrl = () => {
+  return `/api/import/repair/duplicate-locations`;
+};
+
+export const previewDuplicateLocationRepair = async (
+  options?: RequestInit,
+): Promise<DuplicateLocationRepairPreview> => {
+  return customFetch<DuplicateLocationRepairPreview>(
+    getPreviewDuplicateLocationRepairUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getPreviewDuplicateLocationRepairQueryKey = () => {
+  return [`/api/import/repair/duplicate-locations`] as const;
+};
+
+export const getPreviewDuplicateLocationRepairQueryOptions = <
+  TData = Awaited<ReturnType<typeof previewDuplicateLocationRepair>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof previewDuplicateLocationRepair>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getPreviewDuplicateLocationRepairQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof previewDuplicateLocationRepair>>
+  > = ({ signal }) =>
+    previewDuplicateLocationRepair({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof previewDuplicateLocationRepair>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type PreviewDuplicateLocationRepairQueryResult = NonNullable<
+  Awaited<ReturnType<typeof previewDuplicateLocationRepair>>
+>;
+export type PreviewDuplicateLocationRepairQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Preview legacy duplicate-location repairs (admin)
+ */
+
+export function usePreviewDuplicateLocationRepair<
+  TData = Awaited<ReturnType<typeof previewDuplicateLocationRepair>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof previewDuplicateLocationRepair>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getPreviewDuplicateLocationRepairQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Repair legacy duplicate locations after preview confirmation (admin)
+ */
+export const getRepairDuplicateLocationsUrl = () => {
+  return `/api/import/repair/duplicate-locations`;
+};
+
+export const repairDuplicateLocations = async (
+  duplicateLocationRepairInput: DuplicateLocationRepairInput,
+  options?: RequestInit,
+): Promise<DuplicateLocationRepairResult> => {
+  return customFetch<DuplicateLocationRepairResult>(
+    getRepairDuplicateLocationsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(duplicateLocationRepairInput),
+    },
+  );
+};
+
+export const getRepairDuplicateLocationsMutationOptions = <
+  TError = ErrorType<DuplicateLocationRepairConflict>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof repairDuplicateLocations>>,
+    TError,
+    { data: BodyType<DuplicateLocationRepairInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof repairDuplicateLocations>>,
+  TError,
+  { data: BodyType<DuplicateLocationRepairInput> },
+  TContext
+> => {
+  const mutationKey = ["repairDuplicateLocations"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof repairDuplicateLocations>>,
+    { data: BodyType<DuplicateLocationRepairInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return repairDuplicateLocations(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RepairDuplicateLocationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof repairDuplicateLocations>>
+>;
+export type RepairDuplicateLocationsMutationBody =
+  BodyType<DuplicateLocationRepairInput>;
+export type RepairDuplicateLocationsMutationError =
+  ErrorType<DuplicateLocationRepairConflict>;
+
+/**
+ * @summary Repair legacy duplicate locations after preview confirmation (admin)
+ */
+export const useRepairDuplicateLocations = <
+  TError = ErrorType<DuplicateLocationRepairConflict>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof repairDuplicateLocations>>,
+    TError,
+    { data: BodyType<DuplicateLocationRepairInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof repairDuplicateLocations>>,
+  TError,
+  { data: BodyType<DuplicateLocationRepairInput> },
+  TContext
+> => {
+  return useMutation(getRepairDuplicateLocationsMutationOptions(options));
+};
 
 /**
  * @summary List published entries for public directory

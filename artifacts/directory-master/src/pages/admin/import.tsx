@@ -4,6 +4,8 @@ import {
   useAnalyzeImport,
   useImportCsv,
   useGetImportStatus,
+  usePreviewDuplicateLocationRepair,
+  useRepairDuplicateLocations,
   getListEntriesQueryKey,
   getListCategoriesQueryKey,
 } from "@workspace/api-client-react";
@@ -25,7 +27,7 @@ import {
 import {
   Upload, FileText, CheckCircle2, AlertCircle, Loader2,
   CloudUpload, X, ArrowRight, ArrowLeft, Eye, Tag, FolderOpen, Info,
-  Sparkles, Wand2, Pencil, MapPin, ShieldAlert
+  Sparkles, Wand2, Pencil, MapPin, ShieldAlert, Wrench
 } from "lucide-react";
 
 type Step = "upload" | "map" | "progress";
@@ -73,12 +75,17 @@ export default function AdminImportPage() {
   const [isAiMapping, setIsAiMapping] = useState(false);
   const [editingLabel, setEditingLabel] = useState<{ csvColumn: string; value: string } | null>(null);
   const [destinationAcknowledged, setDestinationAcknowledged] = useState(false);
+  const [repairAcknowledged, setRepairAcknowledged] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const analyzeMutation = useAnalyzeImport();
   const importMutation = useImportCsv();
+  const duplicateLocationPreview = usePreviewDuplicateLocationRepair({
+    query: { retry: false },
+  });
+  const duplicateLocationRepair = useRepairDuplicateLocations();
 
   const { data: statusData } = useGetImportStatus(jobId as string, {
     query: {
@@ -326,6 +333,36 @@ export default function AdminImportPage() {
       toast({ title: "AI mapping failed", description: e.message, variant: "destructive" });
     } finally {
       setIsAiMapping(false);
+    }
+  };
+
+  const handleDuplicateLocationRepair = async () => {
+    const expectedCount = duplicateLocationPreview.data?.totalMatches ?? 0;
+    if (!repairAcknowledged || expectedCount < 1) return;
+
+    try {
+      const result = await duplicateLocationRepair.mutateAsync({
+        data: { expectedCount, confirm: true },
+      });
+      setRepairAcknowledged(false);
+      toast({
+        title: "Duplicate addresses repaired",
+        description: `${result.repairedCount} listing address${result.repairedCount === 1 ? "" : "es"} corrected.`,
+      });
+      queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+      await duplicateLocationPreview.refetch();
+    } catch (error: any) {
+      const message =
+        error?.data?.error ||
+        error?.message ||
+        "The repair could not be completed. Refresh the preview and try again.";
+      toast({
+        title: "Address repair stopped",
+        description: message,
+        variant: "destructive",
+      });
+      setRepairAcknowledged(false);
+      await duplicateLocationPreview.refetch();
     }
   };
 
@@ -918,6 +955,115 @@ export default function AdminImportPage() {
           </div>
         ))}
       </div>
+
+      <Card className="border-amber-200 dark:border-amber-900">
+        <CardHeader>
+          <div className="flex items-start gap-3">
+            <div className="rounded-lg bg-amber-100 dark:bg-amber-950 p-2 text-amber-700 dark:text-amber-300">
+              <Wrench className="h-5 w-5" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Repair legacy duplicate addresses</CardTitle>
+              <CardDescription className="mt-1">
+                Scan for listings where the same city, state, and postal code were appended twice by an older import.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {duplicateLocationPreview.isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking listing addresses…
+            </div>
+          ) : duplicateLocationPreview.isError ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-950/30">
+              <div className="flex items-start gap-2 text-sm text-red-800 dark:text-red-200">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                The duplicate-address scan could not be loaded.
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => duplicateLocationPreview.refetch()}
+              >
+                Try Again
+              </Button>
+            </div>
+          ) : (duplicateLocationPreview.data?.totalMatches ?? 0) === 0 ? (
+            <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                  No duplicated addresses found
+                </p>
+                <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                  The current database does not contain either known legacy duplication pattern.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-amber-600 hover:bg-amber-600">
+                    {duplicateLocationPreview.data?.totalMatches} matches
+                  </Badge>
+                  {(duplicateLocationPreview.data?.fullStateMatches ?? 0) > 0 && (
+                    <Badge variant="outline">
+                      {duplicateLocationPreview.data?.fullStateMatches} full-state
+                    </Badge>
+                  )}
+                  {(duplicateLocationPreview.data?.abbreviatedMatches ?? 0) > 0 && (
+                    <Badge variant="outline">
+                      {duplicateLocationPreview.data?.abbreviatedMatches} abbreviated
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-amber-900 dark:text-amber-100 mt-3">
+                  Only the second identical locality suffix will be removed. Titles, contacts,
+                  descriptions, images, coordinates, and normalized location fields are not changed.
+                </p>
+              </div>
+
+              {duplicateLocationPreview.data?.sample.slice(0, 3).map((sample) => (
+                <div key={sample.id} className="rounded-lg border p-3 text-sm">
+                  <p className="font-medium">{sample.title}</p>
+                  <div className="mt-2 grid gap-1 text-xs">
+                    <p className="text-red-700 dark:text-red-300 line-through">{sample.before}</p>
+                    <p className="text-green-700 dark:text-green-300">{sample.after}</p>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex items-start gap-3 rounded-lg border p-4">
+                <Checkbox
+                  id="confirm-location-repair"
+                  checked={repairAcknowledged}
+                  onCheckedChange={(checked) => setRepairAcknowledged(checked === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="confirm-location-repair" className="text-sm leading-relaxed cursor-pointer">
+                  I reviewed the count and examples. Repair exactly{" "}
+                  <strong>{duplicateLocationPreview.data?.totalMatches}</strong> matching addresses.
+                </label>
+              </div>
+
+              <Button
+                variant="destructive"
+                onClick={handleDuplicateLocationRepair}
+                disabled={!repairAcknowledged || duplicateLocationRepair.isPending}
+              >
+                {duplicateLocationRepair.isPending ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Repairing addresses…</>
+                ) : (
+                  <><Wrench className="mr-2 h-4 w-4" /> Repair duplicate addresses</>
+                )}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

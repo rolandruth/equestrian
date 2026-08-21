@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { importJobs, entries, categories } from "@workspace/db";
-import { requireEditor } from "../middlewares/auth.js";
+import { requireAdmin, requireEditor } from "../middlewares/auth.js";
 import { getGeminiClient } from "../lib/gemini.js";
 import { eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -10,6 +10,16 @@ import { mirrorEntryImages, isRemoteImageUrl } from "../lib/imageStore.js";
 import { applyImportLocation, applyImportServiceType } from "../lib/localSeo.js";
 import { composeLocation, allocateSlugs } from "../lib/importHelpers.js";
 import { ENTRY_SLUG_ADVISORY_LOCK_ID } from "../lib/entrySlugs.js";
+import {
+  DuplicateLocationRepairConflictError,
+  previewDuplicateLocationRepair,
+  repairDuplicateLocations,
+} from "../lib/duplicateLocationRepair.js";
+import {
+  PreviewDuplicateLocationRepairResponse,
+  RepairDuplicateLocationsBody,
+  RepairDuplicateLocationsResponse,
+} from "@workspace/api-zod";
 
 const router = Router();
 
@@ -820,6 +830,47 @@ router.post("/csv", requireEditor, async (req, res) => {
   } catch (err) {
     req.log.error(err);
     res.status(500).json({ error: "Failed to start import" });
+  }
+});
+
+router.get("/repair/duplicate-locations", requireAdmin, async (req, res): Promise<void> => {
+  try {
+    const preview = await previewDuplicateLocationRepair();
+    res.json(PreviewDuplicateLocationRepairResponse.parse(preview));
+  } catch (err) {
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to preview duplicate locations" });
+  }
+});
+
+router.post("/repair/duplicate-locations", requireAdmin, async (req, res): Promise<void> => {
+  const parsed = RepairDuplicateLocationsBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  if (parsed.data.confirm !== true) {
+    res.status(400).json({ error: "confirm must be true" });
+    return;
+  }
+
+  try {
+    const result = await repairDuplicateLocations(parsed.data.expectedCount);
+    req.log.info(
+      { repairedCount: result.repairedCount },
+      "Admin repaired legacy duplicate listing locations",
+    );
+    res.json(RepairDuplicateLocationsResponse.parse(result));
+  } catch (err) {
+    if (err instanceof DuplicateLocationRepairConflictError) {
+      res.status(409).json({
+        error: err.message,
+        currentCount: err.currentCount,
+      });
+      return;
+    }
+    req.log.error(err);
+    res.status(500).json({ error: "Failed to repair duplicate locations" });
   }
 });
 

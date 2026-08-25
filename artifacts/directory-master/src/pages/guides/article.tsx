@@ -2,12 +2,10 @@ import { useRoute, useLocation, Link } from "wouter";
 import {
   BEGINNER_LESSON_EXPECTATIONS_PATH,
   getLessonGuide,
-  getLessonGuidePath,
   LESSON_GUIDE_SEARCH_PATH,
   LESSON_GUIDE_BASE_PATH,
-  type LessonGuide,
 } from "@workspace/lesson-guides";
-import { ChevronRight, ArrowRight, ArrowLeft, Clock, BookOpen } from "lucide-react";
+import { ChevronRight, ArrowLeft, Clock, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useGuideMetadata } from "./use-guide-metadata";
@@ -45,12 +43,6 @@ export default function GuideArticlePage() {
       </div>
     );
   }
-
-  // Find related guides based on relatedSlugs
-  const relatedGuides = guide.relatedSlugs
-    .map((relatedSlug) => getLessonGuide(relatedSlug))
-    .filter((related): related is LessonGuide => related !== undefined)
-    .slice(0, 2);
 
   return (
     <article className="lesson-guide-surface w-full bg-background min-h-screen pb-20">
@@ -129,44 +121,18 @@ export default function GuideArticlePage() {
 
       <Separator className="max-w-3xl mx-auto my-16 bg-border/60" />
 
-      {/* Related Guides & CTA */}
-      <div className="max-w-4xl mx-auto px-6 pb-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          {/* Related Articles */}
-          {relatedGuides.length > 0 && (
-            <div>
-              <h3 className="text-sm font-bold tracking-widest uppercase text-muted-foreground mb-6">Read Next</h3>
-              <div className="space-y-6">
-                {relatedGuides.map((related) => (
-                  <Link 
-                    key={related.slug} 
-                    href={getLessonGuidePath(related.slug)}
-                    className="group block"
-                  >
-                    <h4 className="text-xl font-serif font-medium text-foreground group-hover:text-primary transition-colors mb-2 leading-snug">
-                      {related.title}
-                    </h4>
-                    <span className="text-sm text-muted-foreground flex items-center">
-                      Read article <ArrowRight className="w-3.5 h-3.5 ml-1.5 transform group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Inline CTA to Directory */}
-          <div className="bg-card border border-border p-8 rounded-3xl text-center flex flex-col justify-center h-full">
-            <h3 className="text-2xl font-serif font-bold text-foreground mb-4">Find an Instructor</h3>
-            <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
-              Ready to put what you've learned into practice? Search the directory for local riding lesson providers.
-            </p>
-            <Button asChild className="w-full rounded-full bg-primary hover:bg-primary/90">
-              <Link href={LESSON_GUIDE_SEARCH_PATH}>
-                Search Directory
-              </Link>
-            </Button>
-          </div>
+      {/* Directory CTA */}
+      <div className="max-w-3xl mx-auto px-6 pb-20">
+        <div className="bg-card border border-border p-8 rounded-3xl text-center flex flex-col justify-center">
+          <h3 className="text-2xl font-serif font-bold text-foreground mb-4">Find an Instructor</h3>
+          <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
+            Ready to put what you've learned into practice? Search the directory for local riding lesson providers.
+          </p>
+          <Button asChild className="w-full rounded-full bg-primary hover:bg-primary/90">
+            <Link href={LESSON_GUIDE_SEARCH_PATH}>
+              Search Directory
+            </Link>
+          </Button>
         </div>
       </div>
     </article>

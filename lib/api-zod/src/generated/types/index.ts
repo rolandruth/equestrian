@@ -83,7 +83,6 @@ export * from "./requestUploadUrlResponseMetadata";
 export * from "./review";
 export * from "./reviewListResponse";
 export * from "./ridingTypeCount";
-export * from "./serviceCount";
 export * from "./serviceSuggestion";
 export * from "./serviceType";
 export * from "./serviceTypeRef";

@@ -24,19 +24,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
   const bizAuth = useBusinessAuth();
   const { data: seoHubs } = useGetLocalSeoHubs();
   const qualifiedCategoryHubs = getQualifiedCategoryHubs(publicStats?.categoryBreakdown ?? []);
-  const topServices = (seoHubs?.globalServices?.length ?? 0) > 0
-    ? seoHubs!.globalServices.map((service) => ({
-        slug: service.serviceSlug,
-        label: service.serviceLabel,
-        count: service.entryCount,
-        href: `/services/${service.serviceSlug}`,
-      }))
-    : (publicStats?.serviceBreakdown ?? []).map((service) => ({
-        slug: service.serviceSlug,
-        label: service.serviceLabel,
-        count: service.count,
-        href: `/browse?search=${encodeURIComponent(service.serviceLabel)}`,
-      }));
   const navLinks = (settings as any)?.navLinks as Record<string, boolean> | null | undefined;
   const showNavLink = (key: string) => navLinks?.[key] !== false;
 
@@ -402,23 +389,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 </nav>
               )}
 
-              <nav aria-label="Popular services">
-                <p className="font-semibold text-gray-900 dark:text-white mb-3">Top Services</p>
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  {[...topServices]
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 12)
-                    .map((service) => (
-                      <Link
-                        key={service.slug}
-                        href={service.href}
-                        className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                      >
-                        {service.label}
-                      </Link>
-                    ))}
-                </div>
-              </nav>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>

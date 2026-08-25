@@ -260,17 +260,6 @@ router.get("/stats", async (req, res) => {
       .groupBy(sql`${entries.customFields}->>'ridingtype'`)
       .orderBy(desc(count()));
 
-    const serviceBreakdown = await db.select({
-      serviceSlug: serviceTypes.slug,
-      serviceLabel: serviceTypes.label,
-      count: count(),
-    }).from(entryServiceTypes)
-      .innerJoin(serviceTypes, eq(entryServiceTypes.serviceTypeId, serviceTypes.id))
-      .innerJoin(entries, eq(entryServiceTypes.entryId, entries.id))
-      .where(eq(entries.published, true))
-      .groupBy(serviceTypes.slug, serviceTypes.label)
-      .orderBy(desc(count()));
-
     res.json({
       totalEntries: Number(totalEntries.count),
       totalCategories: breakdown.length,
@@ -282,11 +271,6 @@ router.get("/stats", async (req, res) => {
       ridingTypeBreakdown: ridingBreakdown.map(r => ({
         ridingType: r.ridingType,
         count: Number(r.count),
-      })),
-      serviceBreakdown: serviceBreakdown.map(service => ({
-        serviceSlug: service.serviceSlug,
-        serviceLabel: service.serviceLabel,
-        count: Number(service.count),
       })),
     });
   } catch (err) {

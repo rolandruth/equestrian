@@ -556,18 +556,11 @@ export interface RidingTypeCount {
   count: number;
 }
 
-export interface ServiceCount {
-  serviceSlug: string;
-  serviceLabel: string;
-  count: number;
-}
-
 export interface PublicStats {
   totalEntries: number;
   totalCategories: number;
   categoryBreakdown: CategoryCount[];
   ridingTypeBreakdown: RidingTypeCount[];
-  serviceBreakdown: ServiceCount[];
 }
 
 export interface Review {

@@ -407,17 +407,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     ))}
                 </div>
               </nav>
-              <nav aria-label="Information">
-                <p className="font-semibold text-gray-900 dark:text-white mb-3">Learn to Ride</p>
-                <div className="flex flex-wrap gap-x-5 gap-y-2">
-                  <Link
-                    href={BEGINNER_LESSON_EXPECTATIONS_PATH}
-                    className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                  >
-                    Horse Riding Lessons for Beginners: What to Expect
-                  </Link>
-                </div>
-              </nav>
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>
@@ -425,9 +414,17 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 `\u00a9 ${new Date().getFullYear()} ${settings?.siteTitle || "Directory Master"}. All rights reserved.`}
             </p>
             <nav className="flex flex-wrap items-center gap-5 justify-center">
-              <Link href="/horse-riding-lessons" className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
-                Riding Lesson Guides
-              </Link>
+              <div className="flex flex-col items-center gap-1">
+                <Link href="/horse-riding-lessons" className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
+                  Riding Lesson Guides
+                </Link>
+                <Link
+                  href={BEGINNER_LESSON_EXPECTATIONS_PATH}
+                  className="hover:text-gray-900 dark:hover:text-white transition-colors text-center"
+                >
+                  Horse Riding Lessons for Beginners: What to Expect
+                </Link>
+              </div>
               <a href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Contact Us
               </a>

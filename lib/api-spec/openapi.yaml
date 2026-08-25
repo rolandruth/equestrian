@@ -1976,7 +1976,11 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RidingTypeCount"
-      required: [totalEntries, totalCategories, categoryBreakdown, ridingTypeBreakdown]
+        serviceBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceCount"
+      required: [totalEntries, totalCategories, categoryBreakdown, ridingTypeBreakdown, serviceBreakdown]
 
     CategoryCount:
       type: object
@@ -1995,6 +1999,17 @@ components:
         count:
           type: integer
       required: [ridingType, count]
+
+    ServiceCount:
+      type: object
+      properties:
+        serviceSlug:
+          type: string
+        serviceLabel:
+          type: string
+        count:
+          type: integer
+      required: [serviceSlug, serviceLabel, count]
 
     Review:
       type: object

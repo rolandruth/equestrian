@@ -1198,6 +1198,13 @@ export const GetPublicStatsResponse = zod.object({
       count: zod.number(),
     }),
   ),
+  serviceBreakdown: zod.array(
+    zod.object({
+      serviceSlug: zod.string(),
+      serviceLabel: zod.string(),
+      count: zod.number(),
+    }),
+  ),
 });
 
 /**

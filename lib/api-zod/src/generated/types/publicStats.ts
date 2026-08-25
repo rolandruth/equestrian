@@ -7,10 +7,12 @@
  */
 import type { CategoryCount } from "./categoryCount";
 import type { RidingTypeCount } from "./ridingTypeCount";
+import type { ServiceCount } from "./serviceCount";
 
 export interface PublicStats {
   totalEntries: number;
   totalCategories: number;
   categoryBreakdown: CategoryCount[];
   ridingTypeBreakdown: RidingTypeCount[];
+  serviceBreakdown: ServiceCount[];
 }

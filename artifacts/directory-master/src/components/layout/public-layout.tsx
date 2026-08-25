@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useGetPublicSettings, useGetPublicStats, useLogout, useGetCurrentUser, useGetLocalSeoHubs } from "@workspace/api-client-react";
 import { getCategoryHubPath, getQualifiedCategoryHubs } from "@/lib/seoLinks";
+import { BEGINNER_LESSON_EXPECTATIONS_PATH } from "@workspace/lesson-guides";
 import { Search, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -345,8 +346,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
       <footer className="bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 py-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-sm text-gray-500 dark:text-gray-400">
-          {(qualifiedCategoryHubs.length > 0 || (seoHubs?.globalServices?.length ?? 0) > 0 || (seoHubs?.cities?.length ?? 0) > 0) && (
-            <div className="pb-8 mb-6 border-b border-gray-200 dark:border-gray-800 space-y-6">
+          <div className="pb-8 mb-6 border-b border-gray-200 dark:border-gray-800 space-y-6">
               {qualifiedCategoryHubs.length > 0 && (
                 <nav aria-label="Popular states">
                   <p className="font-semibold text-gray-900 dark:text-white mb-3">States</p>
@@ -390,27 +390,35 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 </nav>
               )}
 
-              {(seoHubs?.globalServices?.length ?? 0) > 0 && (
-                <nav aria-label="Popular services">
-                  <p className="font-semibold text-gray-900 dark:text-white mb-3">Top Services</p>
-                  <div className="flex flex-wrap gap-x-5 gap-y-2">
-                    {[...(seoHubs?.globalServices ?? [])]
-                      .sort((a, b) => b.entryCount - a.entryCount)
-                      .slice(0, 12)
-                      .map((service) => (
-                        <Link
-                          key={service.serviceSlug}
-                          href={`/services/${service.serviceSlug}`}
-                          className="hover:text-gray-900 dark:hover:text-white transition-colors"
-                        >
-                          {service.serviceLabel}
-                        </Link>
-                      ))}
-                  </div>
-                </nav>
-              )}
-            </div>
-          )}
+              <nav aria-label="Popular services">
+                <p className="font-semibold text-gray-900 dark:text-white mb-3">Top Services</p>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {[...(seoHubs?.globalServices ?? [])]
+                    .sort((a, b) => b.entryCount - a.entryCount)
+                    .slice(0, 12)
+                    .map((service) => (
+                      <Link
+                        key={service.serviceSlug}
+                        href={`/services/${service.serviceSlug}`}
+                        className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                        {service.serviceLabel}
+                      </Link>
+                    ))}
+                </div>
+              </nav>
+              <nav aria-label="Information">
+                <p className="font-semibold text-gray-900 dark:text-white mb-3">Information</p>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  <Link
+                    href={BEGINNER_LESSON_EXPECTATIONS_PATH}
+                    className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                  >
+                    Horse Riding Lessons for Beginners: What to Expect
+                  </Link>
+                </div>
+              </nav>
+          </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>
               {(settings as any)?.footerText ||

@@ -7,6 +7,7 @@ export type LessonGuideSection = {
 
 export type LessonGuide = {
   slug: string;
+  publicPath?: string;
   title: string;
   metaTitle: string;
   shortTitle: string;
@@ -21,6 +22,7 @@ export type LessonGuide = {
 
 export const LESSON_GUIDE_BASE_PATH = "/horse-riding-lessons";
 export const LESSON_GUIDE_SEARCH_PATH = "/browse?search=horse%20riding%20lessons";
+export const BEGINNER_LESSON_EXPECTATIONS_PATH = "/horse-riding-lessons-for-beginners/";
 
 export const lessonGuideHub = {
   title: "Horse Riding Lesson Guides",
@@ -424,6 +426,90 @@ export const lessonGuides: LessonGuide[] = [
     ],
     relatedSlugs: ["beginners", "adults"],
   },
+  {
+    slug: "beginners-what-to-expect",
+    publicPath: BEGINNER_LESSON_EXPECTATIONS_PATH,
+    title: "Horse Riding Lessons for Beginners: What to Expect",
+    metaTitle: "Horse Riding Lessons for Beginners: What to Expect",
+    shortTitle: "What to Expect",
+    description:
+      "New to horseback riding? Learn what to expect from your first horse riding lesson, what to wear, safety tips, costs, and how to choose a riding stable.",
+    eyebrow: "Your First Lesson",
+    readingTime: "7 min read",
+    summary:
+      "Your first horse riding lesson is an introduction to a new skill, a new environment, and a very large animal. Knowing what will happen ahead of time makes it easier to arrive prepared, ask good questions, and focus on enjoying the experience. This guide covers the practical details beginners most often want to understand before booking, from clothing and safety to costs and choosing a stable.",
+    keyTakeaways: [
+      "A first lesson normally includes a ground introduction, a safety briefing, and basic time in the saddle rather than advanced riding.",
+      "Wear long, comfortable trousers and sturdy closed-toe boots with a small heel; ask whether the stable provides a certified helmet.",
+      "Tell your instructor if you are nervous, have physical limitations, or have never handled a horse before so the lesson can be adapted safely.",
+      "Ask for the complete price, including helmet hire, membership fees, registration, and any required equipment.",
+      "A good beginner stable is clean and organized, uses calm horses, explains its safety procedures, and answers questions clearly before you book.",
+    ],
+    sections: [
+      {
+        heading: "What to Expect During Your First Horse Riding Lesson",
+        paragraphs: [
+          "Most first lessons begin on the ground. Your instructor will introduce you to the horse, explain how to approach and stand near it, and show you the basic parts of the tack, such as the saddle, bridle, stirrups, and reins. You may watch or help with a small part of grooming or preparation, depending on the stable's policy.",
+          "After the ground introduction, your instructor will help you mount and adjust your stirrups. The mounted portion usually focuses on balance, posture, how to hold the reins, and how to ask the horse to walk and stop. Some beginners may try a few steps of another gait, but a responsible instructor will set the pace around your comfort and control rather than rushing through a checklist.",
+          "Expect time for questions and feedback at the end. Your instructor should explain what you practiced, what felt strong, and what you might work on in a future lesson. Feeling a little tired or using muscles you do not normally notice is common after an introductory session.",
+        ],
+        callout:
+          "You never have to hide that you are nervous. Telling your instructor early gives them useful information and helps them choose a calmer horse, slower progression, or extra time on the ground.",
+      },
+      {
+        heading: "What to Wear and Bring",
+        paragraphs: [
+          "You do not need a full set of riding gear for your first lesson, but the right basics make the experience safer and more comfortable. Check the stable's requirements before you leave because some facilities provide helmets while others expect students to bring their own.",
+        ],
+        bullets: [
+          "Helmet: use a properly fitted, certified riding helmet. Ask whether the stable supplies one and what safety standard it meets.",
+          "Footwear: wear sturdy boots or shoes with a defined small heel and a smooth sole. Avoid sandals, athletic shoes, and anything that can slide through the stirrup.",
+          "Trousers: choose long, close-fitting trousers without bulky inner-leg seams. Jeans or riding tights are common choices.",
+          "Layers: dress for the weather and bring a light layer if the stable is outdoors or unheated. Avoid loose scarves or oversized clothing that can catch.",
+          "Practical extras: bring water, sunscreen, and a way to secure long hair. Arrive a little early so you are not getting dressed or finding equipment in a hurry.",
+        ],
+      },
+      {
+        heading: "Beginner Horse Riding Safety Tips",
+        paragraphs: [
+          "Horses are responsive animals with their own instincts and boundaries. Good instruction teaches you how to interact with them respectfully instead of treating them like predictable equipment. Follow the stable's directions about where to stand, when to lead a horse, and how to enter or leave an arena.",
+          "Keep your attention on the horse and your instructor while you are handling or riding. Do not walk directly behind a horse, approach suddenly from the rear, feed an unfamiliar horse without permission, or wrap a lead rope around your hand. If you lose your balance, feel frightened, or do not understand an instruction, say so immediately.",
+          "A reputable facility should have a clear helmet policy, suitable beginner horses, safe fencing and footing, maintained equipment, and an emergency plan. Safety is not just a warning given at the start; it should be visible in how the staff manage horses, students, and the facility throughout the lesson.",
+        ],
+        callout:
+          "The best first lesson is one where you feel supported enough to learn. A stable that dismisses safety questions or pressures you to continue when you feel unsafe is not the right fit.",
+      },
+      {
+        heading: "How Much Do Horse Riding Lessons Cost?",
+        paragraphs: [
+          "Lesson prices vary widely depending on your location, the instructor's experience, the facility, and whether you choose a group, semi-private, or private session. Private lessons generally cost more because the instructor's full attention is on one rider, while small group lessons can be a more affordable way to begin.",
+          "The quoted price may not include every cost. Ask whether the fee covers a helmet, horse use, equipment, arena fees, insurance, membership, registration, taxes, or a required introductory assessment. Also ask about cancellation policies and whether packages expire before buying multiple lessons.",
+          "Price should be considered alongside the quality of instruction and the stable's safety standards. A slightly higher fee may represent better horse care, well-maintained equipment, smaller classes, or more experienced teaching. Comparing what each provider includes gives you a more useful picture than comparing headline prices alone.",
+        ],
+      },
+      {
+        heading: "How to Choose the Right Riding Stable",
+        paragraphs: [
+          "Start by looking for facilities that clearly describe beginner lessons and make it easy to ask questions before booking. A short call, email, or visit can tell you whether the stable is welcoming and organized. You should be able to learn who will teach you, how long the lesson lasts, what to wear, and what happens if the weather changes.",
+        ],
+        bullets: [
+          "Beginner experience: ask how often the instructor teaches first-time riders and how horses are matched to new students.",
+          "Lesson structure: find out whether the first visit includes ground instruction, how large groups are, and how much time you will spend riding.",
+          "Horse and facility care: look for calm, appropriately trained lesson horses, secure fencing, clean areas, and equipment that appears well maintained.",
+          "Instructor communication: choose someone who welcomes questions, explains the reason for instructions, and takes nerves or physical concerns seriously.",
+          "Next steps: ask how progress is assessed, what lessons cost after the introductory visit, and whether you can watch a lesson before committing.",
+        ],
+      },
+      {
+        heading: "Getting Ready to Book Your First Lesson",
+        paragraphs: [
+          "Before you book, write down any questions you want answered and be honest about your experience level. You do not need to be fit, fearless, or knowledgeable about horses to start. You do need a stable that will meet you where you are and give you clear guidance.",
+          "Once you have found a suitable provider, confirm the date, arrival time, clothing requirements, payment details, and cancellation policy. Arriving early and allowing time to settle in will make the first visit less rushed. Afterward, note how you felt around the horses, whether the instructor explained things clearly, and whether you would be comfortable returning.",
+        ],
+      },
+    ],
+    relatedSlugs: ["beginners", "costs"],
+  },
 ];
 
 export function getLessonGuide(slug: string): LessonGuide | undefined {
@@ -431,18 +517,24 @@ export function getLessonGuide(slug: string): LessonGuide | undefined {
 }
 
 export function getLessonGuidePath(slug?: string): string {
-  return slug ? `${LESSON_GUIDE_BASE_PATH}/${slug}` : LESSON_GUIDE_BASE_PATH;
+  if (!slug) return LESSON_GUIDE_BASE_PATH;
+  const guide = lessonGuides.find((item) => item.slug === slug);
+  return guide?.publicPath ?? `${LESSON_GUIDE_BASE_PATH}/${slug}`;
 }
 
 export function getLessonGuideHttpStatus(requestPath: string): 200 | 404 | null {
+  const normalizedPath = requestPath.replace(/\/+$/, "") || "/";
+  if (lessonGuides.some((guide) => getLessonGuidePath(guide.slug).replace(/\/+$/, "") === normalizedPath)) {
+    return 200;
+  }
   if (
-    requestPath !== LESSON_GUIDE_BASE_PATH &&
-    !requestPath.startsWith(`${LESSON_GUIDE_BASE_PATH}/`)
+    normalizedPath !== LESSON_GUIDE_BASE_PATH &&
+    !normalizedPath.startsWith(`${LESSON_GUIDE_BASE_PATH}/`)
   ) {
     return null;
   }
-  const encodedSlug = requestPath.slice(`${LESSON_GUIDE_BASE_PATH}/`.length);
-  if (requestPath === LESSON_GUIDE_BASE_PATH || encodedSlug.length === 0) return 200;
+  const encodedSlug = normalizedPath.slice(`${LESSON_GUIDE_BASE_PATH}/`.length);
+  if (normalizedPath === LESSON_GUIDE_BASE_PATH || encodedSlug.length === 0) return 200;
   try {
     return getLessonGuide(decodeURIComponent(encodedSlug)) ? 200 : 404;
   } catch {

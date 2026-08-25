@@ -4,6 +4,7 @@ import {
   getLessonGuideHttpStatus,
   lessonGuideHub,
   lessonGuides,
+  BEGINNER_LESSON_EXPECTATIONS_PATH,
   LESSON_GUIDE_BASE_PATH,
 } from "@workspace/lesson-guides";
 import { injectSeoMeta } from "../lib/seoHtml";
@@ -21,14 +22,15 @@ const appShell = `<!doctype html>
   <body><div id="root"></div></body>
 </html>`;
 
-assert.equal(lessonGuides.length, 5);
+assert.equal(lessonGuides.length, 6);
 assert.equal(getLessonGuideHttpStatus(LESSON_GUIDE_BASE_PATH), 200);
 assert.equal(getLessonGuideHttpStatus(`${LESSON_GUIDE_BASE_PATH}/beginners`), 200);
+assert.equal(getLessonGuideHttpStatus(BEGINNER_LESSON_EXPECTATIONS_PATH), 200);
 assert.equal(getLessonGuideHttpStatus(`${LESSON_GUIDE_BASE_PATH}/not-a-guide`), 404);
 assert.equal(getLessonGuideHttpStatus("/browse"), null);
 assert.deepEqual(
   lessonGuides.map((guide) => guide.slug),
-  ["beginners", "adults", "kids", "costs", "choosing-an-instructor"],
+  ["beginners", "adults", "kids", "costs", "choosing-an-instructor", "beginners-what-to-expect"],
 );
 assert.equal(new Set(lessonGuides.map((guide) => guide.metaTitle)).size, lessonGuides.length);
 assert.equal(new Set(lessonGuides.map((guide) => guide.description)).size, lessonGuides.length);

@@ -137,23 +137,32 @@ export function injectLessonGuideSeoHtml(
   requestPath: string,
   origin: string,
 ): string | null {
+  const normalizedPath = requestPath.replace(/\/+$/, "") || "/";
+  const pathGuide = lessonGuides.find(
+    (item) => getLessonGuidePath(item.slug).replace(/\/+$/, "") === normalizedPath,
+  );
   if (
-    requestPath !== LESSON_GUIDE_BASE_PATH &&
-    !requestPath.startsWith(`${LESSON_GUIDE_BASE_PATH}/`)
+    normalizedPath !== LESSON_GUIDE_BASE_PATH &&
+    !normalizedPath.startsWith(`${LESSON_GUIDE_BASE_PATH}/`) &&
+    !pathGuide
   ) {
     return null;
   }
 
   const publicOrigin = origin.replace(/\/+$/, "");
   let slug: string | null = null;
-  try {
-    slug = requestPath === LESSON_GUIDE_BASE_PATH
-      ? null
-      : decodeURIComponent(requestPath.slice(`${LESSON_GUIDE_BASE_PATH}/`.length));
-  } catch {
-    slug = "__invalid__";
+  if (pathGuide) {
+    slug = pathGuide.slug;
+  } else {
+    try {
+      slug = normalizedPath === LESSON_GUIDE_BASE_PATH
+        ? null
+        : decodeURIComponent(normalizedPath.slice(`${LESSON_GUIDE_BASE_PATH}/`.length));
+    } catch {
+      slug = "__invalid__";
+    }
   }
-  const guide = slug ? getLessonGuide(slug) : undefined;
+  const guide = pathGuide ?? (slug ? getLessonGuide(slug) : undefined);
 
   if (slug && !guide) {
     const invalidUrl = `${publicOrigin}${requestPath}`;

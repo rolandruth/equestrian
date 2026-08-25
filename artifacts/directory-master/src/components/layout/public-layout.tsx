@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useGetPublicSettings, useGetPublicStats, useLogout, useGetCurrentUser, useGetLocalSeoHubs } from "@workspace/api-client-react";
 import { getCategoryHubPath, getQualifiedCategoryHubs } from "@/lib/seoLinks";
-import { BEGINNER_LESSON_EXPECTATIONS_PATH } from "@workspace/lesson-guides";
 import { Search, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -414,17 +413,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 `\u00a9 ${new Date().getFullYear()} ${settings?.siteTitle || "Directory Master"}. All rights reserved.`}
             </p>
             <nav className="flex flex-wrap items-center gap-5 justify-center">
-              <div className="flex flex-col items-center gap-1">
-                <Link href="/horse-riding-lessons" className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
-                  Riding Lesson Guides
-                </Link>
-                <Link
-                  href={BEGINNER_LESSON_EXPECTATIONS_PATH}
-                  className="hover:text-gray-900 dark:hover:text-white transition-colors text-center"
-                >
-                  Horse Riding Lessons for Beginners: What to Expect
-                </Link>
-              </div>
+              <Link href="/horse-riding-lessons" className="hover:text-gray-900 dark:hover:text-white transition-colors font-medium">
+                Riding Lesson Guides
+              </Link>
               <a href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">
                 Contact Us
               </a>

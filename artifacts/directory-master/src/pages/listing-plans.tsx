@@ -23,7 +23,6 @@ const plans: {
       "All pictures on detail page",
       "Website link",
       '"Featured" badge on listing',
-      "More additional information on your listing",
     ],
   },
   {

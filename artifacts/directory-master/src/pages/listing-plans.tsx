@@ -34,6 +34,7 @@ const plans: {
     highlight: false,
     features: [
       "Everything in Featured",
+      "No ads on your detail page",
       "Homepage placement",
       '"Premium" badge on listing',
     ],

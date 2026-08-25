@@ -510,28 +510,6 @@ const HOURS_BANNER_KEYS = new Set([
   "review3_author", "review3_rating", "review3_text",
 ]);
 
-// ─── Q&A tier gating ──────────────────────────────────────────────────────────
-// Regular: 1 Q&A pair  |  Featured: 6  |  Premium: unlimited
-function applyQaLimit(
-  cfds: CustomFieldDisplay[],
-  customFields: Record<string, unknown>,
-  entry: any
-): CustomFieldDisplay[] {
-  const limit = entry?.premium ? Infinity : entry?.featured ? 6 : 1;
-  if (limit === Infinity) return cfds;
-  const qaIndices = [...new Set(
-    Object.keys(customFields)
-      .map(k => { const m = k.match(/^[qa](\d+)$/i); return m ? parseInt(m[1]) : null; })
-      .filter((v): v is number => v !== null)
-  )].sort((a, b) => a - b);
-  const allowed = new Set(qaIndices.slice(0, limit));
-  return cfds.filter(({ key }) => {
-    const m = key.match(/^[qa](\d+)$/i);
-    if (!m) return true;
-    return allowed.has(parseInt(m[1]));
-  });
-}
-
 // ─── Sortable row for individual custom fields in edit mode ───────────────────
 const CF_SECTION_OPTIONS: Array<{ s: "header" | "description" | "sidebar"; label: string }> = [
   { s: "header",      label: "Title" },
@@ -1086,11 +1064,7 @@ export default function EntryPage() {
 
   const renderDescriptionContent = () => {
     const customFields = (displayEntry as any)?.customFields ?? {};
-    const cfds = applyQaLimit(
-      getEffectiveCustomFieldDisplay(ts.entry.customFieldDisplay, customFields),
-      customFields,
-      displayEntry
-    );
+    const cfds = getEffectiveCustomFieldDisplay(ts.entry.customFieldDisplay, customFields);
     return (
       <div className="p-8 md:p-10 prose prose-gray dark:prose-invert max-w-none">
         {displayEntry.description && (
@@ -1711,14 +1685,9 @@ export default function EntryPage() {
                   <div className="whitespace-pre-wrap">{(displayEntry as any).moreDetails}</div>
                 </>
               )}
-              {/* Section heading + custom fields assigned to the description section —
-                  gated by the "Additional Information" (moreDetails) section toggle */}
+              {/* Section heading + custom fields assigned to the description section */}
               {getSectionEnabled("moreDetails") && (() => {
-                const descCfds = applyQaLimit(
-                  cfForSection(allCfds, "description"),
-                  (displayEntry as any)?.customFields ?? {},
-                  displayEntry
-                );
+                const descCfds = cfForSection(allCfds, "description");
                 return (
                   <>
                     {descCfds.length > 0 && (

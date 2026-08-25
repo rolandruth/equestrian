@@ -408,7 +408,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 </div>
               </nav>
               <nav aria-label="Information">
-                <p className="font-semibold text-gray-900 dark:text-white mb-3">Information</p>
+                <p className="font-semibold text-gray-900 dark:text-white mb-3">Learn to Ride</p>
                 <div className="flex flex-wrap gap-x-5 gap-y-2">
                   <Link
                     href={BEGINNER_LESSON_EXPECTATIONS_PATH}

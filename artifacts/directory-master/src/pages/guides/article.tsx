@@ -1,7 +1,8 @@
 import { useRoute, useLocation, Link } from "wouter";
 import {
-  BEGINNER_LESSON_EXPECTATIONS_PATH,
   getLessonGuide,
+  getLessonGuidePath,
+  lessonGuides,
   LESSON_GUIDE_SEARCH_PATH,
   LESSON_GUIDE_BASE_PATH,
 } from "@workspace/lesson-guides";
@@ -13,10 +14,11 @@ import { useGuideMetadata } from "./use-guide-metadata";
 export default function GuideArticlePage() {
   const [location] = useLocation();
   const [, params] = useRoute("/horse-riding-lessons/:slug");
-  const standaloneBeginnerPath = BEGINNER_LESSON_EXPECTATIONS_PATH.replace(/\/+$/, "");
-  const slug = location.replace(/\/+$/, "") === standaloneBeginnerPath
-    ? "beginners-what-to-expect"
-    : params?.slug;
+  const normalizedLocation = location.replace(/\/+$/, "");
+  const pathGuide = lessonGuides.find(
+    (item) => getLessonGuidePath(item.slug).replace(/\/+$/, "") === normalizedLocation,
+  );
+  const slug = pathGuide?.slug ?? params?.slug;
   const guide = slug ? getLessonGuide(slug) : undefined;
 
   useGuideMetadata(guide ? { kind: "article", guide } : { kind: "notFound" });

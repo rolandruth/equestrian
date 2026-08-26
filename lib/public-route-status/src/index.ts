@@ -58,6 +58,7 @@ export function getPublicRouteKind(pathname: string): PublicRouteKind {
     "/business/reset-password",
     "/horse-riding-lessons",
     "/horse-riding-lessons-for-beginners",
+    "/how-to-find-horse-riding-lessons-near-you",
     "/privacy-policy",
     "/terms",
   ].includes(path)) {

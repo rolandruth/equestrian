@@ -265,6 +265,20 @@ function Router() {
           </PublicLayout>
         </SetupGuard>
       </Route>
+      <Route path="/how-to-find-horse-riding-lessons-near-you/">
+        <SetupGuard>
+          <PublicLayout>
+            <GuideArticlePage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/how-to-find-horse-riding-lessons-near-you">
+        <SetupGuard>
+          <PublicLayout>
+            <GuideArticlePage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
       <Route path="/horse-riding-lessons/:slug">
         <SetupGuard>
           <PublicLayout>

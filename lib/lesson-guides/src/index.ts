@@ -24,6 +24,7 @@ export const LESSON_GUIDE_BASE_PATH = "/horse-riding-lessons";
 export const LESSON_GUIDE_SEARCH_PATH = "/browse?search=horse%20riding%20lessons";
 export const BEGINNER_LESSON_EXPECTATIONS_PATH = "/horse-riding-lessons-for-beginners/";
 export const FIND_LESSONS_NEAR_YOU_PATH = "/how-to-find-horse-riding-lessons-near-you";
+export const FIRST_LESSON_ATTIRE_PATH = "/what-to-wear-first-horse-riding-lesson/";
 
 export const lessonGuideHub = {
   title: "Horse Riding Lesson Guides",
@@ -766,6 +767,194 @@ export const lessonGuides: LessonGuide[] = [
       },
     ],
     relatedSlugs: ["beginners-what-to-expect", "choosing-an-instructor", "costs"],
+  },
+  {
+    slug: "what-to-wear-first-lesson",
+    publicPath: FIRST_LESSON_ATTIRE_PATH,
+    title: "What to Wear to Your First Horse Riding Lesson",
+    metaTitle: "What to Wear to Your First Horse Riding Lesson: A Beginner's Guide",
+    shortTitle: "What to Wear",
+    description:
+      "Not sure what to wear to your first horse riding lesson? Learn what beginners should wear, including helmets, pants, boots, shirts and what to avoid.",
+    eyebrow: "First-Lesson Clothing",
+    readingTime: "10 min read",
+    summary:
+      "Your first horse riding lesson can be exciting and a little intimidating, but choosing an outfit does not need to be complicated or expensive. Focus on safety, comfort, freedom of movement, and the riding stable's requirements. In most cases, beginners can assemble an appropriate first-lesson outfit from clothing they already own and borrow specialized equipment from the stable.",
+    keyTakeaways: [
+      "Wear a properly fitted, equestrian-specific helmet and ask the stable whether it provides loaner helmets before buying one.",
+      "Choose comfortable long pants, a relatively fitted shirt, and closed-toe boots with a defined heel.",
+      "Avoid shorts, sandals, loose clothing, scarves, dangling jewelry, and anything that could catch on riding equipment.",
+      "Dress in safe, movable layers for the weather and confirm whether your lesson will take place indoors or outside.",
+      "Call the stable before your lesson to confirm its dress code, equipment requirements, loaner options, and arrival instructions.",
+    ],
+    sections: [
+      {
+        heading: "Quick Answer: What Should You Wear Horseback Riding?",
+        paragraphs: [
+          "You do not need an expensive riding wardrobe for your first lesson. The most important considerations are safety, comfort, and clothing that allows you to move freely.",
+          "US Equestrian's first-lesson guidance recommends a helmet, closed-toe shoes or boots with a heel, and comfortable pants or jeans that do not restrict movement. Always ask your riding stable about its specific requirements before arriving.",
+        ],
+        bullets: [
+          "A properly fitted equestrian riding helmet",
+          "Long pants that allow you to move comfortably",
+          "Closed-toe boots with a small, defined heel",
+          "A comfortable, relatively fitted shirt",
+          "Layers appropriate for the weather",
+          "Optional riding gloves",
+          "Long hair tied back",
+        ],
+        callout:
+          "The simple formula is: equestrian helmet, comfortable long pants, fitted shirt, and closed-toe boots with a heel.",
+      },
+      {
+        heading: "1. Wear a Proper Horse Riding Helmet",
+        paragraphs: [
+          "The helmet is the most important item you will wear. A horseback riding helmet is designed and tested for equestrian activities, so do not substitute a bicycle helmet, baseball cap, hard hat, or other headgear.",
+          "In the United States, ASTM F1163 with SEI certification is one recognized standard commonly found on equestrian helmets. Fit and certification matter much more than appearance.",
+          "You may not need to buy a helmet before your first lesson. Many riding schools provide helmets for beginners, which lets you try riding before investing in equipment. Ask whether loaner helmets are available and how they are fitted.",
+        ],
+        bullets: [
+          "Fits snugly without creating painful pressure",
+          "Sits level on your head",
+          "Is properly adjusted",
+          "Has the chin strap securely fastened",
+          "Is designed and certified for equestrian use",
+        ],
+      },
+      {
+        heading: "2. Wear Long Pants",
+        paragraphs: [
+          "Your legs will be in contact with the saddle and stirrup leathers, so long pants are more comfortable and protective than shorts.",
+          "Jeans can work for a first lesson when they are comfortable and flexible. Very stiff denim or bulky inner seams may rub while you sit in the saddle.",
+          "There is generally no reason to buy riding pants before your first lesson. If you begin riding regularly, riding tights, breeches, or jodhpurs may become a more comfortable long-term choice.",
+        ],
+        bullets: [
+          "Riding tights",
+          "Leggings",
+          "Comfortable athletic pants",
+          "Jodhpurs or breeches",
+          "Flexible, comfortable jeans",
+        ],
+      },
+      {
+        heading: "3. Wear Closed-Toe Boots With a Heel",
+        paragraphs: [
+          "Footwear is an important safety consideration. Look for closed-toe footwear with a defined heel. Traditional riding boots, paddock boots, and some Western-style riding boots may all be appropriate.",
+          "The heel helps prevent your foot from sliding too far through the stirrup. Many riding programs therefore require boots with a heel for mounted lessons.",
+          "Ask before wearing sneakers because individual stable rules vary. If you do not own suitable boots, call the facility to ask whether student boots are available.",
+        ],
+        bullets: [
+          "Avoid flip-flops and sandals",
+          "Avoid Crocs or other loose footwear",
+          "Avoid open-toed shoes",
+          "Avoid fashion high heels",
+          "Avoid shoes that are difficult to keep securely on your feet",
+        ],
+      },
+      {
+        heading: "4. Choose a Comfortable, Relatively Fitted Shirt",
+        paragraphs: [
+          "You do not need a special equestrian shirt. A comfortable T-shirt, polo, athletic shirt, or lightweight long-sleeve shirt can work well.",
+          "Choose something that allows your arms to move freely without excessive loose or dangling material. A relatively fitted shirt also helps the instructor see your posture and riding position.",
+        ],
+      },
+      {
+        heading: "5. Dress for the Weather",
+        paragraphs: [
+          "Riding is often an outdoor activity, so your clothing should reflect the temperature and whether you will ride indoors or outside.",
+          "On hot days, wear breathable fabrics, long pants, and a lightweight shirt. Bring water and use sunscreen when appropriate.",
+          "On cold days, wear movable layers such as a base layer, long-sleeve shirt, fleece or lightweight jacket, warm pants, and gloves. Avoid a bulky coat that restricts movement or interferes with safe riding.",
+          "If rain or severe weather is expected, ask the stable whether it has an indoor arena, recommends rain gear, or plans to cancel. Policies differ between facilities.",
+        ],
+      },
+      {
+        heading: "6. Riding Gloves Are Optional",
+        paragraphs: [
+          "Gloves are not always necessary for a first lesson, but they may improve grip, reduce friction, help prevent blisters, and keep your hands warm.",
+          "You do not need expensive equestrian gloves for your first ride. If you continue taking lessons, a properly fitted pair can be a useful addition.",
+        ],
+      },
+      {
+        heading: "7. Tie Back Long Hair and Remove Dangling Jewelry",
+        paragraphs: [
+          "Tie long hair into a ponytail, braid, or bun so it stays out of your face while you learn.",
+          "Leave dangling earrings, long necklaces, large bracelets, rings that may catch, and long scarves at home. Simple clothing and accessories reduce distractions and potential entanglement.",
+        ],
+        callout:
+          "You are dressing to learn safely, not for a horse show. Simple, comfortable, and secure is better.",
+      },
+      {
+        heading: "What Not to Wear to Your First Riding Lesson",
+        paragraphs: [
+          "Avoid clothing and footwear that leave you exposed, restrict movement, or may catch on the saddle, tack, or other equipment. When in doubt, ask your instructor because every stable has its own rules.",
+        ],
+        bullets: [
+          "Shorts, which can allow your legs to rub against the saddle",
+          "Sandals, flip-flops, or open-toed shoes",
+          "Very loose or baggy clothing",
+          "Long scarves and dangling jewelry",
+          "Extremely stiff pants that restrict movement",
+          "Fashion high heels or insecure footwear",
+        ],
+      },
+      {
+        heading: "Do You Need to Buy Expensive Riding Clothes?",
+        paragraphs: [
+          "Absolutely not. Experienced riders may wear specialty breeches, tall boots, technical shirts, gloves, jackets, and premium helmets, but you do not need a complete riding wardrobe for your first lesson.",
+          "Many stables have helmets and sometimes boots available for students. Start with the basics, then gradually invest in riding-specific clothing if you discover that you enjoy the sport and plan to continue.",
+        ],
+      },
+      {
+        heading: "A Simple First-Lesson Outfit",
+        paragraphs: [
+          "For the easiest possible answer, wear comfortable long pants, a T-shirt or athletic shirt, closed-toe boots with a small heel, and a properly fitted equestrian helmet.",
+          "Tie back your hair, remove dangling jewelry, dress appropriately for the weather, and bring water. You do not need to look like a professional equestrian; you need to be safe and comfortable enough to concentrate on learning.",
+        ],
+      },
+      {
+        heading: "What Should Children Wear?",
+        paragraphs: [
+          "The same basic rules apply to children: a properly fitted equestrian helmet, long pants, closed-toe boots with a heel, a comfortable shirt, and weather-appropriate layers.",
+          "Because children grow quickly, ask whether the riding school provides helmets and boots before purchasing equipment. Make sure any borrowed helmet is appropriately fitted before the child mounts.",
+        ],
+      },
+      {
+        heading: "Ask the Stable Before You Go",
+        paragraphs: [
+          "Calling the stable is one of the best ways to avoid arriving with the wrong clothing or equipment. Confirm the facility's rules before your appointment.",
+        ],
+        bullets: [
+          "Do you provide properly fitted riding helmets?",
+          "Do you have boots available for students?",
+          "What should I wear, and is there a dress code?",
+          "Will the lesson be indoors or outside?",
+          "What should I bring?",
+          "How early should I arrive?",
+        ],
+      },
+      {
+        heading: "Frequently Asked Questions",
+        paragraphs: [
+          "Can I wear jeans? Yes, provided they are comfortable, allow free movement, and do not have bulky seams that rub.",
+          "Can I wear leggings? Many beginners find leggings flexible and comfortable, but check the stable's dress code.",
+          "Do I need riding boots? Not necessarily if the riding school provides suitable footwear. Ask before purchasing anything.",
+          "Do I need my own helmet? Many schools provide loaners. Any helmet you purchase should be designed for equestrian use, meet an appropriate standard, and fit correctly.",
+          "Can I wear sneakers? Ask the stable first. Many programs require closed-toe riding footwear with a heel.",
+          "What should I wear in summer? Choose comfortable long pants, a breathable shirt, and appropriate footwear, and bring water and sunscreen.",
+        ],
+      },
+      {
+        heading: "Ready for Your First Riding Lesson?",
+        paragraphs: [
+          "Your first lesson is not about having the perfect outfit. It is about learning to interact safely with a horse, developing your balance, listening to your instructor, and having a good experience.",
+          "Start with a helmet, long pants, boots with a heel, a comfortable shirt, and weather-appropriate layers. Do not spend hundreds of dollars before your first ride.",
+          "Once you know that riding is something you enjoy, you can build your riding wardrobe one useful piece at a time. SaddleUpGuide can help you find horse riding lessons and facilities across the United States when you are ready to begin.",
+        ],
+        callout:
+          "Sources include US Equestrian first-lesson, protective-headgear, and helmet-fitting guidance, plus United States Pony Clubs safety and beginner-attire resources.",
+      },
+    ],
+    relatedSlugs: ["beginners-what-to-expect", "find-lessons-near-you", "beginners"],
   },
 ];
 

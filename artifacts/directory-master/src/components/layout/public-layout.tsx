@@ -8,6 +8,7 @@ import { ScriptInjector } from "./ScriptInjector";
 import { ThemeColorInjector } from "@/components/template/ThemeColorInjector";
 import { useAuth } from "@/hooks/use-auth";
 import { useBusinessAuth } from "@workspace/replit-auth-web";
+import { getLessonGuidePath, lessonGuides } from "@workspace/lesson-guides";
 import { Building2 } from "lucide-react";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -403,6 +404,21 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </nav>
               )}
+
+              <nav aria-label="Saddle Up Guides">
+                <p className="font-semibold text-gray-900 dark:text-white mb-3">Saddle Up Guides</p>
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {lessonGuides.map((guide) => (
+                    <Link
+                      key={guide.slug}
+                      href={getLessonGuidePath(guide.slug)}
+                      className="hover:text-gray-900 dark:hover:text-white transition-colors"
+                    >
+                      {guide.title}
+                    </Link>
+                  ))}
+                </div>
+              </nav>
 
           </div>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

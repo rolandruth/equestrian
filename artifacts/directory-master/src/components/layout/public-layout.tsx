@@ -143,13 +143,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Browse All
                 </Link>
               )}
-              <Link
-                href="/horse-riding-lessons"
-                className={linkClass}
-                style={textStyle}
-              >
-                Riding Lesson Guides
-              </Link>
               {showNavLink("listingPlans") && (
                 <Link
                   href="/listing-plans"
@@ -264,14 +257,6 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Browse All
                 </Link>
               )}
-              <Link
-                href="/horse-riding-lessons"
-                onClick={() => setIsMenuOpen(false)}
-                className="block px-3 py-2 rounded-md text-base font-medium"
-                style={navbarText ? textStyle : undefined}
-              >
-                Riding Lesson Guides
-              </Link>
               {showNavLink("listingPlans") && (
                 <Link
                   href="/listing-plans"

@@ -412,6 +412,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                     <Link
                       key={guide.slug}
                       href={getLessonGuidePath(guide.slug)}
+                      onClick={() => {
+                        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+                      }}
                       className="hover:text-gray-900 dark:hover:text-white transition-colors"
                     >
                       {guide.title}

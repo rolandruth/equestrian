@@ -7,6 +7,7 @@ import {
   BEGINNER_LESSON_EXPECTATIONS_PATH,
   FIND_LESSONS_NEAR_YOU_PATH,
   FIRST_LESSON_ATTIRE_PATH,
+  ENGLISH_VS_WESTERN_RIDING_PATH,
   LESSON_GUIDE_BASE_PATH,
 } from "@workspace/lesson-guides";
 import { injectSeoMeta } from "../lib/seoHtml";
@@ -24,17 +25,18 @@ const appShell = `<!doctype html>
   <body><div id="root"></div></body>
 </html>`;
 
-assert.equal(lessonGuides.length, 8);
+assert.equal(lessonGuides.length, 9);
 assert.equal(getLessonGuideHttpStatus(LESSON_GUIDE_BASE_PATH), 200);
 assert.equal(getLessonGuideHttpStatus(`${LESSON_GUIDE_BASE_PATH}/beginners`), 200);
 assert.equal(getLessonGuideHttpStatus(BEGINNER_LESSON_EXPECTATIONS_PATH), 200);
 assert.equal(getLessonGuideHttpStatus(FIND_LESSONS_NEAR_YOU_PATH), 200);
 assert.equal(getLessonGuideHttpStatus(FIRST_LESSON_ATTIRE_PATH), 200);
+assert.equal(getLessonGuideHttpStatus(ENGLISH_VS_WESTERN_RIDING_PATH), 200);
 assert.equal(getLessonGuideHttpStatus(`${LESSON_GUIDE_BASE_PATH}/not-a-guide`), 404);
 assert.equal(getLessonGuideHttpStatus("/browse"), null);
 assert.deepEqual(
   lessonGuides.map((guide) => guide.slug),
-  ["beginners", "adults", "kids", "costs", "choosing-an-instructor", "beginners-what-to-expect", "find-lessons-near-you", "what-to-wear-first-lesson"],
+  ["beginners", "adults", "kids", "costs", "choosing-an-instructor", "beginners-what-to-expect", "find-lessons-near-you", "what-to-wear-first-lesson", "english-vs-western-riding"],
 );
 assert.equal(new Set(lessonGuides.map((guide) => guide.metaTitle)).size, lessonGuides.length);
 assert.equal(new Set(lessonGuides.map((guide) => guide.description)).size, lessonGuides.length);

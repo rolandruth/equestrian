@@ -25,6 +25,7 @@ export const LESSON_GUIDE_SEARCH_PATH = "/browse?search=horse%20riding%20lessons
 export const BEGINNER_LESSON_EXPECTATIONS_PATH = "/horse-riding-lessons-for-beginners/";
 export const FIND_LESSONS_NEAR_YOU_PATH = "/how-to-find-horse-riding-lessons-near-you";
 export const FIRST_LESSON_ATTIRE_PATH = "/what-to-wear-first-horse-riding-lesson/";
+export const ENGLISH_VS_WESTERN_RIDING_PATH = "/english-vs-western-riding/";
 
 export const lessonGuideHub = {
   title: "Horse Riding Lesson Guides",
@@ -955,6 +956,183 @@ export const lessonGuides: LessonGuide[] = [
       },
     ],
     relatedSlugs: ["beginners-what-to-expect", "find-lessons-near-you", "beginners"],
+  },
+  {
+    slug: "english-vs-western-riding",
+    publicPath: ENGLISH_VS_WESTERN_RIDING_PATH,
+    title: "English vs. Western Riding: What's the Difference?",
+    metaTitle: "English vs. Western Riding: What's the Difference?",
+    shortTitle: "English vs. Western Riding",
+    description:
+      "Learn the differences between English and Western riding, from saddles and reins to gaits, clothing, disciplines, and the best style for beginners.",
+    eyebrow: "Choosing a Riding Style",
+    readingTime: "11 min read",
+    summary:
+      "English and Western riding developed around different purposes, and those histories still shape their saddles, rider positions, rein use, gaits, clothing, and disciplines. Neither style is inherently better. The right choice depends on what you want to do with horses, the quality of instruction available, and which approach feels most enjoyable to you.",
+    keyTakeaways: [
+      "English riding generally uses a smaller saddle, closer rein contact, and disciplines such as dressage, hunter/jumper, and eventing.",
+      "Western riding generally uses a larger saddle with a horn, a deeper-feeling seat, and disciplines such as trail, ranch riding, reining, and barrel racing.",
+      "English riders commonly learn the posting trot, while Western riders often sit a slower jog, although both techniques can cross between styles.",
+      "Neither English nor Western riding is universally easier for beginners; a qualified instructor and suitable lesson horse matter more than saddle style.",
+      "Choosing one style for your first lesson does not lock you in. Many riders switch disciplines or learn both.",
+    ],
+    sections: [
+      {
+        heading: "What Is English Riding?",
+        paragraphs: [
+          "English riding is a broad category that includes dressage, hunter, jumping, eventing, equitation, and English pleasure. It developed from European traditions associated with hunting, military riding, and classical horsemanship.",
+          "For beginners, English riding usually means learning in a smaller English saddle while developing balance, position, and communication through the hands, legs, seat, and weight.",
+          "English riders often hold one rein in each hand, maintain relatively consistent contact with the horse's mouth, and learn to post at the trot. Riders pursuing jumping disciplines eventually use a more forward position over fences.",
+        ],
+        bullets: [
+          "Smaller, lighter saddle",
+          "A rein commonly held in each hand",
+          "Closer, more consistent rein contact",
+          "Posting or rising at the trot",
+          "Precise combinations of leg, seat, hand, and weight aids",
+        ],
+      },
+      {
+        heading: "Common English Riding Disciplines",
+        paragraphs: [
+          "English riding includes several distinct disciplines. The skills emphasized in a dressage lesson can differ substantially from those taught in a hunter or jumping program.",
+        ],
+        bullets: [
+          "Dressage emphasizes communication, balance, precision, and controlled movements.",
+          "Hunter evaluates the horse's movement, manners, way of going, and jumping ability.",
+          "Jumping asks horse and rider to navigate a fence course with accuracy, speed, and control.",
+          "Eventing combines dressage, cross-country, and show jumping.",
+          "English pleasure emphasizes manners, obedience, smooth transitions, and suitability as a pleasure mount.",
+        ],
+      },
+      {
+        heading: "What Is Western Riding?",
+        paragraphs: [
+          "Western riding developed from the working traditions of North American ranches and cattle operations. Its equipment and techniques supported riders spending long hours in the saddle while covering rough terrain, handling cattle, and completing ranch tasks.",
+          "A Western saddle is generally larger and heavier than an English saddle and usually includes a horn. Its design provides support and a secure feeling during long periods of riding.",
+          "Modern Western riding extends far beyond ranch work and includes recreational trail riding and many competitive disciplines.",
+        ],
+        bullets: [
+          "Western pleasure",
+          "Reining and cutting",
+          "Ranch riding and roping",
+          "Trail riding",
+          "Barrel racing",
+          "Western horsemanship",
+          "Western dressage",
+        ],
+      },
+      {
+        heading: "English vs. Western Riding: The Biggest Differences",
+        paragraphs: [
+          "The most visible differences involve the saddle, rein handling, rider position, common gaits, clothing, and activities. These are useful generalizations rather than absolute rules because instructors, horses, and disciplines vary.",
+        ],
+        bullets: [
+          "Saddle: English saddles are smaller and lighter; Western saddles are larger, heavier, and usually have a horn.",
+          "Reins: English riders commonly hold one rein in each hand; Western riders may use one or two hands depending on the horse and discipline.",
+          "Contact: English riding often uses more consistent rein contact; Western riding often uses lighter or looser contact.",
+          "Seat: English position varies by discipline; Western riding generally emphasizes a deeper, secure seat.",
+          "Trot: Posting is commonly taught in English lessons; Western riders often sit a slower jog.",
+          "Canter: The corresponding Western gait is commonly called a lope.",
+          "Activities: English disciplines prominently include dressage and jumping; Western disciplines have strong trail, ranch, and cattle-work traditions.",
+        ],
+        callout:
+          "Neither style is better than the other. The best choice depends on what you want to learn and do with horses.",
+      },
+      {
+        heading: "The Saddles Are Very Different",
+        paragraphs: [
+          "The saddle is one of the easiest ways to distinguish English from Western riding. English saddles are relatively small and lightweight, allowing close contact with the horse. Jumping and dressage saddles also have different shapes to support their disciplines.",
+          "Western saddles are larger and heavier, generally offer a deeper and more secure-feeling seat, and usually include a horn. The horn historically served practical purposes connected to ranch work and roping.",
+          "A larger saddle may feel reassuring to some beginners, but saddle size alone does not determine whether a lesson will be safe, comfortable, or easy.",
+        ],
+      },
+      {
+        heading: "How Rider Position and Aids Differ",
+        paragraphs: [
+          "It is too simplistic to say Western riders sit back while English riders sit forward. Both styles require balance, an effective seat, and appropriate communication through the hands, legs, body, and weight.",
+          "English riders generally maintain closer rein contact and use subtle combinations of rein, leg, and seat aids. Balance and precision receive particular emphasis in dressage and hunter/jumper riding.",
+          "Western riding traditionally emphasizes a secure, relaxed seat and less constant rein contact. Neck reining allows a trained horse to respond when the rein is placed against its neck, a technique influenced by the need for working riders to keep one hand available.",
+        ],
+      },
+      {
+        heading: "What About the Reins?",
+        paragraphs: [
+          "Traditional English riding generally uses one rein in each hand. Western riders may hold the reins in one hand, although two-handed riding is common for beginners and may be used in particular disciplines or stages of training.",
+          "English does not always mean two hands and Western does not always mean one. Rein use depends on the discipline, the horse's training, and the rider's experience. In both styles, the underlying goal is clear, humane communication.",
+        ],
+      },
+      {
+        heading: "Posting Trot, Jog, Canter, and Lope",
+        paragraphs: [
+          "English riders commonly learn the posting or rising trot, moving up and down in rhythm with the horse. Posting is useful during working or extended trots.",
+          "Western riders often ride a slower jog while remaining seated. Posting is not exclusively English, however, and Western riders may use it as a training exercise or when it suits the horse and situation.",
+          "Both styles use the three-beat gait English riders call a canter. In Western riding it is commonly called a lope, often with a different desired tempo and way of going.",
+        ],
+      },
+      {
+        heading: "English vs. Western Riding Clothing",
+        paragraphs: [
+          "English riders commonly wear breeches or riding tights, English riding boots, a fitted shirt, and an equestrian helmet. Competition attire may also include a formal show jacket.",
+          "Western riders commonly wear jeans or riding pants, Western boots, and a Western-style shirt. Cowboy hats may appear in some settings, but safety should take priority over tradition or appearance.",
+          "For a first lesson in either style, follow the stable's rules and wear an appropriately fitted equestrian helmet, long pants, and secure footwear with a defined heel.",
+        ],
+      },
+      {
+        heading: "Which Style Is Easier for a Beginner?",
+        paragraphs: [
+          "There is no universal answer. Some beginners feel secure in a larger Western saddle, while others prefer the closer contact of an English saddle or want to progress toward jumping or dressage.",
+          "The quality of the instructor and suitability of the lesson horse matter more than whether the saddle is English or Western. Early lessons in both styles should build the same essential foundations.",
+        ],
+        bullets: [
+          "Mounting and dismounting safely",
+          "Correct, balanced riding position",
+          "Starting, stopping, and steering",
+          "Controlling speed",
+          "Using basic riding aids",
+          "Interacting safely with the horse",
+        ],
+      },
+      {
+        heading: "Which Riding Style Should You Choose?",
+        paragraphs: [
+          "Start with the activities that interest you. Your goals will usually point toward the most practical first lesson.",
+          "Choose English if you want to learn dressage or jumping, participate in hunter/jumper competition or eventing, or develop precise position and aids for English disciplines.",
+          "Choose Western if you want to trail ride, learn ranch skills, work cattle, try reining or barrel racing, compete in Western events, or enjoy recreational riding in a Western saddle.",
+          "If you are undecided, take an introductory lesson in each style. Experiencing both can reveal which saddle, teaching approach, and activities feel most enjoyable.",
+        ],
+      },
+      {
+        heading: "Can You Learn Both English and Western Riding?",
+        paragraphs: [
+          "Absolutely. Learning both can make a rider more adaptable and deepen their understanding of horse communication.",
+          "The fundamentals remain similar: balance, rhythm, steering, correct position, clear aids, and good horsemanship. When changing styles, expect to adjust to differences in saddle design, seat, leg position, rein handling, and cues.",
+          "Choosing English or Western for your first lesson does not lock you into that style forever.",
+        ],
+      },
+      {
+        heading: "Frequently Asked Questions",
+        paragraphs: [
+          "Is English or Western riding better? Neither is inherently better. They developed around different purposes, equipment, techniques, and disciplines.",
+          "Is Western riding easier? Some beginners find the larger saddle reassuring, but difficulty depends on the rider, horse, instructor, and skills being learned.",
+          "Can I ride English in a Western saddle? Foundational skills transfer, but discipline-specific activities normally require appropriate equipment.",
+          "Can I switch from English to Western? Yes. Many riders learn both and adapt to the differences in saddle, position, rein handling, and cues.",
+          "Do English riders always jump? No. English riding also includes dressage, pleasure, saddle seat, and other non-jumping disciplines.",
+          "Do Western riders always use one hand? No. Western riders may use one or two hands depending on the horse, rider, training stage, and discipline.",
+        ],
+      },
+      {
+        heading: "English or Western Riding: Which Is Right for You?",
+        paragraphs: [
+          "If your dream is to jump fences, learn dressage, or compete in hunter/jumper events, English riding is a logical place to start. If you would rather ride trails, learn ranch skills, try reining, or enjoy a Western saddle, Western riding may be the better fit.",
+          "If you still are not sure, try both. A good instructor can teach the shared fundamentals and help you determine which style feels comfortable and enjoyable.",
+          "Saddle Up Guide makes it easier to find horse riding lessons and equestrian facilities for English, Western, trail, and beginner riding across the United States.",
+        ],
+        callout:
+          "Sources include Washington State University Extension, US Equestrian, the University of Connecticut, Penn State Extension, the American Quarter Horse Association, and Horse Illustrated.",
+      },
+    ],
+    relatedSlugs: ["beginners", "choosing-an-instructor", "find-lessons-near-you"],
   },
 ];
 

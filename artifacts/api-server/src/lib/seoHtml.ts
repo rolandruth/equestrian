@@ -80,6 +80,40 @@ export async function injectSeoMeta(
 ): Promise<string> {
   try {
     const publicOrigin = normalizeOrigin(origin);
+    if (path.replace(/\/+$/, "") === "/how-we-build-this-directory") {
+      const title = "How We Build the SaddleUpGuide Directory";
+      const description =
+        "Learn how SaddleUpGuide gathers, reviews, updates, and corrects horse riding lesson and equestrian business listings across the United States.";
+      const canonicalUrl = `${publicOrigin}/how-we-build-this-directory`;
+      const imageUrl = `${publicOrigin}/opengraph.jpg`;
+      let out = replaceTitle(html, title);
+      out = replaceMeta(out, "name", "description", description);
+      out = replaceMeta(out, "name", "robots", "index,follow");
+      out = replaceMeta(out, "property", "og:title", title);
+      out = replaceMeta(out, "property", "og:description", description);
+      out = replaceMeta(out, "property", "og:type", "website");
+      out = replaceMeta(out, "property", "og:url", canonicalUrl);
+      out = replaceMeta(out, "property", "og:image", imageUrl);
+      out = replaceMeta(out, "name", "twitter:card", "summary_large_image");
+      out = replaceMeta(out, "name", "twitter:title", title);
+      out = replaceMeta(out, "name", "twitter:description", description);
+      out = replaceMeta(out, "name", "twitter:image", imageUrl);
+      out = replaceCanonical(out, canonicalUrl);
+      out = injectJsonLd(out, {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        name: "How We Build This Directory",
+        description,
+        url: canonicalUrl,
+        isPartOf: {
+          "@type": "WebSite",
+          name: "SaddleUpGuide",
+          url: publicOrigin,
+        },
+      }, "methodology-structured-data");
+      return out;
+    }
+
     const lessonGuideHtml = injectLessonGuideSeoHtml(html, path, publicOrigin);
     if (lessonGuideHtml !== null) return lessonGuideHtml;
 

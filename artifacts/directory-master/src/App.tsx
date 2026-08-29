@@ -24,6 +24,7 @@ import EntryPage from "@/pages/entry";
 import PrivacyPolicyPage from "@/pages/privacy-policy";
 import TermsPage from "@/pages/terms";
 import ContactPage from "@/pages/contact";
+import HowWeBuildThisDirectoryPage from "@/pages/how-we-build-this-directory";
 import AdvertisePage from "@/pages/advertise";
 import ListingPlansPage from "@/pages/listing-plans";
 import BusinessDashboardPage from "@/pages/business/dashboard";
@@ -218,6 +219,20 @@ function Router() {
         <SetupGuard>
           <PublicLayout>
             <ContactPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/how-we-build-this-directory">
+        <SetupGuard>
+          <PublicLayout>
+            <HowWeBuildThisDirectoryPage />
+          </PublicLayout>
+        </SetupGuard>
+      </Route>
+      <Route path="/how-we-build-this-directory/">
+        <SetupGuard>
+          <PublicLayout>
+            <HowWeBuildThisDirectoryPage />
           </PublicLayout>
         </SetupGuard>
       </Route>

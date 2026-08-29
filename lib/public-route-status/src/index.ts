@@ -51,6 +51,7 @@ export function getPublicRouteKind(pathname: string): PublicRouteKind {
     "/admin/ads",
     "/browse",
     "/contact",
+    "/how-we-build-this-directory",
     "/advertise",
     "/listing-plans",
     "/business/dashboard",

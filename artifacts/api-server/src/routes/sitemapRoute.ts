@@ -137,6 +137,7 @@ router.get("/sitemap.xml", async (req, res) => {
       { loc: "/listing-plans", priority: "0.5", changefreq: "monthly" },
       { loc: "/advertise", priority: "0.5", changefreq: "monthly" },
       { loc: "/contact", priority: "0.4", changefreq: "monthly" },
+      { loc: "/how-we-build-this-directory", priority: "0.5", changefreq: "monthly" },
       { loc: "/privacy-policy", priority: "0.2", changefreq: "yearly" },
       { loc: "/terms", priority: "0.2", changefreq: "yearly" },
     ];

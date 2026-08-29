@@ -18,6 +18,7 @@ import bizAuthRouter from "./bizAuthRoute.js";
 import businessRouter from "./businessRoute.js";
 import adminBizUsersRouter from "./adminBizUsersRoute.js";
 import { adminLocalSeoRouter, publicLocalSeoRouter } from "./localSeoRoute.js";
+import adminClaimsRouter from "./adminClaimsRoute.js";
 
 const router: IRouter = Router();
 
@@ -39,6 +40,7 @@ router.use(storageRouter);
 router.use("/builder", builderRouter);
 router.use("/contacts", contactsRouter);
 router.use(adminBizUsersRouter);
+router.use(adminClaimsRouter);
 router.use("/ads", adsRouter);
 router.use("/reviews", reviewsRouter);
 

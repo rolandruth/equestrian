@@ -18,6 +18,14 @@ type Entry = {
 
 type Listing = { entry: Entry };
 
+type Claim = {
+  id: number;
+  entryId: number;
+  status: string;
+  createdAt: string;
+  entry: { id: number; title: string; category?: string | null; location?: string | null } | null;
+};
+
 const CONTACT_EMAIL = "info@saddleupguide.com";
 
 export default function BusinessDashboardPage() {
@@ -31,6 +39,9 @@ export default function BusinessDashboardPage() {
   const [claimSearching, setClaimSearching] = useState(false);
   const [claimingId, setClaimingId] = useState<number | null>(null);
   const [claimError, setClaimError] = useState<string | null>(null);
+  const [claimNotice, setClaimNotice] = useState<string | null>(null);
+  const [claims, setClaims] = useState<Claim[]>([]);
+  const [cancelingClaimId, setCancelingClaimId] = useState<number | null>(null);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -46,10 +57,24 @@ export default function BusinessDashboardPage() {
     }
   }, []);
 
+  const loadClaims = useCallback(async () => {
+    try {
+      const res = await fetch("/api/business/my-claims", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setClaims(data.claims ?? []);
+    } catch {
+      // Non-fatal — claim status just won't show.
+    }
+  }, []);
+
   useEffect(() => {
     if (!bizAuth.isLoading && !bizAuth.isAuthenticated) return;
-    if (bizAuth.isAuthenticated) loadListings();
-  }, [bizAuth.isAuthenticated, bizAuth.isLoading, loadListings]);
+    if (bizAuth.isAuthenticated) {
+      loadListings();
+      loadClaims();
+    }
+  }, [bizAuth.isAuthenticated, bizAuth.isLoading, loadListings, loadClaims]);
 
   // Self-serve claim search — restricted server-side to unclaimed, published
   // listings only, so this can never surface someone else's already-claimed
@@ -75,6 +100,7 @@ export default function BusinessDashboardPage() {
   async function handleClaim(entryId: number) {
     setClaimingId(entryId);
     setClaimError(null);
+    setClaimNotice(null);
     try {
       const res = await fetch("/api/business/claim", {
         method: "POST",
@@ -86,11 +112,31 @@ export default function BusinessDashboardPage() {
       if (!res.ok) throw new Error(data.error || "Unable to claim this listing");
       setClaimQuery("");
       setClaimResults([]);
-      await loadListings();
+      if (data.pending) {
+        setClaimNotice(
+          "Your claim was submitted for review. Our team will verify that you own this business before assigning the listing to your account.",
+        );
+        await loadClaims();
+      } else {
+        await Promise.all([loadListings(), loadClaims()]);
+      }
     } catch (err: any) {
       setClaimError(err.message || "Something went wrong. Please try again.");
     } finally {
       setClaimingId(null);
+    }
+  }
+
+  async function handleCancelClaim(claimId: number) {
+    setCancelingClaimId(claimId);
+    try {
+      const res = await fetch(`/api/business/my-claims/${claimId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) await loadClaims();
+    } finally {
+      setCancelingClaimId(null);
     }
   }
 
@@ -149,8 +195,8 @@ export default function BusinessDashboardPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-3">
-            Search for your business among unclaimed listings to self-serve claim it — no
-            verification or approval needed.
+            Search for your business among unclaimed listings and submit a claim. Every claim is
+            reviewed and verified by our team before ownership is assigned.
           </p>
           <div className="relative mb-3">
             <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -161,6 +207,12 @@ export default function BusinessDashboardPage() {
               className="pl-9"
             />
           </div>
+
+          {claimNotice && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-3 py-2 text-sm text-amber-800 dark:text-amber-300 mb-3">
+              {claimNotice}
+            </div>
+          )}
 
           {claimError && (
             <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300 mb-3">
@@ -208,6 +260,58 @@ export default function BusinessDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {claims.some((c) => c.status === "pending" || c.status === "rejected") && (
+        <Card className="mb-10">
+          <CardHeader>
+            <CardTitle className="text-base">Claim Requests</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1.5">
+              {claims
+                .filter((c) => c.status === "pending" || c.status === "rejected")
+                .map((claim) => (
+                  <div
+                    key={claim.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">
+                        {claim.entry?.title ?? `Listing #${claim.entryId}`}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Submitted {new Date(claim.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {claim.status === "pending" ? (
+                        <>
+                          <Badge variant="secondary">Pending review</Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleCancelClaim(claim.id)}
+                            disabled={cancelingClaimId === claim.id}
+                          >
+                            {cancelingClaimId === claim.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              "Cancel"
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="text-red-600 border-red-300">
+                          Not approved
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16">

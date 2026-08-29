@@ -48,6 +48,7 @@ import AdminAdsPage from "@/pages/admin/ads";
 import AdminReviewsPage from "@/pages/admin/reviews";
 import AdminLocalSeoPage from "@/pages/admin/local-seo";
 import BuilderPage from "@/pages/admin/builder";
+import AdminClaimsPage from "@/pages/admin/claims";
 
 const queryClient = new QueryClient();
 
@@ -141,6 +142,13 @@ function Router() {
         <RequireAdmin>
           <AdminLayout>
             <AdminContactsPage />
+          </AdminLayout>
+        </RequireAdmin>
+      </Route>
+      <Route path="/admin/claims">
+        <RequireAdmin>
+          <AdminLayout>
+            <AdminClaimsPage />
           </AdminLayout>
         </RequireAdmin>
       </Route>

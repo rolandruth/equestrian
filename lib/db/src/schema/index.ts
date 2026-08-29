@@ -12,3 +12,4 @@ export * from "./ads";
 export * from "./bizAuth";
 export * from "./localSeo";
 export * from "./imageOptimization";
+export * from "./entryClaims";

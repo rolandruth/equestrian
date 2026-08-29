@@ -251,9 +251,6 @@ export default function HowWeBuildThisDirectoryPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 mt-8">
-            <Button asChild size="lg" className="rounded-full">
-              <Link href="/business/dashboard">Open Business Dashboard</Link>
-            </Button>
             <Button asChild size="lg" variant="outline" className="rounded-full">
               <Link href="/contact">Request a Listing Update</Link>
             </Button>

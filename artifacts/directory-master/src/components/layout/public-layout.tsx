@@ -415,7 +415,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 `\u00a9 ${new Date().getFullYear()} ${settings?.siteTitle || "Directory Master"}. All rights reserved.`}
             </p>
             <nav className="flex flex-wrap items-center gap-5 justify-center">
-              <Link href="/how-we-build-this-directory" className="hover:text-gray-900 dark:hover:text-white transition-colors">
+              <Link
+                href="/how-we-build-this-directory"
+                onClick={() => {
+                  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+                }}
+                className="hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
                 How We Build This Directory
               </Link>
               <a href="/contact" className="hover:text-gray-900 dark:hover:text-white transition-colors">
